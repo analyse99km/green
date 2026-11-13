@@ -1,0 +1,201 @@
+name: Green
+
+on:
+  repository_dispatch:
+    types: [green-start]
+  workflow_dispatch:
+    inputs:
+      run_hours:
+        description: "Hours to run (max 5.8)"
+        required: false
+        default: "5.5"
+        type: string
+  push:
+    branches: [main]
+
+concurrency:
+  group: green-${{ github.repository }}
+  cancel-in-progress: true
+
+env:
+  RUN_HOURS: "5.5"
+  PORT: "3000"
+  NODE_VERSION: "20"
+
+jobs:
+  run:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 350
+
+    steps:
+      # ── 1. Determine slot from repo owner ─────────────────────────────────
+      - name: Set account slot
+        run: |
+          case "${{ github.repository_owner }}" in
+            "pocomon9")    echo "SLOT=1" >> $GITHUB_ENV ;;
+            "sifihub")     echo "SLOT=2" >> $GITHUB_ENV ;;
+            "analyse99km") echo "SLOT=3" >> $GITHUB_ENV ;;
+            *)             echo "SLOT=0" >> $GITHUB_ENV ;;
+          esac
+          echo "✅ Slot set for ${{ github.repository_owner }}"
+
+      # ── 2. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout Green
+        uses: actions/checkout@v4
+
+      # ── 3. Restore database ────────────────────────────────────────────────
+      - name: Restore database cache
+        uses: actions/cache@v4
+        with:
+          path: data/database.json
+          key: green-db-slot${{ env.SLOT }}-v1
+          restore-keys: green-db-slot${{ env.SLOT }}-
+
+      # ── 4. Ensure database exists ─────────────────────────────────────────
+      - name: Init database if missing
+        run: |
+          mkdir -p data
+          if [ ! -f data/database.json ]; then
+            echo '{"stores":[],"products":[],"orders":[],"reservations":[]}' > data/database.json
+            echo "✅ Fresh database created"
+          else
+            echo "✅ Existing database loaded ($(wc -c < data/database.json) bytes)"
+          fi
+
+      # ── 5. Node.js + Install + Build ──────────────────────────────────────
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Green
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+        run: npm run build
+
+      # ── 6. Install cloudflared ────────────────────────────────────────────
+      - name: Install cloudflared
+        run: |
+          curl -fsSL \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+            -o /usr/local/bin/cloudflared
+          chmod +x /usr/local/bin/cloudflared
+
+      # ── 7. Start app + tunnel + publish status ────────────────────────────
+      - name: Start Green and publish URL
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          # Start Next.js
+          nohup npm start -- -p $PORT > app.log 2>&1 &
+
+          echo "⏳ Waiting for Green..."
+          for i in $(seq 1 40); do
+            curl -sf http://localhost:$PORT/api/health > /dev/null 2>&1 && echo "✅ Green ready!" && break
+            sleep 3
+          done
+
+          # Start Cloudflare tunnel
+          cloudflared tunnel --url http://localhost:$PORT --logfile tunnel.log 2>&1 &
+          sleep 10
+
+          TUNNEL_URL=$(grep -oP 'https://[a-z0-9\-]+\.trycloudflare\.com' tunnel.log | head -1)
+          [ -z "$TUNNEL_URL" ] && { echo "❌ No tunnel URL"; cat tunnel.log; exit 1; }
+          echo "🌐 URL: $TUNNEL_URL"
+          echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
+
+          # Write status.json to this repo via API
+          STATUS_JSON="{\"url\":\"$TUNNEL_URL\",\"ts\":$(date +%s),\"slot\":$SLOT}"
+          CONTENT=$(echo "$STATUS_JSON" | base64 -w0)
+          SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+
+          if [ -n "$SHA" ]; then
+            curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+              -d "{\"message\":\"status: online\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+          else
+            curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+              -d "{\"message\":\"status: online\",\"content\":\"$CONTENT\"}" > /dev/null
+          fi
+          echo "✅ status.json published → slot $SLOT"
+
+      # ── 8. Keep alive ──────────────────────────────────────────────────────
+      - name: Run Green session
+        env:
+          GH_PAT:      ${{ secrets.GH_PAT }}
+          TUNNEL_URL:  ${{ env.TUNNEL_URL }}
+        run: |
+          HOURS="${{ github.event.inputs.run_hours || env.RUN_HOURS }}"
+          TOTAL=$(echo "$HOURS * 3600 - 240" | bc | cut -d. -f1)
+          END=$(($(date +%s) + TOTAL))
+          HEARTBEAT=0
+
+          echo "🟢 Green slot $SLOT — ${HOURS}h — $TUNNEL_URL"
+
+          while [ $(date +%s) -lt $END ]; do
+            sleep 60
+            HEARTBEAT=$((HEARTBEAT+1))
+            STATUS=$(curl -sf http://localhost:$PORT/api/health > /dev/null 2>&1 && echo "UP" || echo "DOWN")
+            echo "$(date -u +%H:%M:%S) | $STATUS | $((($END-$(date +%s))/60))m left"
+
+            # Heartbeat every 10 min — refresh timestamp
+            if [ $((HEARTBEAT % 10)) -eq 0 ]; then
+              STATUS_JSON="{\"url\":\"$TUNNEL_URL\",\"ts\":$(date +%s),\"slot\":$SLOT}"
+              CONTENT=$(echo "$STATUS_JSON" | base64 -w0)
+              SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+                "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+                | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+              [ -n "$SHA" ] && curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+                -d "{\"message\":\"heartbeat\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+              echo "💓 Heartbeat sent"
+            fi
+          done
+
+      # ── 9. Mark offline ───────────────────────────────────────────────────
+      - name: Mark offline
+        if: always()
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          CONTENT=$(echo "{\"url\":\"offline\",\"ts\":0,\"slot\":$SLOT}" | base64 -w0)
+          SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+          [ -n "$SHA" ] && curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+            -d "{\"message\":\"status: offline\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+          echo "🔴 Slot $SLOT → offline"
+
+      # ── 10. Save + backup database ────────────────────────────────────────
+      - name: Save database cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: data/database.json
+          key: green-db-slot${{ env.SLOT }}-v1
+
+      - name: Backup database artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: green-db-slot${{ env.SLOT }}-run${{ github.run_number }}
+          path: data/database.json
+          retention-days: 90
+
+      # ── 11. Self-trigger next run ─────────────────────────────────────────
+      - name: Rebirth — trigger next run
+        if: always()
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          curl -sf -X POST -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+            -d '{"event_type":"green-start"}' && echo "♻️ Next run triggered"

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Green</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    #bar{display:flex;align-items:center;gap:10px;padding:7px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0;z-index:10}
+    #led{width:9px;height:9px;border-radius:50%;background:#3fb950;box-shadow:0 0 7px #3fb950;transition:all .4s}
+    #led.amber{background:#d29922;box-shadow:0 0 7px #d29922}
+    #led.red{background:#f85149;box-shadow:0 0 7px #f85149}
+    #msg{font-size:13px;color:#8b949e;flex:1}
+    #slots{display:flex;gap:5px}
+    .slot{font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid #30363d;color:#8b949e;transition:all .3s;cursor:default}
+    .slot.on{border-color:#3fb950;color:#3fb950}
+    .slot.off{border-color:#f85149;color:#f85149;opacity:.4}
+    .slot.check{border-color:#d29922;color:#d29922}
+    #splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+    .spin{width:40px;height:40px;border:3px solid #30363d;border-top-color:#3fb950;border-radius:50%;animation:s .75s linear infinite}
+    @keyframes s{to{transform:rotate(360deg)}}
+    #splash h1{font-size:32px;font-weight:700;letter-spacing:-1px}
+    #splash p{font-size:14px;color:#8b949e}
+    #frame{flex:1;border:none;display:none;width:100%;background:#fff}
+    #down{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:40px}
+    #down h2{font-size:22px}
+    #down p{font-size:14px;color:#8b949e;max-width:440px;line-height:1.6}
+    #down button{margin-top:4px;padding:9px 24px;background:#238636;border:none;border-radius:6px;color:#fff;font-size:14px;cursor:pointer;transition:background .2s}
+    #down button:hover{background:#2ea043}
+    #cds{font-weight:700;color:#3fb950}
+  </style>
+</head>
+<body>
+
+<div id="bar">
+  <div id="led" class="amber"></div>
+  <span id="msg">Connecting to Green...</span>
+  <div id="slots">
+    <span class="slot check" id="s1" title="pocomon9">1</span>
+    <span class="slot check" id="s2" title="sifihub">2</span>
+    <span class="slot check" id="s3" title="analyse99km">3</span>
+  </div>
+</div>
+
+<div id="splash">
+  <div class="spin"></div>
+  <h1>🟢 Green</h1>
+  <p id="smsg">Finding a live runner...</p>
+</div>
+
+<iframe id="frame" src="about:blank" allow="*"></iframe>
+
+<div id="down">
+  <h2>⏳ All runners restarting</h2>
+  <p>Green automatically restarts every ~5.5 hours.<br>
+     All 3 slots are between sessions right now.<br>
+     Retrying in <span id="cds">20</span>s...</p>
+  <button onclick="check()">Retry Now</button>
+</div>
+
+<script>
+// ── Status files — each account writes to their own repo ────────────────────
+const RUNNERS = [
+  { label: "1", status: "https://raw.githubusercontent.com/pocomon9/green/main/status.json" },
+  { label: "2", status: "https://raw.githubusercontent.com/sifihub/green/main/status.json" },
+  { label: "3", status: "https://raw.githubusercontent.com/analyse99km/green/main/status.json" },
+];
+const HEALTH    = "/api/health";
+const STALE_MS  = 25 * 60 * 1000;   // 25 min without heartbeat = stale
+const RECHECK   = 4  * 60 * 1000;   // re-check every 4 min
+
+const led    = document.getElementById("led");
+const msg    = document.getElementById("msg");
+const smsg   = document.getElementById("smsg");
+const splash = document.getElementById("splash");
+const frame  = document.getElementById("frame");
+const down   = document.getElementById("down");
+const cdsEl  = document.getElementById("cds");
+
+let activeUrl = null, recheckId = null, cdId = null;
+
+const setLed = c => led.className = c;
+const slotEl = i => document.getElementById("s"+(i+1));
+
+async function fetchStatus(url) {
+  try {
+    const r = await fetch(url + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function ping(url) {
+  if (!url || url === "offline") return false;
+  try {
+    const r = await fetch(url + HEALTH, { signal: AbortSignal.timeout(5000) });
+    return r.ok;
+  } catch { return false; }
+}
+
+async function check() {
+  clearInterval(recheckId);
+  clearInterval(cdId);
+  down.style.display  = "none";
+  frame.style.display = "none";
+  splash.style.display = "flex";
+  setLed("amber");
+  msg.textContent  = "Checking runners...";
+  smsg.textContent = "Reading status files...";
+  RUNNERS.forEach((_,i) => slotEl(i).className = "slot check");
+
+  // Fetch all status files in parallel
+  const statuses = await Promise.all(RUNNERS.map(r => fetchStatus(r.status)));
+
+  smsg.textContent = "Pinging live runners...";
+
+  // Ping URLs that look alive
+  const now = Date.now();
+  const results = await Promise.all(
+    statuses.map(async (s, i) => {
+      if (!s || s.url === "offline" || !s.url) {
+        slotEl(i).className = "slot off";
+        return { alive: false, url: null };
+      }
+      const fresh = (now - s.ts * 1000) < STALE_MS;
+      const alive = fresh && await ping(s.url);
+      slotEl(i).className = "slot " + (alive ? "on" : "off");
+      return { alive, url: s.url };
+    })
+  );
+
+  const live = results.filter(r => r.alive);
+
+  if (!live.length) {
+    setLed("red");
+    msg.textContent = "All runners restarting — will retry...";
+    splash.style.display = "none";
+    down.style.display   = "flex";
+    startCd(20);
+    return;
+  }
+
+  // Pick random live runner
+  const pick = live[Math.floor(Math.random() * live.length)];
+  activeUrl = pick.url;
+
+  setLed("");
+  msg.textContent = `🟢 Live · ${live.length}/3 runners online`;
+  smsg.textContent = "Loading Green...";
+
+  frame.onload = () => {
+    splash.style.display = "none";
+    frame.style.display  = "block";
+  };
+  frame.src = activeUrl;
+
+  recheckId = setInterval(silentCheck, RECHECK);
+}
+
+async function silentCheck() {
+  if (activeUrl && await ping(activeUrl)) return;
+  setLed("amber");
+  msg.textContent = "🟡 Rerouting...";
+  check();
+}
+
+function startCd(s) {
+  cdsEl.textContent = s;
+  cdId = setInterval(() => {
+    cdsEl.textContent = --s;
+    if (s <= 0) { clearInterval(cdId); check(); }
+  }, 1000);
+}
+
+check();
+</script>
+</body>
+</html>
