@@ -11,10 +11,14 @@ on:
         type: string
   push:
     branches: [main]
+    paths-ignore:
+      - 'status.json'
+      - 'data/**'
+      - 'README.md'
 
 concurrency:
   group: green-${{ github.repository }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   PORT: "3000"
@@ -62,7 +66,6 @@ jobs:
           mkdir -p data
           echo "📥 Fetching global master database from ${{ env.SHARED_STORAGE_REPO }}..."
           
-          # Try download master database.json from shared repo
           HTTP_CODE=$(curl -s -w "%{http_code}" -o data/database.json \
             -H "Authorization: Bearer $GH_PAT" \
             -H "Accept: application/vnd.github.v3.raw" \
@@ -139,11 +142,11 @@ jobs:
           if [ -n "$SHA" ]; then
             curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
-              -d "{\"message\":\"status: online\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+              -d "{\"message\":\"status: online [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
           else
             curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
-              -d "{\"message\":\"status: online\",\"content\":\"$CONTENT\"}" > /dev/null
+              -d "{\"message\":\"status: online [skip ci]\",\"content\":\"$CONTENT\"}" > /dev/null
           fi
           echo "✅ status.json published → slot $SLOT"
 
@@ -177,7 +180,7 @@ jobs:
                 | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
               [ -n "$SHA" ] && curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
                 "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
-                -d "{\"message\":\"heartbeat\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+                -d "{\"message\":\"heartbeat [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
               
               # 2. Sync database.json to central shared repository
               if [ -s data/database.json ]; then
@@ -188,11 +191,11 @@ jobs:
                 if [ -n "$M_SHA" ]; then
                   curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
                     "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
-                    -d "{\"message\":\"sync master db\",\"content\":\"$DB_B64\",\"sha\":\"$M_SHA\"}" > /dev/null || true
+                    -d "{\"message\":\"sync master db [skip ci]\",\"content\":\"$DB_B64\",\"sha\":\"$M_SHA\"}" > /dev/null || true
                 else
                   curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
                     "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
-                    -d "{\"message\":\"init master db\",\"content\":\"$DB_B64\"}" > /dev/null || true
+                    -d "{\"message\":\"init master db [skip ci]\",\"content\":\"$DB_B64\"}" > /dev/null || true
                 fi
                 echo "💾 Master DB synced to ${{ env.SHARED_STORAGE_REPO }}"
               fi
@@ -213,7 +216,7 @@ jobs:
             if [ -n "$M_SHA" ]; then
               curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
                 "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
-                -d "{\"message\":\"final db sync before recycle\",\"content\":\"$DB_B64\",\"sha\":\"$M_SHA\"}" > /dev/null || true
+                -d "{\"message\":\"final db sync before recycle [skip ci]\",\"content\":\"$DB_B64\",\"sha\":\"$M_SHA\"}" > /dev/null || true
             fi
             echo "✅ Final DB backup written to master storage"
           fi
@@ -224,7 +227,7 @@ jobs:
             | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
           [ -n "$SHA" ] && curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
-            -d "{\"message\":\"status: offline\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+            -d "{\"message\":\"status: offline [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
           echo "🔴 Slot $SLOT marked offline"
 
       # ── 10. Save cache & artifact ─────────────────────────────────────────
