@@ -60,7 +60,18 @@ export class DatabaseManager {
 
   async ensureInitialized(): Promise<DatabaseSchema> {
     const data = await this.readDb();
-    if (data) return data;
+    if (data && typeof data === 'object') {
+      const sanitized: DatabaseSchema = {
+        stores: Array.isArray(data.stores) ? data.stores : [],
+        products: Array.isArray(data.products) ? data.products : [],
+        orders: Array.isArray(data.orders) ? data.orders : [],
+        reservations: Array.isArray(data.reservations) ? data.reservations : [],
+      };
+      if (!Array.isArray(data.stores) || !Array.isArray(data.products) || !Array.isArray(data.orders) || !Array.isArray(data.reservations)) {
+        await this.writeDb(sanitized);
+      }
+      return sanitized;
+    }
 
     await this.writeDb(INITIAL_DATA);
     return INITIAL_DATA;
@@ -74,29 +85,34 @@ export class DatabaseManager {
   // Stores
   async getAllStores(): Promise<Store[]> {
     const db = await this.ensureInitialized();
-    return db.stores.filter((s) => !s.isSuspended);
+    const stores = Array.isArray(db?.stores) ? db.stores : [];
+    return stores.filter((s) => s && !s.isSuspended);
   }
 
   async getStoreBySlug(slug: string): Promise<Store | null> {
     const db = await this.ensureInitialized();
-    return db.stores.find((s) => s.slug === slug && !s.isSuspended) || null;
+    const stores = Array.isArray(db?.stores) ? db.stores : [];
+    return stores.find((s) => s && s.slug?.toLowerCase() === slug.toLowerCase() && !s.isSuspended) || null;
   }
 
   async getStoreByNumber(num: number): Promise<Store | null> {
     const db = await this.ensureInitialized();
-    return db.stores.find((s) => s.storeNumber === num && !s.isSuspended) || null;
+    const stores = Array.isArray(db?.stores) ? db.stores : [];
+    return stores.find((s) => s && s.storeNumber === num && !s.isSuspended) || null;
   }
 
   async getStoreById(id: string): Promise<Store | null> {
     const db = await this.ensureInitialized();
-    return db.stores.find((s) => s.id === id) || null;
+    const stores = Array.isArray(db?.stores) ? db.stores : [];
+    return stores.find((s) => s && s.id === id) || null;
   }
 
   async createStore(
     storeData: Omit<Store, 'id' | 'storeNumber' | 'createdAt' | 'isVerified' | 'isSuspended'>
   ): Promise<Store> {
     const db = await this.ensureInitialized();
-    const nextStoreNumber = db.stores.length > 0 ? Math.max(...db.stores.map((s) => s.storeNumber || 0)) + 1 : 1;
+    const stores = Array.isArray(db?.stores) ? db.stores : [];
+    const nextStoreNumber = stores.length > 0 ? Math.max(...stores.map((s) => s.storeNumber || 0)) + 1 : 1;
     const newStore: Store = {
       ...storeData,
       id: 'store-' + Date.now(),
@@ -105,66 +121,78 @@ export class DatabaseManager {
       isSuspended: false,
       createdAt: new Date().toISOString(),
     };
-    db.stores.push(newStore);
+    stores.push(newStore);
+    db.stores = stores;
     await this.writeDb(db);
     return newStore;
   }
 
   async updateStore(id: string, updates: Partial<Store>): Promise<Store | null> {
     const db = await this.ensureInitialized();
-    const index = db.stores.findIndex((s) => s.id === id);
+    const stores = Array.isArray(db?.stores) ? db.stores : [];
+    const index = stores.findIndex((s) => s && s.id === id);
     if (index === -1) return null;
 
-    db.stores[index] = { ...db.stores[index], ...updates };
+    stores[index] = { ...stores[index], ...updates };
+    db.stores = stores;
     await this.writeDb(db);
-    return db.stores[index];
+    return stores[index];
   }
 
   // Products
   async getAllProducts(): Promise<Product[]> {
     const db = await this.ensureInitialized();
-    return db.products.filter((p) => !p.isArchived);
+    const products = Array.isArray(db?.products) ? db.products : [];
+    return products.filter((p) => p && !p.isArchived);
   }
 
   async getProductsByStoreId(storeId: string): Promise<Product[]> {
     const db = await this.ensureInitialized();
-    return db.products.filter((p) => p.storeId === storeId && !p.isArchived);
+    const products = Array.isArray(db?.products) ? db.products : [];
+    return products.filter((p) => p && p.storeId === storeId && !p.isArchived);
   }
 
   async getProductById(id: string): Promise<Product | null> {
     const db = await this.ensureInitialized();
-    return db.products.find((p) => p.id === id && !p.isArchived) || null;
+    const products = Array.isArray(db?.products) ? db.products : [];
+    return products.find((p) => p && p.id === id && !p.isArchived) || null;
   }
 
   async createProduct(productData: Omit<Product, 'id' | 'createdAt' | 'isArchived'>): Promise<Product> {
     const db = await this.ensureInitialized();
+    const products = Array.isArray(db?.products) ? db.products : [];
     const newProduct: Product = {
       ...productData,
       id: 'prod-' + Date.now(),
       isArchived: false,
       createdAt: new Date().toISOString(),
     };
-    db.products.push(newProduct);
+    products.push(newProduct);
+    db.products = products;
     await this.writeDb(db);
     return newProduct;
   }
 
   async updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
     const db = await this.ensureInitialized();
-    const index = db.products.findIndex((p) => p.id === id);
+    const products = Array.isArray(db?.products) ? db.products : [];
+    const index = products.findIndex((p) => p && p.id === id);
     if (index === -1) return null;
 
-    db.products[index] = { ...db.products[index], ...updates };
+    products[index] = { ...products[index], ...updates };
+    db.products = products;
     await this.writeDb(db);
-    return db.products[index];
+    return products[index];
   }
 
   async deleteProduct(id: string): Promise<boolean> {
     const db = await this.ensureInitialized();
-    const index = db.products.findIndex((p) => p.id === id);
+    const products = Array.isArray(db?.products) ? db.products : [];
+    const index = products.findIndex((p) => p && p.id === id);
     if (index === -1) return false;
 
-    db.products[index].isArchived = true;
+    products[index].isArchived = true;
+    db.products = products;
     await this.writeDb(db);
     return true;
   }
@@ -172,6 +200,7 @@ export class DatabaseManager {
   // Orders
   async createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'orderNumber' | 'status'>): Promise<Order> {
     const db = await this.ensureInitialized();
+    const orders = Array.isArray(db?.orders) ? db.orders : [];
     const orderNumber = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
     const newOrder: Order = {
       ...orderData,
@@ -180,35 +209,40 @@ export class DatabaseManager {
       status: 'AWAITING_SELLER_CONFIRMATION',
       createdAt: new Date().toISOString(),
     };
-    db.orders.unshift(newOrder);
+    orders.unshift(newOrder);
+    db.orders = orders;
     await this.writeDb(db);
     return newOrder;
   }
 
   async getAllOrders(): Promise<Order[]> {
     const db = await this.ensureInitialized();
-    return db.orders;
+    return Array.isArray(db?.orders) ? db.orders : [];
   }
 
   async getOrdersByStoreId(storeId: string): Promise<Order[]> {
     const db = await this.ensureInitialized();
-    return db.orders.filter((o) => o.storeId === storeId);
+    const orders = Array.isArray(db?.orders) ? db.orders : [];
+    return orders.filter((o) => o && o.storeId === storeId);
   }
 
   async getOrderById(id: string): Promise<Order | null> {
     const db = await this.ensureInitialized();
-    return db.orders.find((o) => o.id === id) || null;
+    const orders = Array.isArray(db?.orders) ? db.orders : [];
+    return orders.find((o) => o && (o.id === id || o.orderNumber === id)) || null;
   }
 
   async updateOrderStatus(id: string, status: OrderStatus, sellerNote?: string): Promise<Order | null> {
     const db = await this.ensureInitialized();
-    const index = db.orders.findIndex((o) => o.id === id);
+    const orders = Array.isArray(db?.orders) ? db.orders : [];
+    const index = orders.findIndex((o) => o && o.id === id);
     if (index === -1) return null;
 
-    db.orders[index].status = status;
-    if (sellerNote) db.orders[index].sellerNote = sellerNote;
+    orders[index].status = status;
+    if (sellerNote) orders[index].sellerNote = sellerNote;
+    db.orders = orders;
     await this.writeDb(db);
-    return db.orders[index];
+    return orders[index];
   }
 
   // Table Reservations
@@ -216,30 +250,35 @@ export class DatabaseManager {
     resData: Omit<Reservation, 'id' | 'createdAt' | 'status'>
   ): Promise<Reservation> {
     const db = await this.ensureInitialized();
+    const reservations = Array.isArray(db?.reservations) ? db.reservations : [];
     const newRes: Reservation = {
       ...resData,
       id: 'res-' + Date.now(),
       status: 'PENDING',
       createdAt: new Date().toISOString(),
     };
-    db.reservations.unshift(newRes);
+    reservations.unshift(newRes);
+    db.reservations = reservations;
     await this.writeDb(db);
     return newRes;
   }
 
   async getReservationsByStoreId(storeId: string): Promise<Reservation[]> {
     const db = await this.ensureInitialized();
-    return db.reservations.filter((r) => r.storeId === storeId);
+    const reservations = Array.isArray(db?.reservations) ? db.reservations : [];
+    return reservations.filter((r) => r && r.storeId === storeId);
   }
 
   async updateReservationStatus(id: string, status: ReservationStatus): Promise<Reservation | null> {
     const db = await this.ensureInitialized();
-    const index = db.reservations.findIndex((r) => r.id === id);
+    const reservations = Array.isArray(db?.reservations) ? db.reservations : [];
+    const index = reservations.findIndex((r) => r && r.id === id);
     if (index === -1) return null;
 
-    db.reservations[index].status = status;
+    reservations[index].status = status;
+    db.reservations = reservations;
     await this.writeDb(db);
-    return db.reservations[index];
+    return reservations[index];
   }
 }
 

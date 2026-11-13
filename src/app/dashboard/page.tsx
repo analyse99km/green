@@ -460,7 +460,7 @@ export default function SellerDashboardPage() {
           </div>
           <h1 className="text-2xl font-black text-neutral-900 dark:text-white">Seller Dashboard Login</h1>
           <p className="text-xs text-neutral-500">
-            Enter your Store #, Seller ID, and Password (verified against your private GitHub vault if connected).
+            Enter your Store #, Seller ID, and Password to access your merchant dashboard.
           </p>
         </div>
 
@@ -519,7 +519,7 @@ export default function SellerDashboardPage() {
 
           <div>
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-              GitHub PAT (Required if store uses Private GitHub Vault)
+              GitHub Access Token (If your store uses GitHub Storage)
             </label>
             <input
               type="password"
@@ -577,8 +577,8 @@ export default function SellerDashboardPage() {
 
         <div className="flex items-center gap-2">
           {selectedStore.githubVaultRepo && (
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-500/20 text-[10px] font-bold text-purple-700 dark:text-purple-300">
-              🔒 Private Vault: {selectedStore.githubVaultRepo}
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+              🔒 Encrypted Cloud Storage Connected
             </span>
           )}
 

@@ -22,7 +22,29 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyInfo> = {
 };
 
 /**
+ * Maps country code (ISO 2/3 letter) to currency.
+ * Default fallback is Swiss Franc (CHF) as requested.
+ */
+export function detectCurrencyFromCountry(countryCode?: string): string {
+  if (!countryCode) return 'CHF';
+  const code = countryCode.toUpperCase().trim();
+  if (code === 'CH' || code === 'CHE' || code === 'SWITZERLAND') return 'CHF';
+  if (code === 'IN' || code === 'IND' || code === 'INDIA') return 'INR';
+  if (code === 'US' || code === 'USA' || code === 'UNITED STATES') return 'USD';
+  if (code === 'GB' || code === 'GBR' || code === 'UNITED KINGDOM') return 'GBP';
+  if (code === 'JP' || code === 'JPN' || code === 'JAPAN') return 'JPY';
+  if (code === 'AU' || code === 'AUS' || code === 'AUSTRALIA') return 'AUD';
+  if (code === 'CA' || code === 'CAN' || code === 'CANADA') return 'CAD';
+  
+  const eurozone = ['DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'PT', 'IE', 'FI', 'GR', 'SK', 'SI', 'EE', 'LV', 'LT', 'LU', 'MT', 'CY', 'HR'];
+  if (eurozone.includes(code)) return 'EUR';
+  
+  return 'CHF'; // Default fallback is Swiss Franc
+}
+
+/**
  * Automatically detects default currency based on system locale or timezone.
+ * Defaults to Swiss Franc (CHF) if not resolved.
  */
 export function detectDefaultCurrency(): string {
   if (typeof window === 'undefined') return 'CHF';
@@ -36,18 +58,20 @@ export function detectDefaultCurrency(): string {
     if (timeZone.includes('Tokyo')) return 'JPY';
     if (timeZone.includes('Sydney') || timeZone.includes('Melbourne')) return 'AUD';
     if (timeZone.includes('Toronto') || timeZone.includes('Vancouver')) return 'CAD';
+    if (timeZone.includes('New_York') || timeZone.includes('Los_Angeles') || timeZone.includes('Chicago')) return 'USD';
     if (timeZone.includes('Europe')) return 'EUR';
 
     const locale = navigator.language || '';
     if (locale.includes('CH')) return 'CHF';
     if (locale.includes('en-IN') || locale.includes('hi')) return 'INR';
+    if (locale.includes('en-US')) return 'USD';
     if (locale.includes('en-GB')) return 'GBP';
     if (locale.includes('ja')) return 'JPY';
     if (locale.includes('de') || locale.includes('fr') || locale.includes('it') || locale.includes('es')) return 'EUR';
   } catch {
     // fallback
   }
-  return 'USD';
+  return 'CHF'; // Default fallback Swiss Franc
 }
 
 /**

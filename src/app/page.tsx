@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Store, Product } from '@/lib/types';
 import ProductCard from '@/components/ProductCard';
 import { calculateDistanceKm } from '@/lib/geo';
+import { detectUserLocation } from '@/lib/geoClient';
+import { useCurrency } from '@/components/CurrencyContext';
 import { 
   Search, 
   MapPin, 
@@ -35,6 +37,7 @@ const DiscoveryMap = dynamic(() => import('@/components/DiscoveryMap'), {
 });
 
 export default function HomePage() {
+  const { currency, setCurrency } = useCurrency();
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,21 +49,42 @@ export default function HomePage() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(true);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
 
-  // Fetch stores and products + auto-detect real browser GPS if permitted
+  // Auto-detect location & matching currency immediately on site open
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setLocationLabel(`GPS Active (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`);
-        },
-        () => {
-          // Keep Zurich default if user denies GPS
-        }
-      );
-    }
+    async function initLocation() {
+      try {
+        const loc = await detectUserLocation();
+        setUserLocation({ lat: loc.lat, lng: loc.lng });
+        setLocationLabel(
+          loc.city && loc.country
+            ? `${loc.city}, ${loc.country}`
+            : loc.source === 'GPS'
+            ? `GPS Active (${loc.lat.toFixed(3)}, ${loc.lng.toFixed(3)})`
+            : 'Zürich, Switzerland'
+        );
 
+        // Auto-switch currency according to detected location if user hasn't explicitly selected one
+        const userHasChosen = localStorage.getItem('green_user_currency');
+        if (!userHasChosen && loc.currency) {
+          setCurrency(loc.currency);
+        }
+
+        // If location could not be determined at all (default fallback), show location/currency selection popup
+        if (loc.source === 'DEFAULT' && !localStorage.getItem('green_location_confirmed')) {
+          setShowLocationPopup(true);
+        }
+      } catch {
+        // Fallback default
+        setShowLocationPopup(true);
+      }
+    }
+    initLocation();
+  }, [setCurrency]);
+
+  // Load stores and products
+  useEffect(() => {
     async function loadData() {
       setIsLoading(true);
       try {
@@ -71,12 +95,21 @@ export default function HomePage() {
         const storesData = await storesRes.json();
         const productsData = await productsRes.json();
 
-        if (storesData.success) setStores(storesData.stores);
-        if (productsData.success) {
-          setProducts(productsData.results.map((r: any) => r.product));
+        if (storesData && storesData.success && Array.isArray(storesData.stores)) {
+          setStores(storesData.stores);
+        } else {
+          setStores([]);
+        }
+
+        if (productsData && productsData.success && Array.isArray(productsData.results)) {
+          setProducts(productsData.results.map((r: any) => r.product).filter(Boolean));
+        } else {
+          setProducts([]);
         }
       } catch (err) {
         console.error('Failed to load marketplace data:', err);
+        setStores([]);
+        setProducts([]);
       } finally {
         setIsLoading(false);
       }
@@ -84,22 +117,23 @@ export default function HomePage() {
     loadData();
   }, []);
 
-  // Request real browser GPS location
-  const handleGetLocation = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserLocation({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-          setLocationLabel(`Real GPS (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`);
-        },
-        () => {
-          setUserLocation({ lat: 47.3769, lng: 8.5417 });
-          setLocationLabel('Zürich, Switzerland');
-        }
+  // Request/refresh real location (GPS + IP fallback)
+  const handleGetLocation = async () => {
+    setIsGeocoding(true);
+    try {
+      const loc = await detectUserLocation();
+      setUserLocation({ lat: loc.lat, lng: loc.lng });
+      setLocationLabel(
+        loc.city && loc.country
+          ? `${loc.city}, ${loc.country}`
+          : `${loc.source} (${loc.lat.toFixed(3)}, ${loc.lng.toFixed(3)})`
       );
+      if (loc.currency) setCurrency(loc.currency);
+    } catch {
+      setUserLocation({ lat: 47.3769, lng: 8.5417 });
+      setLocationLabel('Zürich, Switzerland');
+    } finally {
+      setIsGeocoding(false);
     }
   };
 
@@ -459,6 +493,78 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* Region & Currency Selection Popup (Appears if location not detected) */}
+      {showLocationPopup && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-lg font-bold">
+                🇨🇭
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-neutral-900 dark:text-white">
+                  Welcome to GREEN Marketplace
+                </h3>
+                <p className="text-[11px] text-neutral-500">
+                  Default currency: <strong className="text-emerald-600">Swiss Franc (CHF)</strong>
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-600 dark:text-neutral-400">
+              We couldn't automatically detect your exact location. Select your currency below or continue with Swiss Franc (CHF):
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { code: 'CHF', label: '🇨🇭 Swiss Franc (Default)', symbol: 'CHF' },
+                { code: 'EUR', label: '🇪🇺 Euro', symbol: '€' },
+                { code: 'USD', label: '🇺🇸 US Dollar', symbol: '$' },
+                { code: 'INR', label: '🇮🇳 Indian Rupee', symbol: '₹' },
+                { code: 'GBP', label: '🇬🇧 British Pound', symbol: '£' },
+                { code: 'JPY', label: '🇯🇵 Japanese Yen', symbol: '¥' },
+                { code: 'CAD', label: '🇨🇦 Canadian Dollar', symbol: 'C$' },
+                { code: 'AUD', label: '🇦🇺 Australian Dollar', symbol: 'A$' },
+              ].map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => {
+                    setCurrency(c.code);
+                    localStorage.setItem('green_location_confirmed', 'true');
+                    setShowLocationPopup(false);
+                  }}
+                  className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all ${
+                    currency === c.code
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20'
+                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 text-neutral-800 dark:text-neutral-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="truncate">{c.label}</span>
+                    <span className="font-mono text-[10px] opacity-60 ml-1">{c.symbol}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrency('CHF');
+                  localStorage.setItem('green_location_confirmed', 'true');
+                  setShowLocationPopup(false);
+                }}
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors"
+              >
+                Continue with Swiss Franc (CHF)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

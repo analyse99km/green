@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import { StorageProviderType } from '@/lib/types';
+import { detectUserLocation } from '@/lib/geoClient';
 import { 
   Store as StoreIcon, 
   MapPin, 
@@ -60,6 +61,7 @@ export default function CreateStorePage() {
 
   // Payment configuration
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrCodePreview, setQrCodePreview] = useState<string | null>(null);
   const [upiId, setUpiId] = useState('');
   const [cryptoBtc, setCryptoBtc] = useState('');
   const [cryptoEth, setCryptoEth] = useState('');
@@ -74,50 +76,39 @@ export default function CreateStorePage() {
   const [createdStore, setCreatedStore] = useState<any>(null);
   const [locationStatus, setLocationStatus] = useState<{ loading: boolean; message?: string }>({ loading: false });
 
-  // Geolocation helper with GPS + IP geolocation fallback
+  // Handle direct QR code photo/screenshot upload
+  const handleQrImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setQrCodeUrl(reader.result);
+        setQrCodePreview(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Universal Geolocation helper (GPS + IP Geolocation + Timezone Fallback)
   const handleDetectLocation = async () => {
     setLocationStatus({ loading: true, message: 'Detecting location...' });
-
-    const fallbackToIp = async () => {
-      try {
-        const res = await fetch('https://ipwho.is/');
-        const data = await res.json();
-        if (data && data.success && data.latitude && data.longitude) {
-          setLatitude(Number(data.latitude.toFixed(6)));
-          setLongitude(Number(data.longitude.toFixed(6)));
-          if (data.city || data.country) {
-            setAddress(`${data.city || ''}${data.city && data.country ? ', ' : ''}${data.country || ''}`);
-          }
-          setLocationStatus({ loading: false, message: `Detected via IP: ${data.city || 'Location updated'}` });
-          return;
-        }
-      } catch {}
-      setLocationStatus({ loading: false, message: 'Could not detect GPS/IP location. Enter address & click "Find".' });
-    };
-
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = Number(pos.coords.latitude.toFixed(6));
-          const lng = Number(pos.coords.longitude.toFixed(6));
-          setLatitude(lat);
-          setLongitude(lng);
-          setLocationStatus({ loading: false, message: `GPS detected (${lat}, ${lng})` });
-          try {
-            const rev = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-            const revData = await rev.json();
-            if (revData?.display_name) {
-              setAddress(revData.display_name.split(',').slice(0, 3).join(', '));
-            }
-          } catch {}
-        },
-        () => {
-          fallbackToIp();
-        },
-        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
-      );
-    } else {
-      await fallbackToIp();
+    try {
+      const loc = await detectUserLocation();
+      setLatitude(loc.lat);
+      setLongitude(loc.lng);
+      if (loc.city || loc.country) {
+        setAddress(`${loc.city || ''}${loc.city && loc.country ? ', ' : ''}${loc.country || ''}`);
+      }
+      setLocationStatus({
+        loading: false,
+        message: `Location set (${loc.source}): ${loc.city ? loc.city + ', ' : ''}${loc.country || 'Coordinates set'}`,
+      });
+    } catch {
+      setLocationStatus({
+        loading: false,
+        message: 'Could not detect location. Type your city in Store Address and click "Find".',
+      });
     }
   };
 
@@ -382,7 +373,7 @@ export default function CreateStorePage() {
                   required
                   value={sellerPassword}
                   onChange={(e) => setSellerPassword(e.target.value)}
-                  placeholder="Private password (saved to GitHub vault)"
+                  placeholder="Enter a secure merchant password"
                   className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900"
                 />
               </div>
@@ -755,7 +746,7 @@ export default function CreateStorePage() {
                   type="text"
                   value={githubRepo}
                   onChange={(e) => setGithubRepo(e.target.value)}
-                  placeholder="e.g. NEXUSPRIME1112 or NEXUSPRIME1112/store-media"
+                  placeholder="e.g. your-github-username or username/repo"
                   className="w-full text-xs px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 font-mono"
                 />
               </div>
@@ -833,17 +824,54 @@ export default function CreateStorePage() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Direct QR Code Image URL (Optional)
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                Direct QR Code (Twint / UPI / Bank / Wallet QR)
               </label>
+
+              {/* Upload QR Image Box */}
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 text-xs font-bold transition-all shadow-xs">
+                  <Upload className="w-4 h-4" />
+                  <span>Upload QR Code Image (Photo / Screenshot)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleQrImageUpload}
+                    className="hidden"
+                  />
+                </label>
+                <span className="text-[11px] text-neutral-400">or enter image URL below:</span>
+              </div>
+
               <input
-                type="url"
+                type="text"
                 value={qrCodeUrl}
-                onChange={(e) => setQrCodeUrl(e.target.value)}
-                placeholder="https://.../my-qr-code.png (leave blank to auto-generate from UPI)"
-                className="w-full text-xs px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950"
+                onChange={(e) => {
+                  setQrCodeUrl(e.target.value);
+                  setQrCodePreview(e.target.value);
+                }}
+                placeholder="https://.../my-qr-code.png or upload image above (or leave blank to auto-generate from UPI)"
+                className="w-full text-xs px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 font-mono"
               />
+
+              {qrCodePreview && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40">
+                  <img
+                    src={qrCodePreview}
+                    alt="Seller QR Preview"
+                    className="w-16 h-16 rounded-lg object-contain bg-white p-1 border border-neutral-200 shadow-xs"
+                  />
+                  <div>
+                    <div className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Direct QR Loaded Successfully
+                    </div>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">
+                      Buyers can scan this QR code directly during checkout to pay you with zero commission.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Crypto Wallets */}

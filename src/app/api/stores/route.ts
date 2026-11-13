@@ -17,10 +17,11 @@ export async function GET(request: NextRequest) {
     const lng = searchParams.get('lng') ? parseFloat(searchParams.get('lng')!) : null;
     const maxRadius = searchParams.get('radius') ? parseFloat(searchParams.get('radius')!) : null;
 
-    let stores = await db.getAllStores();
+    const rawStores = await db.getAllStores();
+    let stores = Array.isArray(rawStores) ? rawStores : [];
 
     // Hide suspended stores from general discovery unless specifically querying by slug or admin
-    stores = stores.filter((s) => !s.isSuspended);
+    stores = stores.filter((s) => s && !s.isSuspended);
 
     if (category && category !== 'ALL') {
       stores = stores.filter((s) => s.category === category);

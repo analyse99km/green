@@ -12,15 +12,19 @@ export async function GET(request: NextRequest) {
     const maxRadius = searchParams.get('radius') ? parseFloat(searchParams.get('radius')!) : null;
     const inStockOnly = searchParams.get('inStock') === 'true';
 
-    const [allProducts, allStores] = await Promise.all([
+    const [rawProducts, rawStores] = await Promise.all([
       db.getAllProducts(),
       db.getAllStores(),
     ]);
 
-    const storeMap = new Map(allStores.map((s) => [s.id, s]));
+    const allProducts = Array.isArray(rawProducts) ? rawProducts : [];
+    const allStores = Array.isArray(rawStores) ? rawStores : [];
+
+    const storeMap = new Map(allStores.filter(Boolean).map((s) => [s.id, s]));
 
     let results = allProducts
       .filter((p) => {
+        if (!p) return false;
         const store = storeMap.get(p.storeId);
         // Exclude suspended stores
         if (!store || store.isSuspended) return false;
