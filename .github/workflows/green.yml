@@ -146,6 +146,7 @@ jobs:
 
           echo "🌐 URL: $TUNNEL_URL"
           echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
+          echo "SESSION_STARTED=true" >> $GITHUB_ENV
 
           STATUS_JSON="{\"url\":\"$TUNNEL_URL\",\"ts\":$(date +%s),\"slot\":$SLOT}"
           CONTENT=$(echo "$STATUS_JSON" | base64 -w0)
@@ -228,7 +229,7 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          if [ -s data/database.json ]; then
+          if [ -s data/database.json ] && [ "$SESSION_STARTED" = "true" ]; then
             DB_B64=$(base64 -w0 data/database.json)
             M_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
               "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
@@ -241,14 +242,16 @@ jobs:
             echo "✅ Final DB backup written to master storage"
           fi
 
-          CONTENT=$(echo "{\"url\":\"offline\",\"ts\":0,\"slot\":$SLOT}" | base64 -w0)
-          SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
-          [ -n "$SHA" ] && curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
-            -d "{\"message\":\"status: offline [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
-          echo "🔴 Slot $SLOT marked offline"
+          if [ "$SESSION_STARTED" = "true" ]; then
+            CONTENT=$(echo "{\"url\":\"offline\",\"ts\":0,\"slot\":$SLOT}" | base64 -w0)
+            SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+            [ -n "$SHA" ] && curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+              -d "{\"message\":\"status: offline [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+            echo "🔴 Slot $SLOT marked offline"
+          fi
 
       # ── 10. Save cache & artifact ─────────────────────────────────────────
       - name: Save database cache
@@ -272,6 +275,10 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
+          if [ "$SESSION_STARTED" != "true" ]; then
+            echo "⚠️ Session did not start normally. Pausing 5 minutes before retrying to prevent quota exhaustion..."
+            sleep 300
+          fi
           curl -sf -X POST -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/dispatches" \
             -d '{"event_type":"green-start"}' && echo "♻️ Next run triggered"
