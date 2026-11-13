@@ -25,6 +25,7 @@ export default function DiscoveryMap({
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<{ [id: string]: any }>({});
   const circleRef = useRef<any>(null);
+  const userMarkerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -32,8 +33,8 @@ export default function DiscoveryMap({
     // Dynamically require Leaflet on client
     const L = require('leaflet');
 
-    // Default icon fix for Leaflet in bundlers
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    // Fix default Leaflet icon paths
+    delete L.Icon.Default.prototype._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
       iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -60,7 +61,12 @@ export default function DiscoveryMap({
 
     const map = mapInstanceRef.current;
 
-    // Clear existing markers
+    // Dynamically fly and center the map when userLocation arrives or changes
+    if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+      map.flyTo([userLocation.lat, userLocation.lng], 13, { duration: 1.2 });
+    }
+
+    // Clear existing store markers
     Object.values(markersRef.current).forEach((marker: any) => marker.remove());
     markersRef.current = {};
 
@@ -69,50 +75,60 @@ export default function DiscoveryMap({
       circleRef.current = null;
     }
 
-    // Add user marker if available
+    // Add or update pulsing user location marker
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+
     if (userLocation) {
       const userIcon = L.divIcon({
         className: 'user-pin-icon',
         html: `
-          <div style="position:relative; width:22px; height:22px;">
-            <div style="position:absolute; width:100%; height:100%; border-radius:50%; background:#10b981; opacity:0.3; animation:ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-            <div style="position:relative; width:16px; height:16px; margin:3px; border-radius:50%; background:#059669; border:2.5px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+          <div style="position:relative; width:26px; height:26px;">
+            <div style="position:absolute; width:100%; height:100%; border-radius:50%; background:#10b981; opacity:0.4; animation:ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <div style="position:relative; width:18px; height:18px; margin:4px; border-radius:50%; background:#059669; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.35);"></div>
           </div>
         `,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
       });
 
-      const userMarker = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
+      userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
         .addTo(map)
-        .bindPopup('<b>Your Current Location</b>');
-      markersRef.current['user-loc'] = userMarker;
+        .bindPopup('<b>📍 Your Current Location</b>');
     }
 
     // Add store markers
     stores.forEach((store) => {
-      const isSelected = store.id === selectedStoreId;
+      const isSelected = selectedStoreId === store.id;
+      const categoryEmoji =
+        store.category === 'RETAIL'
+          ? '🛍️'
+          : store.category === 'HOSPITALITY'
+          ? '🍽️'
+          : store.category === 'DIGITAL'
+          ? '💻'
+          : '⚡';
 
-      // Color coding per category
-      let badgeColor = '#10b981'; // Retail emerald
-      let categoryEmoji = '🛍️';
-      if (store.category === 'HOSPITALITY') {
-        badgeColor = '#f59e0b'; // Amber
-        categoryEmoji = '☕';
-      } else if (store.category === 'DIGITAL') {
-        badgeColor = '#8b5cf6'; // Violet
-        categoryEmoji = '⚡';
-      }
+      const badgeColor =
+        store.category === 'RETAIL'
+          ? '#059669'
+          : store.category === 'HOSPITALITY'
+          ? '#d97706'
+          : store.category === 'DIGITAL'
+          ? '#7c3aed'
+          : '#2563eb';
 
-      const storeNumberFormatted = `#${String(store.storeNumber).padStart(2, '0')}`;
+      const storeNumberFormatted = String(store.storeNumber || 1).padStart(3, '0');
 
       const customIcon = L.divIcon({
-        className: 'store-custom-marker',
+        className: 'custom-store-pin',
         html: `
           <div style="
-            background: ${store.isVerified ? 'linear-gradient(135deg, #059669, #10b981)' : badgeColor}; 
+            background: ${badgeColor}; 
             color: white; 
-            padding: 4px 9px; 
+            padding: 4px 10px; 
             border-radius: 14px; 
             font-size: 11px; 
             font-weight: 800; 
@@ -214,8 +230,8 @@ export default function DiscoveryMap({
       }
     });
 
-    // Auto-fit bounds if we have multiple stores
-    if (stores.length > 1 && !selectedStoreId) {
+    // Auto-fit bounds if we have multiple stores and no active selection
+    if (stores.length > 1 && !selectedStoreId && !userLocation) {
       const group = new L.featureGroup(Object.values(markersRef.current));
       map.fitBounds(group.getBounds().pad(0.15));
     }

@@ -43,8 +43,8 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'ALL' | 'LOCAL' | 'GLOBAL' | 'HOSPITALITY'>('ALL');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ lat: 47.3769, lng: 8.5417 });
-  const [locationLabel, setLocationLabel] = useState('Zürich, Switzerland (Default)');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLabel, setLocationLabel] = useState('Detecting location...');
   const [citySearch, setCitySearch] = useState('');
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | undefined>();
@@ -185,8 +185,8 @@ export default function HomePage() {
       return true;
     })
     .sort((a, b) => {
-      const distA = calculateDistanceKm(userLocation.lat, userLocation.lng, a.latitude, a.longitude);
-      const distB = calculateDistanceKm(userLocation.lat, userLocation.lng, b.latitude, b.longitude);
+      const distA = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, a.latitude, a.longitude) : 0;
+      const distB = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, b.latitude, b.longitude) : 0;
       return distA - distB;
     });
 
@@ -396,7 +396,7 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {filteredStores.map((s) => {
-              const distKm = calculateDistanceKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude);
+                const distKm = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude) : null;
               return (
                 <div
                   key={s.id}
