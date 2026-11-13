@@ -3,30 +3,33 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Green</title>
+  <title>Green Marketplace</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-    #bar{display:flex;align-items:center;gap:10px;padding:7px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0;z-index:10}
-    #led{width:9px;height:9px;border-radius:50%;background:#3fb950;box-shadow:0 0 7px #3fb950;transition:all .4s}
-    #led.amber{background:#d29922;box-shadow:0 0 7px #d29922}
-    #led.red{background:#f85149;box-shadow:0 0 7px #f85149}
-    #msg{font-size:13px;color:#8b949e;flex:1}
-    #slots{display:flex;gap:5px}
-    .slot{font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid #30363d;color:#8b949e;transition:all .3s;cursor:default}
-    .slot.on{border-color:#3fb950;color:#3fb950}
-    .slot.off{border-color:#f85149;color:#f85149;opacity:.4}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#06080c;color:#f0f6fc;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    #bar{display:flex;align-items:center;gap:12px;padding:9px 18px;background:#0d1117;border-bottom:1px solid #21262d;flex-shrink:0;z-index:10}
+    #led{width:10px;height:10px;border-radius:50%;background:#238636;box-shadow:0 0 8px #238636;transition:all .4s}
+    #led.amber{background:#d29922;box-shadow:0 0 8px #d29922}
+    #led.red{background:#f85149;box-shadow:0 0 8px #f85149}
+    #msg{font-size:13px;font-weight:500;color:#8b949e;flex:1}
+    #slots{display:flex;gap:6px}
+    .slot{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid #30363d;color:#8b949e;transition:all .3s}
+    .slot.on{border-color:#238636;color:#3fb950;background:rgba(35,134,54,0.15)}
+    .slot.off{border-color:#30363d;color:#6e7681;opacity:.45}
     .slot.check{border-color:#d29922;color:#d29922}
-    #splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-    .spin{width:40px;height:40px;border:3px solid #30363d;border-top-color:#3fb950;border-radius:50%;animation:s .75s linear infinite}
+    #splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(circle at center, #111822 0%, #06080c 100%)}
+    .spin{width:44px;height:44px;border:3px solid #21262d;border-top-color:#3fb950;border-radius:50%;animation:s .75s linear infinite}
     @keyframes s{to{transform:rotate(360deg)}}
-    #splash h1{font-size:32px;font-weight:700;letter-spacing:-1px}
-    #splash p{font-size:14px;color:#8b949e}
-    #frame{flex:1;border:none;display:none;width:100%;background:#fff}
-    #down{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:40px}
-    #down h2{font-size:22px}
-    #down p{font-size:14px;color:#8b949e;max-width:440px;line-height:1.6}
-    #down button{margin-top:4px;padding:9px 24px;background:#238636;border:none;border-radius:6px;color:#fff;font-size:14px;cursor:pointer;transition:background .2s}
+    #splash h1{font-size:32px;font-weight:700;letter-spacing:-0.8px;display:flex;align-items:center;gap:10px}
+    #splash p{font-size:14px;color:#8b949e;text-align:center;max-width:400px;line-height:1.5}
+    #frame{flex:1;border:none;display:none;width:100%;height:100%;background:#06080c}
+    #down{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:32px;background:radial-gradient(circle at center, #161b22 0%, #06080c 100%)}
+    .alert-icon{font-size:42px;margin-bottom:6px}
+    #down h2{font-size:24px;font-weight:700;color:#f0f6fc}
+    #down .badge{display:inline-block;padding:4px 14px;border-radius:12px;background:rgba(210,153,34,0.15);border:1px solid rgba(210,153,34,0.4);color:#d29922;font-size:12px;font-weight:600}
+    #down p{font-size:14px;color:#8b949e;max-width:480px;line-height:1.6}
+    #down .notice{font-size:13px;color:#3fb950;background:#0d1117;padding:12px 18px;border-radius:8px;border:1px solid #21262d;max-width:500px}
+    #down button{margin-top:6px;padding:10px 26px;background:#238636;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s}
     #down button:hover{background:#2ea043}
     #cds{font-weight:700;color:#3fb950}
   </style>
@@ -35,40 +38,42 @@
 
 <div id="bar">
   <div id="led" class="amber"></div>
-  <span id="msg">Connecting to Green...</span>
+  <span id="msg">Connecting to Green server network...</span>
   <div id="slots">
-    <span class="slot check" id="s1" title="pocomon9">1</span>
-    <span class="slot check" id="s2" title="sifihub">2</span>
-    <span class="slot check" id="s3" title="analyse99km">3</span>
+    <span class="slot check" id="s1" title="Cluster Slot 1">S1</span>
+    <span class="slot check" id="s2" title="Cluster Slot 2">S2</span>
+    <span class="slot check" id="s3" title="Cluster Slot 3">S3</span>
   </div>
 </div>
 
 <div id="splash">
   <div class="spin"></div>
   <h1>🟢 Green</h1>
-  <p id="smsg">Finding a live runner...</p>
+  <p id="smsg">Connecting to the nearest available secure cloud node...</p>
 </div>
 
 <iframe id="frame" src="about:blank" allow="*"></iframe>
 
 <div id="down">
-  <h2>⏳ All runners restarting</h2>
-  <p>Green automatically restarts every ~5.5 hours.<br>
-     All 3 slots are between sessions right now.<br>
-     Retrying in <span id="cds">20</span>s...</p>
-  <button onclick="check()">Retry Now</button>
+  <div class="alert-icon">⚡</div>
+  <span class="badge">Traffic Spike Alert</span>
+  <h2>Server Overload</h2>
+  <p>Pre-release is currently a minimal test version. We will launch the full high-capacity version soon!</p>
+  <div class="notice">
+    Restarting cloud node instances takes about <strong>5–10 minutes</strong>. Checking cluster automatically in <span id="cds">15</span>s...
+  </div>
+  <button onclick="check()">Refresh Now</button>
 </div>
 
 <script>
-// ── Status files — each account writes to their own repo ────────────────────
 const RUNNERS = [
   { label: "1", status: "https://raw.githubusercontent.com/pocomon9/green/main/status.json" },
   { label: "2", status: "https://raw.githubusercontent.com/sifihub/green/main/status.json" },
   { label: "3", status: "https://raw.githubusercontent.com/analyse99km/green/main/status.json" },
 ];
 const HEALTH    = "/api/health";
-const STALE_MS  = 25 * 60 * 1000;   // 25 min without heartbeat = stale
-const RECHECK   = 4  * 60 * 1000;   // re-check every 4 min
+const STALE_MS  = 30 * 60 * 1000;
+const RECHECK   = 4 * 60 * 1000;
 
 const led    = document.getElementById("led");
 const msg    = document.getElementById("msg");
@@ -94,7 +99,7 @@ async function fetchStatus(url) {
 async function ping(url) {
   if (!url || url === "offline") return false;
   try {
-    const r = await fetch(url + HEALTH, { signal: AbortSignal.timeout(5000) });
+    const r = await fetch(url + HEALTH, { signal: AbortSignal.timeout(6000) });
     return r.ok;
   } catch { return false; }
 }
@@ -102,20 +107,16 @@ async function ping(url) {
 async function check() {
   clearInterval(recheckId);
   clearInterval(cdId);
-  down.style.display  = "none";
-  frame.style.display = "none";
+  down.style.display   = "none";
+  frame.style.display  = "none";
   splash.style.display = "flex";
   setLed("amber");
-  msg.textContent  = "Checking runners...";
-  smsg.textContent = "Reading status files...";
+  msg.textContent  = "Locating active server node...";
+  smsg.textContent = "Routing request through Green cloud cluster...";
   RUNNERS.forEach((_,i) => slotEl(i).className = "slot check");
 
-  // Fetch all status files in parallel
   const statuses = await Promise.all(RUNNERS.map(r => fetchStatus(r.status)));
 
-  smsg.textContent = "Pinging live runners...";
-
-  // Ping URLs that look alive
   const now = Date.now();
   const results = await Promise.all(
     statuses.map(async (s, i) => {
@@ -134,20 +135,19 @@ async function check() {
 
   if (!live.length) {
     setLed("red");
-    msg.textContent = "All runners restarting — will retry...";
+    msg.textContent = "Server nodes currently recycling...";
     splash.style.display = "none";
     down.style.display   = "flex";
-    startCd(20);
+    startCd(15);
     return;
   }
 
-  // Pick random live runner
   const pick = live[Math.floor(Math.random() * live.length)];
   activeUrl = pick.url;
 
   setLed("");
-  msg.textContent = `🟢 Live · ${live.length}/3 runners online`;
-  smsg.textContent = "Loading Green...";
+  msg.textContent = `🟢 Online · Cluster Node Healthy (${live.length}/3)`;
+  smsg.textContent = "Rendering Green application...";
 
   frame.onload = () => {
     splash.style.display = "none";
@@ -161,7 +161,7 @@ async function check() {
 async function silentCheck() {
   if (activeUrl && await ping(activeUrl)) return;
   setLed("amber");
-  msg.textContent = "🟡 Rerouting...";
+  msg.textContent = "Switching to alternate cluster node...";
   check();
 }
 
