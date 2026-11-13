@@ -126,10 +126,24 @@ jobs:
           done
 
           cloudflared tunnel --url http://localhost:$PORT --logfile tunnel.log 2>&1 &
-          sleep 10
+          
+          echo "⏳ Waiting for Cloudflare tunnel URL to establish..."
+          TUNNEL_URL=""
+          for i in $(seq 1 30); do
+            TUNNEL_URL=$(grep -oP 'https://[a-z0-9\-]+\.trycloudflare\.com' tunnel.log 2>/dev/null | head -1 || true)
+            if [ -n "$TUNNEL_URL" ]; then
+              echo "✅ Tunnel connected!"
+              break
+            fi
+            sleep 2
+          done
 
-          TUNNEL_URL=$(grep -oP 'https://[a-z0-9\-]+\.trycloudflare\.com' tunnel.log | head -1)
-          [ -z "$TUNNEL_URL" ] && { echo "❌ No tunnel URL"; cat tunnel.log; exit 1; }
+          if [ -z "$TUNNEL_URL" ]; then
+            echo "❌ Cloudflare tunnel failed to allocate public URL. Log output:"
+            cat tunnel.log || true
+            exit 1
+          fi
+
           echo "🌐 URL: $TUNNEL_URL"
           echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
 
@@ -139,14 +153,20 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
             | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
 
+          echo "Publishing status.json to GitHub..."
           if [ -n "$SHA" ]; then
-            curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+            RESP=$(curl -s -w "\n%{http_code}" -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
-              -d "{\"message\":\"status: online [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+              -d "{\"message\":\"status: online [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}")
           else
-            curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+            RESP=$(curl -s -w "\n%{http_code}" -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
-              -d "{\"message\":\"status: online [skip ci]\",\"content\":\"$CONTENT\"}" > /dev/null
+              -d "{\"message\":\"status: online [skip ci]\",\"content\":\"$CONTENT\"}")
+          fi
+          HTTP_STATUS=$(echo "$RESP" | tail -n1)
+          echo "GitHub API response: HTTP $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+            echo "API Error response: $RESP"
           fi
           echo "✅ status.json published → slot $SLOT"
 
