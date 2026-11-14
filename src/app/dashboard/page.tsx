@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Store, Product, Order, Reservation } from '@/lib/types';
 import { useCurrency } from '@/components/CurrencyContext';
+import StoreShareModal from '@/components/StoreShareModal';
 import { 
   Store as StoreIcon, 
   Package, 
@@ -22,7 +23,8 @@ import {
   AlertCircle,
   Truck,
   CheckCircle2,
-  Copy
+  Copy,
+  QrCode
 } from 'lucide-react';
 
 export default function SellerDashboardPage() {
@@ -30,6 +32,7 @@ export default function SellerDashboardPage() {
 
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'ORDERS' | 'RESERVATIONS' | 'CUSTOMIZER' | 'DEV_API'>('PRODUCTS');
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -581,6 +584,15 @@ export default function SellerDashboardPage() {
               🔒 Encrypted Cloud Storage Connected
             </span>
           )}
+
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors"
+            title="Download QR Code and Print Table Tent Flyer"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Share Store QR</span>
+          </button>
 
           <a
             href={`/store/${selectedStore.slug}`}
@@ -1665,6 +1677,15 @@ export default function SellerDashboardPage() {
           )}
           </div>
         </div>
+      )}
+
+      {/* Store QR Share Modal */}
+      {isShareModalOpen && selectedStore && (
+        <StoreShareModal
+          store={selectedStore}
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+        />
       )}
     </div>
   );

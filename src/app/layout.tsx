@@ -4,6 +4,7 @@ import './globals.css';
 import { CurrencyProvider } from '@/components/CurrencyContext';
 import { CartProvider } from '@/components/CartContext';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import CartCheckoutModal from '@/components/CartCheckoutModal';
 
 import { Suspense } from 'react';
@@ -38,18 +39,7 @@ export default function RootLayout({
             </Suspense>
             <main className="flex-1 pb-16">{children}</main>
             <CartCheckoutModal />
-            <footer className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 py-8 px-4 text-center text-xs text-neutral-500">
-              <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-neutral-800 dark:text-neutral-200">GREEN Marketplace</span>
-                  <span>•</span>
-                  <span>Open Source & Self-Hosted</span>
-                </div>
-                <div>
-                  Zero platform fees • Direct P2P seller payments • All rights owned by store owners
-                </div>
-              </div>
-            </footer>
+            <Footer />
           </CartProvider>
         </CurrencyProvider>
       </body>

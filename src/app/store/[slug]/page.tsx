@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Store, Product } from '@/lib/types';
 import ProductCard from '@/components/ProductCard';
 import ReservationModal from '@/components/ReservationModal';
+import StoreShareModal from '@/components/StoreShareModal';
 import { 
   Store as StoreIcon, 
   MapPin, 
@@ -14,7 +15,8 @@ import {
   Truck, 
   Sparkles,
   AlertTriangle,
-  Clock
+  Clock,
+  QrCode
 } from 'lucide-react';
 
 function StorefrontContent() {
@@ -25,6 +27,7 @@ function StorefrontContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>('ALL');
   const [isReservationOpen, setIsReservationOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -176,16 +179,27 @@ function StorefrontContent() {
               </div>
             </div>
 
-            {/* Action buttons (Table reservation for hospitality) */}
-            {store.category === 'HOSPITALITY' && (
+            {/* Action buttons (Share Store QR & Table reservation) */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => setIsReservationOpen(true)}
-                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105 shrink-0"
+                onClick={() => setIsShareModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur-md font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105"
+                title="Share Storefront QR Code"
               >
-                <Calendar className="w-4 h-4" />
-                <span>Reserve a Table</span>
+                <QrCode className="w-4 h-4" />
+                <span>Share QR</span>
               </button>
-            )}
+
+              {store.category === 'HOSPITALITY' && (
+                <button
+                  onClick={() => setIsReservationOpen(true)}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Reserve a Table</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -242,6 +256,15 @@ function StorefrontContent() {
           store={store}
           isOpen={true}
           onClose={() => setIsReservationOpen(false)}
+        />
+      )}
+
+      {/* Store QR Share Modal */}
+      {isShareModalOpen && store && (
+        <StoreShareModal
+          store={store}
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
         />
       )}
     </div>

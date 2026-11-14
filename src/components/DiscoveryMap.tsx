@@ -1,17 +1,23 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
-import Link from 'next/link';
+import React, { useEffect, useRef, useState } from 'react';
 import { Store } from '@/lib/types';
 import { calculateDistanceKm } from '@/lib/geo';
+import { reverseGeocode, detectUserLocation } from '@/lib/geoClient';
+import { detectCurrencyFromCountry } from '@/lib/currency';
+import { Search, Crosshair, Layers, Check, MapPin, Loader2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+
+export type MapTileLayer = 'GOOGLE_ROAD' | 'GOOGLE_SATELLITE' | 'OSM';
 
 interface DiscoveryMapProps {
   stores: Store[];
   selectedStoreId?: string;
   onSelectStore?: (store: Store) => void;
   userLocation?: { lat: number; lng: number } | null;
+  onLocationChange?: (loc: { lat: number; lng: number; label?: string; currency?: string }) => void;
   height?: string;
+  allowPinDrop?: boolean;
 }
 
 export default function DiscoveryMap({
@@ -19,13 +25,113 @@ export default function DiscoveryMap({
   selectedStoreId,
   onSelectStore,
   userLocation,
+  onLocationChange,
   height = '540px',
+  allowPinDrop = true,
 }: DiscoveryMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
   const markersRef = useRef<{ [id: string]: any }>({});
-  const circleRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
+  const circleRef = useRef<any>(null);
+
+  const [activeLayer, setActiveLayer] = useState<MapTileLayer>('GOOGLE_ROAD');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [statusNotification, setStatusNotification] = useState<string | null>(null);
+
+  const showNotification = (msg: string) => {
+    setStatusNotification(msg);
+    setTimeout(() => setStatusNotification(null), 3500);
+  };
+
+  // Switch Tile Layer on the Leaflet instance
+  const applyTileLayer = (layer: MapTileLayer, L: any) => {
+    if (!mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    let newTileLayer: any;
+    if (layer === 'GOOGLE_ROAD') {
+      newTileLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 21,
+        attribution: '&copy; Google Maps',
+      });
+    } else if (layer === 'GOOGLE_SATELLITE') {
+      newTileLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 21,
+        attribution: '&copy; Google Maps Satellite Hybrid',
+      });
+    } else {
+      newTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      });
+    }
+
+    newTileLayer.addTo(map);
+    tileLayerRef.current = newTileLayer;
+  };
+
+  // Search any address / landmark and fly there
+  const handleSearchAddress = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim() || !mapInstanceRef.current) return;
+
+    setIsSearching(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const lat = Number(parseFloat(data[0].lat).toFixed(6));
+        const lng = Number(parseFloat(data[0].lon).toFixed(6));
+        const label = data[0].display_name ? data[0].display_name.split(',').slice(0, 3).join(', ') : searchQuery;
+
+        mapInstanceRef.current.flyTo([lat, lng], 15, { animate: true, duration: 1.2 });
+        showNotification(`Moved to: ${label}`);
+
+        if (onLocationChange) {
+          const rev = await reverseGeocode(lat, lng);
+          const curr = detectCurrencyFromCountry(rev.countryCode);
+          onLocationChange({ lat, lng, label, currency: curr });
+        }
+      } else {
+        showNotification('Address not found. Try a nearby street or landmark.');
+      }
+    } catch {
+      showNotification('Search failed. Check your internet connection.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Re-detect high accuracy GPS
+  const handleGPSDetect = async () => {
+    setIsLocating(true);
+    showNotification('Locking onto satellite GPS...');
+    try {
+      const loc = await detectUserLocation();
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.flyTo([loc.lat, loc.lng], 16, { animate: true, duration: 1.2 });
+      }
+      const label = loc.city && loc.country ? `${loc.city}, ${loc.country}` : `GPS (${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)})`;
+      showNotification(`📍 Locked (${loc.source}): ${label}`);
+      if (onLocationChange) {
+        onLocationChange({ lat: loc.lat, lng: loc.lng, label, currency: loc.currency });
+      }
+    } catch {
+      showNotification('GPS unavailable. Click anywhere on the map to pinpoint your location.');
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -33,8 +139,8 @@ export default function DiscoveryMap({
     // Dynamically require Leaflet on client
     const L = require('leaflet');
 
-    // Fix default Leaflet icon paths
-    delete L.Icon.Default.prototype._getIconUrl;
+    // Default icon fix for Leaflet in bundlers
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
       iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -46,25 +152,45 @@ export default function DiscoveryMap({
         ? [userLocation.lat, userLocation.lng]
         : stores.length > 0
         ? [stores[0].latitude, stores[0].longitude]
-        : [28.6139, 77.2090]; // Delhi fallback
+        : [47.3769, 8.5417]; // Zürich default fallback
 
-      const map = L.map(mapContainerRef.current).setView(defaultCenter, 12);
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: false,
+      }).setView(defaultCenter, 13);
 
-      // OpenStreetMap Tiles (100% Free & Open Source)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
+      // Add zoom control on bottom right
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      // Initial tile layer (Google Roadmap by default)
+      applyTileLayer(activeLayer, L);
+
+      // Map Click Listener: allow user to click anywhere to pinpoint exact building / doorstep
+      if (allowPinDrop) {
+        map.on('click', async (e: any) => {
+          const lat = Number(e.latlng.lat.toFixed(6));
+          const lng = Number(e.latlng.lng.toFixed(6));
+
+          showNotification(`Pin placed at: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          if (onLocationChange) {
+            const rev = await reverseGeocode(lat, lng);
+            const curr = detectCurrencyFromCountry(rev.countryCode);
+            onLocationChange({
+              lat,
+              lng,
+              label: rev.address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+              currency: curr,
+            });
+          }
+        });
+      }
 
       mapInstanceRef.current = map;
     }
 
     const map = mapInstanceRef.current;
 
-    // Dynamically fly and center the map when userLocation arrives or changes
-    if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
-      map.flyTo([userLocation.lat, userLocation.lng], 13, { duration: 1.2 });
-    }
+    // Reapply tile layer if activeLayer changes
+    applyTileLayer(activeLayer, L);
 
     // Clear existing store markers
     Object.values(markersRef.current).forEach((marker: any) => marker.remove());
@@ -75,60 +201,84 @@ export default function DiscoveryMap({
       circleRef.current = null;
     }
 
-    // Add or update pulsing user location marker
-    if (userMarkerRef.current) {
-      userMarkerRef.current.remove();
-      userMarkerRef.current = null;
-    }
-
+    // Update or create User Marker
     if (userLocation) {
-      const userIcon = L.divIcon({
-        className: 'user-pin-icon',
-        html: `
-          <div style="position:relative; width:26px; height:26px;">
-            <div style="position:absolute; width:100%; height:100%; border-radius:50%; background:#10b981; opacity:0.4; animation:ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-            <div style="position:relative; width:18px; height:18px; margin:4px; border-radius:50%; background:#059669; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.35);"></div>
-          </div>
-        `,
-        iconSize: [26, 26],
-        iconAnchor: [13, 13],
-      });
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
+      } else {
+        const userIcon = L.divIcon({
+          className: 'user-pin-icon',
+          html: `
+            <div style="position:relative; width:28px; height:28px;">
+              <div style="position:absolute; width:100%; height:100%; border-radius:50%; background:#059669; opacity:0.35; animation:ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+              <div style="position:relative; width:20px; height:20px; margin:4px; border-radius:50%; background:#059669; border:3px solid white; box-shadow:0 3px 8px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:900;">
+                📍
+              </div>
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+        });
 
-      userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
-        .addTo(map)
-        .bindPopup('<b>📍 Your Current Location</b>');
+        const userMarker = L.marker([userLocation.lat, userLocation.lng], {
+          icon: userIcon,
+          draggable: allowPinDrop,
+        }).addTo(map);
+
+        userMarker.bindPopup(`
+          <div style="font-family: inherit; font-size: 12px; font-weight: bold; padding: 2px;">
+            <span>📍 Your Current Location</span>
+            <div style="font-size: 10px; color: #6b7280; font-weight: normal; margin-top: 2px;">
+              ${allowPinDrop ? 'Click anywhere on map or drag pin to adjust exact doorstep.' : ''}
+            </div>
+          </div>
+        `);
+
+        if (allowPinDrop) {
+          userMarker.on('dragend', async (event: any) => {
+            const position = event.target.getLatLng();
+            const lat = Number(position.lat.toFixed(6));
+            const lng = Number(position.lng.toFixed(6));
+            if (onLocationChange) {
+              const rev = await reverseGeocode(lat, lng);
+              const curr = detectCurrencyFromCountry(rev.countryCode);
+              onLocationChange({
+                lat,
+                lng,
+                label: rev.address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+                currency: curr,
+              });
+            }
+          });
+        }
+
+        userMarkerRef.current = userMarker;
+      }
     }
 
     // Add store markers
     stores.forEach((store) => {
-      const isSelected = selectedStoreId === store.id;
-      const categoryEmoji =
-        store.category === 'RETAIL'
-          ? '🛍️'
-          : store.category === 'HOSPITALITY'
-          ? '🍽️'
-          : store.category === 'DIGITAL'
-          ? '💻'
-          : '⚡';
+      const isSelected = store.id === selectedStoreId;
 
-      const badgeColor =
-        store.category === 'RETAIL'
-          ? '#059669'
-          : store.category === 'HOSPITALITY'
-          ? '#d97706'
-          : store.category === 'DIGITAL'
-          ? '#7c3aed'
-          : '#2563eb';
+      let badgeColor = '#10b981'; // Retail emerald
+      let categoryEmoji = '🛍️';
+      if (store.category === 'HOSPITALITY') {
+        badgeColor = '#f59e0b'; // Amber
+        categoryEmoji = '☕';
+      } else if (store.category === 'DIGITAL') {
+        badgeColor = '#8b5cf6'; // Violet
+        categoryEmoji = '⚡';
+      }
 
-      const storeNumberFormatted = String(store.storeNumber || 1).padStart(3, '0');
+      const storeNumberFormatted = `#${String(store.storeNumber).padStart(2, '0')}`;
 
       const customIcon = L.divIcon({
-        className: 'custom-store-pin',
+        className: 'store-custom-marker',
         html: `
           <div style="
-            background: ${badgeColor}; 
+            background: ${store.isVerified ? 'linear-gradient(135deg, #059669, #10b981)' : badgeColor}; 
             color: white; 
-            padding: 4px 10px; 
+            padding: 4px 9px; 
             border-radius: 14px; 
             font-size: 11px; 
             font-weight: 800; 
@@ -230,17 +380,106 @@ export default function DiscoveryMap({
       }
     });
 
-    // Auto-fit bounds if we have multiple stores and no active selection
-    if (stores.length > 1 && !selectedStoreId && !userLocation) {
-      const group = new L.featureGroup(Object.values(markersRef.current));
-      map.fitBounds(group.getBounds().pad(0.15));
-    }
-  }, [stores, selectedStoreId, userLocation, onSelectStore]);
+  }, [stores, selectedStoreId, userLocation, activeLayer, onSelectStore, allowPinDrop, onLocationChange]);
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm">
+    <div className="relative w-full rounded-3xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm bg-neutral-100 dark:bg-neutral-900">
+      
+      {/* Top Floating Controls Bar */}
+      <div className="absolute top-3 inset-x-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        
+        {/* Search Bar (Address / Landmark) */}
+        <form
+          onSubmit={handleSearchAddress}
+          className="pointer-events-auto flex items-center bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-md p-1 pl-3 max-w-xs sm:max-w-sm w-full"
+        >
+          <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search street, area or landmark..."
+            className="w-full text-xs bg-transparent border-none outline-none px-2 text-neutral-900 dark:text-white placeholder:text-neutral-400"
+          />
+          <button
+            type="submit"
+            disabled={isSearching}
+            className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shrink-0 transition-colors disabled:opacity-50"
+          >
+            {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Go'}
+          </button>
+        </form>
+
+        {/* Map Layer Switcher & GPS Button */}
+        <div className="pointer-events-auto flex items-center gap-1.5 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md rounded-2xl border border-neutral-200 dark:border-neutral-700 p-1 shadow-md">
+          {/* Layer Switcher Pills */}
+          <button
+            type="button"
+            onClick={() => setActiveLayer('GOOGLE_ROAD')}
+            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 ${
+              activeLayer === 'GOOGLE_ROAD'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+            }`}
+            title="Google Maps Roadmap (High Detail Roads & Buildings)"
+          >
+            <span>🗺️</span>
+            <span className="hidden sm:inline">Google Road</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveLayer('GOOGLE_SATELLITE')}
+            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 ${
+              activeLayer === 'GOOGLE_SATELLITE'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+            }`}
+            title="Google Maps Satellite Hybrid (Satellite + Street Labels)"
+          >
+            <span>🛰️</span>
+            <span className="hidden sm:inline">Satellite</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveLayer('OSM')}
+            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 ${
+              activeLayer === 'OSM'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+            }`}
+            title="OpenStreetMap Open Source Layer"
+          >
+            <span>🌿</span>
+            <span className="hidden sm:inline">OSM</span>
+          </button>
+
+          {/* GPS Crosshair Trigger */}
+          <button
+            type="button"
+            onClick={handleGPSDetect}
+            disabled={isLocating}
+            className="p-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors"
+            title="Lock Exact GPS Location"
+          >
+            {isLocating ? <Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> : <Crosshair className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Floating Status Notification */}
+      {statusNotification && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-neutral-900/90 text-white text-[11px] font-semibold px-4 py-1.5 rounded-full shadow-lg backdrop-blur-md animate-fade-in border border-white/10 pointer-events-none">
+          {statusNotification}
+        </div>
+      )}
+
+      {/* Map Leaflet Canvas */}
       <div ref={mapContainerRef} style={{ height, width: '100%' }} className="z-0" />
-      <div className="absolute bottom-3 left-3 z-10 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 text-[11px] font-medium text-neutral-600 dark:text-neutral-400 flex items-center gap-3">
+
+      {/* Bottom Information Legend */}
+      <div className="absolute bottom-3 left-3 z-10 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[11px] font-medium text-neutral-600 dark:text-neutral-400 flex flex-wrap items-center gap-3 shadow-xs">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Retail
         </span>
@@ -249,6 +488,9 @@ export default function DiscoveryMap({
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Tech & Digital
+        </span>
+        <span className="text-[10px] text-neutral-400 border-l pl-2 border-neutral-200 dark:border-neutral-700">
+          💡 Click anywhere on map to pinpoint exact location
         </span>
       </div>
     </div>

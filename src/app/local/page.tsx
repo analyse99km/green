@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { Store, Product } from '@/lib/types';
 import ProductCard from '@/components/ProductCard';
 import { calculateDistanceKm } from '@/lib/geo';
-import { detectUserLocation } from '@/lib/geoClient';
 import { ShoppingBag, MapPin, SlidersHorizontal, Store as StoreIcon, ShieldCheck } from 'lucide-react';
 
 const DiscoveryMap = dynamic(() => import('@/components/DiscoveryMap'), {
@@ -17,19 +16,17 @@ export default function LocalBuyPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [maxRadiusKm, setMaxRadiusKm] = useState<number>(15);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null); // Default Zurich center
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ lat: 47.3769, lng: 8.5417 }); // Default Zurich center
   const [allowPickupOnly, setAllowPickupOnly] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Auto-detect real user location
-    async function initLoc() {
-      try {
-        const loc = await detectUserLocation();
-        setUserLocation({ lat: loc.lat, lng: loc.lng });
-      } catch {}
+    // Attempt browser geolocation
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      });
     }
-    initLoc();
 
     async function load() {
       try {
@@ -52,7 +49,7 @@ export default function LocalBuyPage() {
 
   // Filter local stores within radius or with pickup
   const localStores = stores.filter((s) => {
-    const dist = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude) : 0;
+    const dist = calculateDistanceKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude);
     const withinRadius = dist <= Math.min(s.deliveryRadiusKm, maxRadiusKm);
     if (allowPickupOnly) return s.allowSelfPickup;
     return withinRadius || s.allowSelfPickup;
@@ -62,7 +59,7 @@ export default function LocalBuyPage() {
   const localProducts = products.filter((p) => {
     const store = storeMap.get(p.storeId);
     if (!store) return false;
-    const dist = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, store.latitude, store.longitude) : 0;
+    const dist = calculateDistanceKm(userLocation.lat, userLocation.lng, store.latitude, store.longitude);
     const effectiveRadius = p.customDeliveryRadiusKm ?? store.deliveryRadiusKm;
     if (allowPickupOnly) return store.allowSelfPickup;
     return dist <= Math.min(effectiveRadius, maxRadiusKm) || store.allowSelfPickup;
@@ -125,7 +122,7 @@ export default function LocalBuyPage() {
             Local Items Deliverable to You ({localProducts.length})
           </h2>
           <span className="text-xs text-neutral-500">
-            Based on current coordinates ({userLocation ? `${userLocation.lat.toFixed(2)}, ${userLocation.lng.toFixed(2)}` : 'Detecting...'})
+            Based on current coordinates ({userLocation.lat.toFixed(2)}, {userLocation.lng.toFixed(2)})
           </span>
         </div>
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import { StorageProviderType } from '@/lib/types';
 import { detectUserLocation } from '@/lib/geoClient';
+import StoreShareModal from '@/components/StoreShareModal';
 import { 
   Store as StoreIcon, 
   MapPin, 
@@ -37,6 +38,7 @@ export default function CreateStorePage() {
   const [deliveryType, setDeliveryType] = useState<'LOCAL' | 'GLOBAL' | 'BOTH'>('LOCAL');
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState<number>(10);
   const [allowSelfPickup, setAllowSelfPickup] = useState<boolean>(true);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Storage configuration
   const [storageProvider, setStorageProvider] = useState<StorageProviderType>('GITHUB');
@@ -977,6 +979,14 @@ export default function CreateStorePage() {
             >
               View Live Storefront →
             </a>
+            <button
+              type="button"
+              onClick={() => setIsShareModalOpen(true)}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-xs shadow-xs flex items-center justify-center gap-2"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Get Store QR & Flyer</span>
+            </button>
             <a
               href="/dashboard"
               className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-bold"
@@ -985,6 +995,15 @@ export default function CreateStorePage() {
             </a>
           </div>
         </div>
+      )}
+
+      {/* Store QR Share Modal */}
+      {isShareModalOpen && createdStore && (
+        <StoreShareModal
+          store={createdStore}
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+        />
       )}
     </div>
   );

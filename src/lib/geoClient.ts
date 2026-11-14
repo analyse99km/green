@@ -18,13 +18,9 @@ const TIMEZONE_COORDS: Record<string, { lat: number; lng: number; city: string; 
   'Europe/Rome': { lat: 41.9028, lng: 12.4964, city: 'Rome', country: 'Italy', code: 'IT' },
   'Europe/Madrid': { lat: 40.4168, lng: -3.7038, city: 'Madrid', country: 'Spain', code: 'ES' },
   'Europe/Vienna': { lat: 48.2082, lng: 16.3738, city: 'Vienna', country: 'Austria', code: 'AT' },
-  'Europe/Amsterdam': { lat: 52.3676, lng: 4.9041, city: 'Amsterdam', country: 'Netherlands', code: 'NL' },
-  'Europe/Brussels': { lat: 50.8503, lng: 4.3517, city: 'Brussels', country: 'Belgium', code: 'BE' },
-  'Asia/Kolkata': { lat: 28.6139, lng: 77.2090, city: 'New Delhi', country: 'India', code: 'IN' },
+  'Asia/Kolkata': { lat: 19.0760, lng: 72.8777, city: 'Mumbai', country: 'India', code: 'IN' },
   'Asia/Calcutta': { lat: 28.6139, lng: 77.2090, city: 'New Delhi', country: 'India', code: 'IN' },
   'Asia/Tokyo': { lat: 35.6762, lng: 139.6503, city: 'Tokyo', country: 'Japan', code: 'JP' },
-  'Asia/Dubai': { lat: 25.2048, lng: 55.2708, city: 'Dubai', country: 'United Arab Emirates', code: 'AE' },
-  'Asia/Singapore': { lat: 1.3521, lng: 103.8198, city: 'Singapore', country: 'Singapore', code: 'SG' },
   'America/New_York': { lat: 40.7128, lng: -74.0060, city: 'New York', country: 'United States', code: 'US' },
   'America/Los_Angeles': { lat: 34.0522, lng: -118.2437, city: 'Los Angeles', country: 'United States', code: 'US' },
   'America/Chicago': { lat: 41.8781, lng: -87.6298, city: 'Chicago', country: 'United States', code: 'US' },
@@ -33,60 +29,113 @@ const TIMEZONE_COORDS: Record<string, { lat: number; lng: number; city: string; 
   'Australia/Melbourne': { lat: -37.8136, lng: 144.9631, city: 'Melbourne', country: 'Australia', code: 'AU' },
 };
 
-/**
- * Universally detects user's location & matching currency:
- * 1. Checks localStorage for any cached real user location
- * 2. Tries IP Geolocation first (instant, works seamlessly inside iframes without permission prompts)
- * 3. Tries Browser GPS
- * 4. Falls back to System TimeZone mapping (bypasses all ad-blockers)
- * 5. Ultimate Default: Zürich, Switzerland · Swiss Franc (CHF)
- */
-export async function detectUserLocation(): Promise<DetectedLocationResult> {
-  // 1. Check if user already had a saved detected location in this session
-  if (typeof window !== 'undefined') {
-    try {
-      const saved = sessionStorage.getItem('green_detected_location');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.lat && parsed.lng && parsed.countryCode) {
-          return parsed as DetectedLocationResult;
-        }
-      }
-    } catch {}
-  }
-
-  // 2. Try fast IP Geolocation first (Works 100% inside iframes, Cloudflare tunnels, mobile, and desktop)
+export async function reverseGeocode(lat: number, lng: number): Promise<{ address: string; city: string; country: string; countryCode: string }> {
   try {
-    const res = await fetch('https://ipwho.is/', { cache: 'no-store' });
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
     if (res.ok) {
       const data = await res.json();
-      if (data && data.success && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-        const countryCode = data.country_code || 'IN';
-        const result: DetectedLocationResult = {
+      const addr = data.address || {};
+      const street = addr.road || addr.pedestrian || addr.suburb || '';
+      const houseNumber = addr.house_number ? `${addr.house_number} ` : '';
+      const city = addr.city || addr.town || addr.village || addr.municipality || '';
+      const country = addr.country || '';
+      const countryCode = (addr.country_code || 'ch').toUpperCase();
+      const fullDisplay = data.display_name ? data.display_name.split(',').slice(0, 3).join(', ') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      return {
+        address: fullDisplay,
+        city,
+        country,
+        countryCode,
+      };
+    }
+  } catch {}
+  return {
+    address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    city: '',
+    country: '',
+    countryCode: 'CH',
+  };
+}
+
+/**
+ * Universally detects user's location & matching currency:
+ * 1. Tries Browser GPS with 12s high-accuracy lock
+ * 2. Falls back to IP Geolocation (ipwho.is or ipapi.co)
+ * 3. Falls back to System TimeZone mapping (bypasses all ad-blockers)
+ * 4. Default fallback: Swiss Franc (CHF)
+ */
+export async function detectUserLocation(): Promise<DetectedLocationResult> {
+  // 1. Try Browser GPS (High Accuracy Satellite / WiFi)
+  const gpsPromise = new Promise<DetectedLocationResult>((resolve, reject) => {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+      return reject(new Error('Geolocation not available'));
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        try {
+          const rev = await reverseGeocode(lat, lng);
+          resolve({
+            lat,
+            lng,
+            city: rev.city,
+            country: rev.country,
+            countryCode: rev.countryCode,
+            source: 'GPS',
+            currency: detectCurrencyFromCountry(rev.countryCode),
+          });
+        } catch {
+          resolve({
+            lat,
+            lng,
+            source: 'GPS',
+            currency: 'CHF',
+          });
+        }
+      },
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+  });
+
+  try {
+    return await gpsPromise;
+  } catch {
+    // GPS failed or permissions blocked (e.g. inside iframe)
+  }
+
+  // 2. Try IP Geolocation (ipwho.is)
+  try {
+    const res = await fetch('https://ipwho.is/');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.latitude && data.longitude) {
+        const countryCode = data.country_code || 'CH';
+        return {
           lat: Number(data.latitude.toFixed(6)),
           lng: Number(data.longitude.toFixed(6)),
-          city: data.city || data.region || '',
+          city: data.city || '',
           country: data.country || '',
           countryCode,
           source: 'IP',
           currency: detectCurrencyFromCountry(countryCode),
         };
-        try { sessionStorage.setItem('green_detected_location', JSON.stringify(result)); } catch {}
-        return result;
       }
     }
   } catch {
-    // ipwho.is failed or ad-blocked
+    // ipwho.is failed or blocked by ad-blocker
   }
 
-  // Fallback IP provider (ipapi.co)
+  // 3. Try IP Geolocation fallback (ipapi.co)
   try {
-    const res = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+    const res = await fetch('https://ipapi.co/json/');
     if (res.ok) {
       const data = await res.json();
-      if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
-        const countryCode = data.country_code || 'IN';
-        const result: DetectedLocationResult = {
+      if (data && data.latitude && data.longitude) {
+        const countryCode = data.country_code || 'CH';
+        return {
           lat: Number(data.latitude.toFixed(6)),
           lng: Number(data.longitude.toFixed(6)),
           city: data.city || '',
@@ -95,65 +144,13 @@ export async function detectUserLocation(): Promise<DetectedLocationResult> {
           source: 'IP',
           currency: detectCurrencyFromCountry(countryCode),
         };
-        try { sessionStorage.setItem('green_detected_location', JSON.stringify(result)); } catch {}
-        return result;
       }
     }
   } catch {
-    // ipapi.co blocked
+    // ipapi blocked
   }
 
-  // 3. Try Browser GPS (if user allows GPS)
-  try {
-    const gpsRes = await new Promise<DetectedLocationResult>((resolve, reject) => {
-      if (typeof window === 'undefined' || !('geolocation' in navigator)) {
-        return reject(new Error('Geolocation not available'));
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = Number(pos.coords.latitude.toFixed(6));
-          const lng = Number(pos.coords.longitude.toFixed(6));
-          let countryCode = '';
-          let city = '';
-          let country = '';
-
-          try {
-            const rev = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-            );
-            if (rev.ok) {
-              const data = await rev.json();
-              countryCode = data.address?.country_code?.toUpperCase() || '';
-              city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
-              country = data.address?.country || '';
-            }
-          } catch {}
-
-          const resolvedCountryCode = countryCode || detectCountryFromTimezone();
-          const result: DetectedLocationResult = {
-            lat,
-            lng,
-            city,
-            country,
-            countryCode: resolvedCountryCode,
-            source: 'GPS',
-            currency: detectCurrencyFromCountry(resolvedCountryCode),
-          };
-          try { sessionStorage.setItem('green_detected_location', JSON.stringify(result)); } catch {}
-          resolve(result);
-        },
-        (err) => reject(err),
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
-      );
-    });
-
-    return gpsRes;
-  } catch {
-    // GPS rejected or timed out
-  }
-
-  // 4. TimeZone Mapping fallback (always succeeds on all devices without any network access)
+  // 4. TimeZone Mapping fallback (always succeeds on all modern browsers without network)
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz && TIMEZONE_COORDS[tz]) {
@@ -168,7 +165,9 @@ export async function detectUserLocation(): Promise<DetectedLocationResult> {
         currency: detectCurrencyFromCountry(info.code),
       };
     }
-  } catch {}
+  } catch {
+    // Timezone check failed
+  }
 
   // 5. Ultimate Default: Zürich, Switzerland · Swiss Franc (CHF)
   return {
@@ -180,20 +179,4 @@ export async function detectUserLocation(): Promise<DetectedLocationResult> {
     source: 'DEFAULT',
     currency: 'CHF',
   };
-}
-
-function detectCountryFromTimezone(): string {
-  if (typeof window === 'undefined') return 'CH';
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    if (tz.includes('Calcutta') || tz.includes('Kolkata') || tz.includes('India')) return 'IN';
-    if (tz.includes('Zurich') || tz.includes('Switzerland')) return 'CH';
-    if (tz.includes('London')) return 'GB';
-    if (tz.includes('Tokyo')) return 'JP';
-    if (tz.includes('Sydney') || tz.includes('Melbourne')) return 'AU';
-    if (tz.includes('Toronto') || tz.includes('Vancouver')) return 'CA';
-    if (tz.includes('New_York') || tz.includes('Los_Angeles') || tz.includes('Chicago')) return 'US';
-    if (tz.includes('Europe')) return 'DE';
-  } catch {}
-  return 'CH';
 }

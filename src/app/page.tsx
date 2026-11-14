@@ -43,8 +43,8 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'ALL' | 'LOCAL' | 'GLOBAL' | 'HOSPITALITY'>('ALL');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationLabel, setLocationLabel] = useState('Detecting location...');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ lat: 47.3769, lng: 8.5417 });
+  const [locationLabel, setLocationLabel] = useState('Zürich, Switzerland (Default)');
   const [citySearch, setCitySearch] = useState('');
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | undefined>();
@@ -185,8 +185,8 @@ export default function HomePage() {
       return true;
     })
     .sort((a, b) => {
-      const distA = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, a.latitude, a.longitude) : 0;
-      const distB = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, b.latitude, b.longitude) : 0;
+      const distA = calculateDistanceKm(userLocation.lat, userLocation.lng, a.latitude, a.longitude);
+      const distB = calculateDistanceKm(userLocation.lat, userLocation.lng, b.latitude, b.longitude);
       return distA - distB;
     });
 
@@ -360,6 +360,11 @@ export default function HomePage() {
           selectedStoreId={selectedStoreId}
           onSelectStore={(s) => setSelectedStoreId(s.id)}
           userLocation={userLocation}
+          onLocationChange={(loc) => {
+            setUserLocation({ lat: loc.lat, lng: loc.lng });
+            if (loc.label) setLocationLabel(loc.label);
+            if (loc.currency) setCurrency(loc.currency);
+          }}
           height="460px"
         />
       </section>
@@ -396,7 +401,7 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {filteredStores.map((s) => {
-                const distKm = userLocation ? calculateDistanceKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude) : null;
+              const distKm = calculateDistanceKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude);
               return (
                 <div
                   key={s.id}
