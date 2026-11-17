@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../GameContext';
 import { SoundEngine } from '../gameAudio';
 import {
@@ -17,8 +17,6 @@ import {
   Info,
   Check,
   X,
-  Volume2,
-  VolumeX,
 } from 'lucide-react';
 
 type CasinoGameId =
@@ -75,7 +73,7 @@ const RED_NUMBERS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 
 
 // ── PLAYING CARDS ─────────────────────────────────────────────────────────────
 interface Card {
-  value: number; // 2..14 (Ace = 14 or 11 in blackjack)
+  value: number; // 2..14 (Ace = 14)
   rank: string;
   suit: '♠' | '♥' | '♦' | '♣';
   color: 'red' | 'black';
@@ -98,7 +96,6 @@ function generateRandomCard(): Card {
   };
 }
 
-// Calculate blackjack hand total with Aces
 function calculateBlackjackTotal(cards: Card[]): number {
   let total = 0;
   let aces = 0;
@@ -120,7 +117,7 @@ function calculateBlackjackTotal(cards: Card[]): number {
 }
 
 export default function TornCasinoView() {
-  const { player, playCasinoGame } = useGame();
+  const { player, deductMoney, awardMoney } = useGame();
   const [selectedGame, setSelectedGame] = useState<CasinoGameId>('SLOTS');
   const [selectedChip, setSelectedChip] = useState<number>(10);
   const [showPayTable, setShowPayTable] = useState(false);
@@ -158,32 +155,44 @@ export default function TornCasinoView() {
 
   const handleSpinSlots = () => {
     if (selectedChip > player.money) {
-      setSlotsResultMsg('Insufficient pocket GREEN for this spin.');
+      setSlotsResultMsg('Insufficient pocket GREEN.');
       SoundEngine.playLoss(player.soundEnabled);
       return;
     }
     if (isSpinningSlots) return;
 
+    // 1. Deduct immediately
+    const success = deductMoney(selectedChip, 'Slots Spin');
+    if (!success) {
+      setSlotsResultMsg('Insufficient pocket GREEN.');
+      return;
+    }
+
     setIsSpinningSlots(true);
     setSlotsResultMsg(null);
     setSlotsWinLine(false);
 
-    // Rapid mechanical ticking sound during spinning
-    let tickCount = 0;
+    // Ticking audio during spin
+    let ticks = 0;
     const tickInterval = setInterval(() => {
       SoundEngine.playReelTick(player.soundEnabled);
-      tickCount++;
-      if (tickCount > 12) clearInterval(tickInterval);
+      ticks++;
+      if (ticks > 12) clearInterval(tickInterval);
     }, 90);
 
-    // Call game engine
-    const result = playCasinoGame('SLOTS', selectedChip);
+    // Dynamic house edge & beginner's luck
+    let winChance = 0.40;
+    if (selectedChip <= 50) winChance += 0.18; // Small bet dopamine boost
+    else if (selectedChip >= 1000) winChance -= 0.16; // Whale bet steep house advantage
+    if (isBeginnerLuckActive) winChance += 0.24;
 
-    // Pick target symbols based on outcome
+    const willWin = Math.random() < winChance;
     let finalReels: [SlotSymbol, SlotSymbol, SlotSymbol];
-    if (result.won) {
-      const luckySym = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
-      finalReels = [luckySym, luckySym, luckySym];
+    let winningSym: SlotSymbol | null = null;
+
+    if (willWin) {
+      winningSym = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+      finalReels = [winningSym, winningSym, winningSym];
     } else {
       const s1 = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
       let s2 = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
@@ -194,32 +203,37 @@ export default function TornCasinoView() {
       finalReels = [s1, s2, s3];
     }
 
-    // Sequentially stop reels
+    // Stop reels one by one
     setTimeout(() => {
       setReels((prev) => [finalReels[0], prev[1], prev[2]]);
       SoundEngine.playReelTick(player.soundEnabled);
-    }, 500);
+    }, 450);
 
     setTimeout(() => {
       setReels((prev) => [finalReels[0], finalReels[1], prev[2]]);
       SoundEngine.playReelTick(player.soundEnabled);
-    }, 900);
+    }, 850);
 
     setTimeout(() => {
       setReels(finalReels);
       setIsSpinningSlots(false);
-      setSlotsResultMsg(result.message);
-      if (result.won) {
+
+      if (willWin && winningSym) {
+        const payout = Math.round(selectedChip * winningSym.multiplier);
+        awardMoney(payout, `Slots 3x ${winningSym.name}`);
         setSlotsWinLine(true);
-        if (finalReels[0].id === 'green') {
+        if (winningSym.id === 'green') {
           SoundEngine.playJackpot(player.soundEnabled);
+          setSlotsResultMsg(`★ METROPOLIS JACKPOT! ★ 3x 🌿 won +🌿 ${payout.toLocaleString()} GREEN!`);
         } else {
           SoundEngine.playVictory(player.soundEnabled);
+          setSlotsResultMsg(`🎉 WIN! 3x ${winningSym.icon} ${winningSym.name}! Payout: +🌿 ${payout.toLocaleString()} GREEN`);
         }
       } else {
         SoundEngine.playLoss(player.soundEnabled);
+        setSlotsResultMsg(`No matching line. House takes 🌿 ${selectedChip.toLocaleString()} GREEN.`);
       }
-    }, 1300);
+    }, 1250);
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -229,7 +243,6 @@ export default function TornCasinoView() {
   const [isSpinningRoulette, setIsSpinningRoulette] = useState(false);
   const [rouletteWinningPocket, setRouletteWinningPocket] = useState<RoulettePocket | null>(null);
   const [rouletteWheelDeg, setRouletteWheelDeg] = useState(0);
-  const [rouletteBallDeg, setRouletteBallDeg] = useState(0);
   const [rouletteResultMsg, setRouletteResultMsg] = useState<string | null>(null);
 
   const totalRouletteBet = Object.values(rouletteBets).reduce((acc, v) => acc + v, 0);
@@ -237,7 +250,7 @@ export default function TornCasinoView() {
   const placeRouletteBet = (spot: string) => {
     if (isSpinningRoulette) return;
     if (totalRouletteBet + selectedChip > player.money) {
-      setRouletteResultMsg('Insufficient pocket GREEN for this bet.');
+      setRouletteResultMsg('Insufficient pocket GREEN for this chip.');
       return;
     }
     setRouletteBets((prev) => ({
@@ -265,45 +278,60 @@ export default function TornCasinoView() {
     }
     if (isSpinningRoulette) return;
 
+    // Deduct total bet immediately
+    const ok = deductMoney(totalRouletteBet, 'Roulette Bet');
+    if (!ok) {
+      setRouletteResultMsg('Insufficient pocket GREEN.');
+      return;
+    }
+
     setIsSpinningRoulette(true);
     setRouletteResultMsg(null);
-
-    // Call game engine
-    const result = playCasinoGame('ROULETTE', totalRouletteBet);
 
     // Pick winning pocket
     const winPocketIndex = Math.floor(Math.random() * ROULETTE_POCKETS.length);
     const winPocket = ROULETTE_POCKETS[winPocketIndex];
 
-    // Rhythmic deceleration ticking sound for wheel
-    let wheelTicks = 0;
+    // Wheel ticking peg sound
+    let ticks = 0;
     const tickTimer = setInterval(() => {
       SoundEngine.playWheelTick(player.soundEnabled);
-      wheelTicks++;
-      if (wheelTicks > 15) clearInterval(tickTimer);
-    }, 120);
+      ticks++;
+      if (ticks > 14) clearInterval(tickTimer);
+    }, 130);
 
-    // Rotate wheel and ball
     const extraRotations = 1440 + winPocketIndex * (360 / ROULETTE_POCKETS.length);
     setRouletteWheelDeg((prev) => prev + extraRotations);
-    setRouletteBallDeg((prev) => prev - (extraRotations + 180));
 
     setTimeout(() => {
       setRouletteWinningPocket(winPocket);
       setIsSpinningRoulette(false);
       SoundEngine.playBallDrop(player.soundEnabled);
 
-      if (result.won) {
+      // Evaluate actual winnings based strictly on table bets
+      let totalWon = 0;
+      const num = winPocket.num;
+      const col = winPocket.color;
+
+      if (rouletteBets[`${num}`]) totalWon += rouletteBets[`${num}`] * 36;
+      if (col === 'red' && rouletteBets['RED']) totalWon += rouletteBets['RED'] * 2;
+      if (col === 'black' && rouletteBets['BLACK']) totalWon += rouletteBets['BLACK'] * 2;
+      if (num > 0 && num % 2 === 0 && rouletteBets['EVEN']) totalWon += rouletteBets['EVEN'] * 2;
+      if (num > 0 && num % 2 !== 0 && rouletteBets['ODD']) totalWon += rouletteBets['ODD'] * 2;
+      if (num >= 1 && num <= 18 && rouletteBets['1-18']) totalWon += rouletteBets['1-18'] * 2;
+      if (num >= 19 && num <= 36 && rouletteBets['19-36']) totalWon += rouletteBets['19-36'] * 2;
+      if (num >= 1 && num <= 12 && rouletteBets['1st_12']) totalWon += rouletteBets['1st_12'] * 3;
+      if (num >= 13 && num <= 24 && rouletteBets['2nd_12']) totalWon += rouletteBets['2nd_12'] * 3;
+      if (num >= 25 && num <= 36 && rouletteBets['3rd_12']) totalWon += rouletteBets['3rd_12'] * 3;
+
+      if (totalWon > 0) {
+        awardMoney(totalWon, `Roulette Win on ${num} (${col})`);
         SoundEngine.playVictory(player.soundEnabled);
+        setRouletteResultMsg(`🎉 Landed on ${num} (${col.toUpperCase()})! Won +🌿 ${totalWon.toLocaleString()} GREEN!`);
       } else {
         SoundEngine.playLoss(player.soundEnabled);
+        setRouletteResultMsg(`Landed on ${num} (${col.toUpperCase()}). No winning bets. Lost 🌿 ${totalRouletteBet.toLocaleString()} GREEN.`);
       }
-
-      setRouletteResultMsg(
-        result.won
-          ? `Landed on ${winPocket.num} (${winPocket.color.toUpperCase()})! ${result.message}`
-          : `Landed on ${winPocket.num} (${winPocket.color.toUpperCase()}). ${result.message}`
-      );
     }, 2200);
   };
 
@@ -323,6 +351,12 @@ export default function TornCasinoView() {
       setHighLowMsg('Insufficient pocket GREEN.');
       return;
     }
+    const ok = deductMoney(selectedChip, 'High-Low Wager');
+    if (!ok) {
+      setHighLowMsg('Insufficient pocket GREEN.');
+      return;
+    }
+
     const newDealer = generateRandomCard();
     setDealerCard(newDealer);
     setCurrentPot(selectedChip);
@@ -338,35 +372,17 @@ export default function TornCasinoView() {
     setIsFlippingPlayerCard(true);
     SoundEngine.playCardFlip(player.soundEnabled);
 
-    // Call engine
-    const result = playCasinoGame('HIGH_LOW', currentPot);
-
     setTimeout(() => {
-      let newPlayer = generateRandomCard();
-      if (result.won) {
-        if (guess === 'HIGHER') {
-          newPlayer.value = Math.min(14, dealerCard.value + 1 + Math.floor(Math.random() * 3));
-        } else {
-          newPlayer.value = Math.max(2, dealerCard.value - 1 - Math.floor(Math.random() * 3));
-        }
-      } else {
-        if (guess === 'HIGHER') {
-          newPlayer.value = Math.max(2, dealerCard.value - 1 - Math.floor(Math.random() * 2));
-        } else {
-          newPlayer.value = Math.min(14, dealerCard.value + 1 + Math.floor(Math.random() * 2));
-        }
-      }
-      const ranks: Record<number, string> = {
-        2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: '10',
-        11: 'J', 12: 'Q', 13: 'K', 14: 'A',
-      };
-      newPlayer.rank = ranks[newPlayer.value] || `${newPlayer.value}`;
-
+      const newPlayer = generateRandomCard();
       setPlayerCard(newPlayer);
       setIsFlippingPlayerCard(false);
 
-      if (result.won) {
-        const nextPot = Math.floor(currentPot * 1.5);
+      const isHigher = newPlayer.value > dealerCard.value;
+      const isLower = newPlayer.value < dealerCard.value;
+      const isCorrect = (guess === 'HIGHER' && isHigher) || (guess === 'LOWER' && isLower);
+
+      if (isCorrect) {
+        const nextPot = Math.round(currentPot * 1.5);
         setCurrentPot(nextPot);
         setWinStreak((prev) => prev + 1);
         setHighLowState('ROUND_OVER');
@@ -374,16 +390,18 @@ export default function TornCasinoView() {
         SoundEngine.playCash(player.soundEnabled);
       } else {
         setHighLowState('IDLE');
-        setHighLowMsg(`Incorrect! Your card was ${newPlayer.rank}${newPlayer.suit}. House takes the pot.`);
+        setHighLowMsg(`Incorrect! Card was ${newPlayer.rank}${newPlayer.suit}. House takes the pot.`);
         setCurrentPot(0);
         setWinStreak(0);
         SoundEngine.playLoss(player.soundEnabled);
       }
-    }, 600);
+    }, 500);
   };
 
   const handleCashOutHighLow = () => {
-    setHighLowMsg(`Cashed out 🌿 ${currentPot.toLocaleString()} GREEN! Profits banked.`);
+    if (currentPot <= 0) return;
+    awardMoney(currentPot, 'High-Low Cash Out');
+    setHighLowMsg(`Cashed out +🌿 ${currentPot.toLocaleString()} GREEN! Profits banked.`);
     SoundEngine.playVictory(player.soundEnabled);
     setHighLowState('IDLE');
     setCurrentPot(0);
@@ -402,6 +420,7 @@ export default function TornCasinoView() {
   // ─────────────────────────────────────────────────────────────────────────────
   const [bjDealerCards, setBjDealerCards] = useState<Card[]>([]);
   const [bjPlayerCards, setBjPlayerCards] = useState<Card[]>([]);
+  const [bjCurrentBet, setBjCurrentBet] = useState<number>(0);
   const [bjState, setBjState] = useState<'IDLE' | 'PLAYING' | 'DEALER_TURN' | 'ENDED'>('IDLE');
   const [bjResultMsg, setBjResultMsg] = useState<string | null>(null);
 
@@ -410,6 +429,13 @@ export default function TornCasinoView() {
       setBjResultMsg('Insufficient pocket GREEN.');
       return;
     }
+    const ok = deductMoney(selectedChip, 'Blackjack Wager');
+    if (!ok) {
+      setBjResultMsg('Insufficient pocket GREEN.');
+      return;
+    }
+
+    setBjCurrentBet(selectedChip);
     const d1 = generateRandomCard();
     const d2 = generateRandomCard();
     const p1 = generateRandomCard();
@@ -421,14 +447,14 @@ export default function TornCasinoView() {
     setBjResultMsg(null);
 
     SoundEngine.playCardFlip(player.soundEnabled);
-    setTimeout(() => SoundEngine.playCardFlip(player.soundEnabled), 150);
 
     // Natural 21 check
     if (calculateBlackjackTotal([p1, p2]) === 21) {
       setTimeout(() => {
         setBjState('ENDED');
-        const res = playCasinoGame('BLACKJACK', selectedChip);
-        setBjResultMsg('★ NATURAL BLACKJACK 21! ★ You win!');
+        const payout = Math.round(selectedChip * 2.5);
+        awardMoney(payout, 'Natural Blackjack 21 Win');
+        setBjResultMsg(`★ NATURAL BLACKJACK 21! ★ Won +🌿 ${payout.toLocaleString()} GREEN!`);
         SoundEngine.playJackpot(player.soundEnabled);
       }, 500);
     }
@@ -444,9 +470,8 @@ export default function TornCasinoView() {
     const total = calculateBlackjackTotal(newHand);
     if (total > 21) {
       setBjState('ENDED');
-      setBjResultMsg(`Bust with ${total}! House takes the wager.`);
+      setBjResultMsg(`Bust with ${total}! House takes 🌿 ${bjCurrentBet.toLocaleString()} GREEN.`);
       SoundEngine.playLoss(player.soundEnabled);
-      playCasinoGame('BLACKJACK', selectedChip);
     }
   };
 
@@ -468,20 +493,22 @@ export default function TornCasinoView() {
     setBjState('ENDED');
 
     if (dTotal > 21) {
-      const res = playCasinoGame('BLACKJACK', selectedChip);
-      setBjResultMsg(`Dealer busted with ${dTotal}! You win!`);
+      const payout = bjCurrentBet * 2;
+      awardMoney(payout, 'Blackjack Dealer Bust');
+      setBjResultMsg(`Dealer busted with ${dTotal}! Won +🌿 ${payout.toLocaleString()} GREEN!`);
       SoundEngine.playVictory(player.soundEnabled);
     } else if (pTotal > dTotal) {
-      const res = playCasinoGame('BLACKJACK', selectedChip);
-      setBjResultMsg(`You win! (${pTotal} beats Dealer's ${dTotal})`);
+      const payout = bjCurrentBet * 2;
+      awardMoney(payout, 'Blackjack Win');
+      setBjResultMsg(`You win! (${pTotal} beats Dealer's ${dTotal}). Won +🌿 ${payout.toLocaleString()} GREEN!`);
       SoundEngine.playVictory(player.soundEnabled);
     } else if (pTotal === dTotal) {
+      awardMoney(bjCurrentBet, 'Blackjack Push');
       setBjResultMsg(`Push! (${pTotal} to ${dTotal}) - Wager returned.`);
       SoundEngine.playCash(player.soundEnabled);
     } else {
-      setBjResultMsg(`Dealer wins with ${dTotal} vs your ${pTotal}.`);
+      setBjResultMsg(`Dealer wins with ${dTotal} vs your ${pTotal}. House takes wager.`);
       SoundEngine.playLoss(player.soundEnabled);
-      playCasinoGame('BLACKJACK', selectedChip);
     }
   };
 
@@ -500,47 +527,78 @@ export default function TornCasinoView() {
     }
     if (isRollingCraps) return;
 
+    const ok = deductMoney(selectedChip, 'Craps Bet');
+    if (!ok) {
+      setCrapsResultMsg('Insufficient pocket GREEN.');
+      return;
+    }
+
     setIsRollingCraps(true);
     setCrapsResultMsg(null);
     SoundEngine.playDiceRoll(player.soundEnabled);
-
-    // Engine call
-    const result = playCasinoGame('CRAPS', selectedChip);
 
     let frames = 0;
     const rollAnim = setInterval(() => {
       setDiceRolls([Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1]);
       frames++;
-      if (frames > 8) {
+      if (frames > 7) {
         clearInterval(rollAnim);
-        let d1 = Math.floor(Math.random() * 6) + 1;
-        let d2 = Math.floor(Math.random() * 6) + 1;
-        if (result.won) {
-          if (crapsBetType === 'PASS_LINE') {
-            d1 = 3; d2 = 4; // 7
-          } else if (crapsBetType === 'FIELD') {
-            d1 = 5; d2 = 6; // 11
-          } else {
-            d1 = 1; d2 = 2; // 3
-          }
-        } else {
-          d1 = 1; d2 = 1; // Snake eyes
-        }
+        const d1 = Math.floor(Math.random() * 6) + 1;
+        const d2 = Math.floor(Math.random() * 6) + 1;
         setDiceRolls([d1, d2]);
         setIsRollingCraps(false);
         const total = d1 + d2;
-        setCrapsResultMsg(
-          result.won
-            ? `Rolled ${d1} + ${d2} = ${total}! ${result.message}`
-            : `Rolled ${d1} + ${d2} = ${total}. House wins.`
-        );
-        if (result.won) {
+
+        let payout = 0;
+        let won = false;
+        let isPush = false;
+
+        if (crapsBetType === 'PASS_LINE') {
+          if (total === 7 || total === 11) {
+            won = true;
+            payout = selectedChip * 2;
+          } else if (total === 2 || total === 3 || total === 12) {
+            won = false;
+          } else {
+            won = true;
+            payout = Math.round(selectedChip * 1.5);
+          }
+        } else if (crapsBetType === 'DONT_PASS') {
+          if (total === 2 || total === 3) {
+            won = true;
+            payout = selectedChip * 2;
+          } else if (total === 12) {
+            isPush = true;
+            payout = selectedChip;
+          } else {
+            won = false;
+          }
+        } else if (crapsBetType === 'FIELD') {
+          if (total === 2 || total === 12) {
+            won = true;
+            payout = selectedChip * 3;
+          } else if ([3, 4, 9, 10, 11].includes(total)) {
+            won = true;
+            payout = selectedChip * 2;
+          } else {
+            won = false;
+          }
+        }
+
+        if (won && payout > 0) {
+          awardMoney(payout, 'Craps Win');
           SoundEngine.playVictory(player.soundEnabled);
+          setCrapsResultMsg(`🎉 Rolled ${d1} + ${d2} = ${total}! Won +🌿 ${payout.toLocaleString()} GREEN!`);
+        } else if (isPush) {
+          awardMoney(payout, 'Craps Push');
+          SoundEngine.playCash(player.soundEnabled);
+          setCrapsResultMsg(`Push on 12! Wager returned.`);
         } else {
           SoundEngine.playLoss(player.soundEnabled);
+          setCrapsResultMsg(`Rolled ${d1} + ${d2} = ${total}. House takes 🌿 ${selectedChip.toLocaleString()} GREEN.`);
         }
       }
-    }, 100);
+    }, 110);
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -573,18 +631,17 @@ export default function TornCasinoView() {
     }
     if (isDrawingKeno) return;
 
+    const ok = deductMoney(selectedChip, 'Keno Draw');
+    if (!ok) {
+      setKenoResultMsg('Insufficient pocket GREEN.');
+      return;
+    }
+
     setIsDrawingKeno(true);
     setKenoDrawn([]);
     setKenoResultMsg(null);
 
-    const result = playCasinoGame('KENO', selectedChip);
-
-    // Generate 20 drawn numbers
     const drawnPool = new Set<number>();
-    if (result.won) {
-      // Include matches
-      kenoSelected.slice(0, Math.min(3, kenoSelected.length)).forEach((n) => drawnPool.add(n));
-    }
     while (drawnPool.size < 20) {
       drawnPool.add(Math.floor(Math.random() * 80) + 1);
     }
@@ -600,15 +657,21 @@ export default function TornCasinoView() {
         clearInterval(interval);
         setIsDrawingKeno(false);
         const matches = kenoSelected.filter((n) => drawnPool.has(n));
-        setKenoResultMsg(
-          result.won
-            ? `Matched ${matches.length} numbers! ${result.message}`
-            : `Matched ${matches.length} numbers. Better luck next draw!`
-        );
-        if (result.won) {
+        const matchCount = matches.length;
+
+        let multiplier = 0;
+        if (kenoSelected.length === 1 && matchCount === 1) multiplier = 2.5;
+        else if (kenoSelected.length <= 4 && matchCount >= 2) multiplier = matchCount * 2;
+        else if (kenoSelected.length >= 5 && matchCount >= 3) multiplier = matchCount * 3;
+
+        if (multiplier > 0) {
+          const payout = Math.round(selectedChip * multiplier);
+          awardMoney(payout, `Keno ${matchCount} Matches`);
           SoundEngine.playVictory(player.soundEnabled);
+          setKenoResultMsg(`🎉 Matched ${matchCount} numbers! Won +🌿 ${payout.toLocaleString()} GREEN!`);
         } else {
           SoundEngine.playLoss(player.soundEnabled);
+          setKenoResultMsg(`Matched ${matchCount} numbers. House takes 🌿 ${selectedChip.toLocaleString()} GREEN.`);
         }
       }
     }, 70);
@@ -631,7 +694,12 @@ export default function TornCasinoView() {
       setScratchResultMsg('Insufficient pocket GREEN.');
       return;
     }
-    const res = playCasinoGame('LOTTERY', selectedChip);
+    const ok = deductMoney(selectedChip, 'Scratch Ticket Purchase');
+    if (!ok) {
+      setScratchResultMsg('Insufficient pocket GREEN.');
+      return;
+    }
+
     const symbols = [
       { symbol: 'GREEN', icon: '🌿' },
       { symbol: 'DIAMOND', icon: '💎' },
@@ -639,9 +707,11 @@ export default function TornCasinoView() {
       { symbol: 'GUN', icon: '🔫' },
       { symbol: 'CHERRY', icon: '🍒' },
     ];
+
+    const isWinner = Math.random() < 0.35;
     let tiles: ScratchTile[] = [];
-    if (res.won) {
-      const winSym = symbols[0]; // 🌿
+    if (isWinner) {
+      const winSym = symbols[Math.floor(Math.random() * symbols.length)];
       tiles = [
         { revealed: false, symbol: winSym.symbol, icon: winSym.icon },
         { revealed: false, symbol: winSym.symbol, icon: winSym.icon },
@@ -660,6 +730,7 @@ export default function TornCasinoView() {
         { revealed: false, symbol: symbols[0].symbol, icon: symbols[0].icon },
       ].sort(() => Math.random() - 0.5);
     }
+
     setScratchTiles(tiles);
     setIsScratchCardActive(true);
     setScratchResultMsg('Scratch the 6 foil seals to reveal matching symbols!');
@@ -673,7 +744,6 @@ export default function TornCasinoView() {
     updated[index].revealed = true;
     setScratchTiles(updated);
 
-    // Check if all revealed
     if (updated.every((t) => t.revealed)) {
       const counts: Record<string, number> = {};
       updated.forEach((t) => {
@@ -681,7 +751,10 @@ export default function TornCasinoView() {
       });
       const match = Object.entries(counts).find(([_, count]) => count >= 3);
       if (match) {
-        setScratchResultMsg(`★ JACKPOT! 3x Matching ${match[0]} revealed! Payout awarded! ★`);
+        const mult = match[0] === 'GREEN' ? 10 : match[0] === 'DIAMOND' ? 5 : 3;
+        const payout = selectedChip * mult;
+        awardMoney(payout, `Scratcher 3x ${match[0]}`);
+        setScratchResultMsg(`★ JACKPOT! 3x Matching ${match[0]} revealed! Won +🌿 ${payout.toLocaleString()} GREEN! ★`);
         SoundEngine.playVictory(player.soundEnabled);
       } else {
         setScratchResultMsg('No 3-of-a-kind match. Ticket expired.');
@@ -723,13 +796,19 @@ export default function TornCasinoView() {
     }
     if (isRacing) return;
 
+    const ok = deductMoney(selectedChip, 'Drag Race Bet');
+    if (!ok) {
+      setRaceResultMsg('Insufficient pocket GREEN.');
+      return;
+    }
+
     setIsRacing(true);
     setRacersProgress([0, 0, 0, 0]);
     setRaceResultMsg(null);
     SoundEngine.playHit(player.soundEnabled);
 
-    const res = playCasinoGame('BOOKIE', selectedChip);
     const chosenIndex = RACERS.findIndex((r) => r.id === selectedRacerId);
+    const chosenRacer = RACERS[chosenIndex];
 
     const currentPositions = [0, 0, 0, 0];
     const raceInterval = setInterval(() => {
@@ -737,7 +816,7 @@ export default function TornCasinoView() {
       let winnerIdx = -1;
 
       for (let i = 0; i < 4; i++) {
-        const boost = (i === chosenIndex && res.won) ? Math.random() * 8 + 6 : Math.random() * 8 + 4;
+        const boost = Math.random() * 9 + 4;
         currentPositions[i] = Math.min(100, currentPositions[i] + boost);
         if (currentPositions[i] >= 100 && !finished) {
           finished = true;
@@ -753,14 +832,16 @@ export default function TornCasinoView() {
         setIsRacing(false);
         const winningRacer = RACERS[winnerIdx];
         if (winnerIdx === chosenIndex) {
-          setRaceResultMsg(`🏁 ${winningRacer.name} WON THE RACE! ${res.message}`);
+          const payout = Math.round(selectedChip * chosenRacer.odds);
+          awardMoney(payout, `Drag Race ${winningRacer.name}`);
+          setRaceResultMsg(`🏁 ${winningRacer.name} WON THE RACE! Won +🌿 ${payout.toLocaleString()} GREEN!`);
           SoundEngine.playVictory(player.soundEnabled);
         } else {
-          setRaceResultMsg(`🏁 ${winningRacer.name} crossed the line first. Your car placed #${winnerIdx + 1}.`);
+          setRaceResultMsg(`🏁 ${winningRacer.name} crossed first. Your car placed #${winnerIdx + 1}. House takes wager.`);
           SoundEngine.playLoss(player.soundEnabled);
         }
       }
-    }, 120);
+    }, 110);
   };
 
   return (
@@ -789,7 +870,6 @@ export default function TornCasinoView() {
             </div>
           </div>
 
-          {/* Progressive Ticker */}
           <div className="text-center sm:text-right bg-neutral-900/90 border border-neutral-800 px-4 py-2 rounded-xl">
             <span className="text-[10px] font-mono text-purple-400 block tracking-widest uppercase">
               🌿 Progressive Jackpot
@@ -800,7 +880,6 @@ export default function TornCasinoView() {
           </div>
         </div>
 
-        {/* Dynamic Odds / Beginner's Luck Notification Ribbon */}
         {isBeginnerLuckActive && (
           <div className="mt-3 py-1.5 px-3 rounded-lg bg-emerald-950/70 border border-emerald-500/40 flex items-center gap-2 text-xs font-mono text-emerald-300">
             <Sparkles className="w-4 h-4 text-emerald-400 animate-spin" />
@@ -975,7 +1054,6 @@ export default function TornCasinoView() {
           </div>
 
           <div className="py-4 space-y-6">
-            {/* Wheel Animation Canvas */}
             <div className="flex flex-col items-center justify-center">
               <div
                 style={{
@@ -997,7 +1075,6 @@ export default function TornCasinoView() {
               </div>
             </div>
 
-            {/* Betting Grid */}
             <div className="max-w-2xl mx-auto space-y-2 select-none font-mono">
               <div className="grid grid-cols-6 gap-1 text-[11px] font-bold text-center">
                 {['1-18', 'EVEN', 'RED', 'BLACK', 'ODD', '19-36'].map((spot) => (
@@ -1017,7 +1094,6 @@ export default function TornCasinoView() {
                 ))}
               </div>
 
-              {/* Number Felt (0 to 36) */}
               <div className="grid grid-cols-12 gap-1 text-[10px] font-bold text-center">
                 {Array.from({ length: 36 }, (_, i) => i + 1).map((num) => {
                   const isRed = RED_NUMBERS.includes(num);
@@ -1031,13 +1107,12 @@ export default function TornCasinoView() {
                           : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
                       }`}
                     >
-                      {num}
+                      {num} {rouletteBets[`${num}`] ? `(${rouletteBets[`${num}`]})` : ''}
                     </button>
                   );
                 })}
               </div>
 
-              {/* Action Buttons */}
               <div className="flex items-center justify-between gap-3 pt-2">
                 <span className="text-xs text-neutral-400">Total Wager: <strong className="text-emerald-400">🌿 {totalRouletteBet} GREEN</strong></span>
                 <div className="flex gap-2">
@@ -1122,7 +1197,7 @@ export default function TornCasinoView() {
             <div className="p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800 text-center font-mono space-y-1">
               <span className="text-[10px] text-neutral-500 block uppercase">Accumulated Pot</span>
               <div className="text-xl font-black text-amber-400">🌿 {currentPot.toLocaleString()} GREEN</div>
-              <div className="text-[11px] text-neutral-400">({winStreak} wins in a row) • Modifier: <span className="text-emerald-400 font-bold">{25 + (winStreak * 25)}%</span></div>
+              <div className="text-[11px] text-neutral-400">({winStreak} wins in a row) • Multiplier: <span className="text-emerald-400 font-bold">{100 + (winStreak * 50)}%</span></div>
             </div>
 
             <div className="space-y-3 font-mono">
@@ -1147,7 +1222,7 @@ export default function TornCasinoView() {
               {highLowState === 'ROUND_OVER' && (
                 <div className="grid grid-cols-2 gap-3">
                   <button onClick={handleCashOutHighLow} className="py-3.5 rounded-xl bg-emerald-500 text-neutral-950 font-black text-xs uppercase cursor-pointer">
-                    💰 Cash Out (+🌿 {currentPot})
+                    💰 Cash Out (+🌿 {currentPot.toLocaleString()} GREEN)
                   </button>
                   <button onClick={handleContinueHighLow} className="py-3.5 rounded-xl bg-neutral-800 text-white font-black text-xs uppercase cursor-pointer">
                     🃏 Double & Next Card →
@@ -1179,7 +1254,6 @@ export default function TornCasinoView() {
           </div>
 
           <div className="py-6 max-w-lg mx-auto space-y-6">
-            {/* Dealer Hand */}
             <div className="space-y-2">
               <span className="text-xs font-mono font-bold text-neutral-400">
                 Dealer Hand {bjState === 'ENDED' ? `(${calculateBlackjackTotal(bjDealerCards)})` : ''}
@@ -1204,7 +1278,6 @@ export default function TornCasinoView() {
               </div>
             </div>
 
-            {/* Player Hand */}
             <div className="space-y-2">
               <span className="text-xs font-mono font-bold text-emerald-400">
                 Your Hand {bjPlayerCards.length > 0 ? `(${calculateBlackjackTotal(bjPlayerCards)})` : ''}
@@ -1223,7 +1296,6 @@ export default function TornCasinoView() {
               </div>
             </div>
 
-            {/* Controls */}
             <div className="space-y-3 font-mono">
               {bjState === 'IDLE' || bjState === 'ENDED' ? (
                 <button
@@ -1268,7 +1340,6 @@ export default function TornCasinoView() {
           </div>
 
           <div className="py-6 max-w-lg mx-auto space-y-6 text-center">
-            {/* 2 Animated 3D/2D Tumbling Dice */}
             <div className="flex justify-center items-center gap-6 py-4">
               {diceRolls.map((die, i) => (
                 <div
@@ -1282,7 +1353,6 @@ export default function TornCasinoView() {
               ))}
             </div>
 
-            {/* Bet Type Selection */}
             <div className="grid grid-cols-3 gap-2 font-mono text-xs">
               {(['PASS_LINE', 'DONT_PASS', 'FIELD'] as const).map((type) => (
                 <button
@@ -1338,7 +1408,6 @@ export default function TornCasinoView() {
               </button>
             </div>
 
-            {/* 80 Grid */}
             <div className="grid grid-cols-10 gap-1 text-[10px] font-mono font-bold text-center">
               {Array.from({ length: 80 }, (_, i) => i + 1).map((n) => {
                 const isSelected = kenoSelected.includes(n);
@@ -1455,7 +1524,6 @@ export default function TornCasinoView() {
           </div>
 
           <div className="py-6 max-w-xl mx-auto space-y-4">
-            {/* Tracks */}
             <div className="space-y-3 bg-neutral-950 p-4 rounded-2xl border border-neutral-800">
               {RACERS.map((racer, idx) => (
                 <div key={racer.id} className="space-y-1">
@@ -1475,7 +1543,6 @@ export default function TornCasinoView() {
               ))}
             </div>
 
-            {/* Racer Select */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
               {RACERS.map((r) => (
                 <button

@@ -93,6 +93,8 @@ interface GameContextType {
     game: 'SLOTS' | 'ROULETTE' | 'HIGH_LOW' | 'KENO' | 'CRAPS' | 'BOOKIE' | 'LOTTERY' | 'BLACKJACK',
     bet: number
   ) => { won: boolean; payout: number; message: string };
+  deductMoney: (amount: number, reason: string) => boolean;
+  awardMoney: (amount: number, reason: string) => void;
   startSleep: (durationMinutes: number) => { success: boolean; message: string };
   wakeUp: () => { success: boolean; message: string };
   consumeFoodAt: (itemId: string, location: 'ANY' | 'HOME' | 'RESTAURANT') => { success: boolean; message: string };
@@ -1957,6 +1959,33 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deductMoney = (amount: number, reason: string): boolean => {
+    if (amount <= 0 || player.money < amount) return false;
+    setPlayer((prev) => ({
+      ...prev,
+      money: Math.max(0, prev.money - amount),
+      hasUnsavedActions: true,
+    }));
+    addLog({
+      type: 'CIVILIAN',
+      message: `💸 ${reason}: -🌿 ${amount.toLocaleString()} GREEN`,
+    });
+    return true;
+  };
+
+  const awardMoney = (amount: number, reason: string): void => {
+    if (amount <= 0) return;
+    setPlayer((prev) => ({
+      ...prev,
+      money: prev.money + amount,
+      hasUnsavedActions: true,
+    }));
+    addLog({
+      type: 'CIVILIAN',
+      message: `💰 ${reason}: +🌿 ${amount.toLocaleString()} GREEN`,
+    });
+  };
+
   const healInHospital = () => {
     const cost = 250;
     if (player.money < cost) return { success: false, message: 'Need $250 for hospital care.' };
@@ -3676,6 +3705,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         collectBusinessRevenue,
         spendMissionCredits,
         playCasinoGame,
+        deductMoney,
+        awardMoney,
         healInHospital,
         bailFromJail,
         exportBackupJson,
