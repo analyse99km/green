@@ -52,9 +52,10 @@ export default function TornSidebar({ currentView, onSelectView }: TornSidebarPr
   const navItems = [
     { id: 'HOME', label: 'Home', icon: Home },
     { id: 'ITEMS', label: '🎒 Items & Outfitter', icon: Package },
+    { id: 'BAZAAR', label: 'Item Market & Bazaar', icon: Store },
+    { id: 'CASINO', label: '🎰 2D Velvet Casino', icon: Dice5, highlight: true },
     { id: 'DREAM_TAP', label: '⚡ Lucid Dream Tap', icon: Zap },
     { id: 'CRIMES', label: 'Crimes (2.0)', icon: Flame },
-    { id: 'BAZAAR', label: 'Item Market & Bazaar', icon: Store },
     { id: 'ATTACK', label: 'Attacks & Bounties', icon: Swords },
     { id: 'GYM', label: 'Iron Core Gym', icon: Dumbbell },
     { id: 'WHEEL', label: 'Daily Lucky Wheel', icon: RotateCw },
@@ -68,7 +69,6 @@ export default function TornSidebar({ currentView, onSelectView }: TornSidebarPr
     { id: 'BANK', label: 'Bank & Vault', icon: Landmark },
     { id: 'JAIL', label: 'Jail', icon: ShieldAlert },
     { id: 'HOSPITAL', label: 'Hospital', icon: Heart },
-    { id: 'CASINO', label: 'Red-Light Casino', icon: Dice5 },
     { id: 'FACTION', label: `Faction (${player.faction.name})`, icon: Users },
     { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users },
   ];

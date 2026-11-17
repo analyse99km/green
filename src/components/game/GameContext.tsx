@@ -1867,18 +1867,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     bet: number
   ) => {
     if (bet <= 0 || bet > player.money) {
-      return { won: false, payout: 0, message: 'Invalid bet or insufficient pocket cash.' };
+      return { won: false, payout: 0, message: 'Invalid bet or insufficient pocket GREEN.' };
     }
 
-    const odds: Record<string, number> = {
-      SLOTS: 0.45,
-      ROULETTE: 0.48,
+    // Base house probabilities
+    const baseOdds: Record<string, number> = {
+      SLOTS: 0.42,
+      ROULETTE: 0.47,
       HIGH_LOW: 0.50,
-      KENO: 0.40,
-      CRAPS: 0.49,
-      BOOKIE: 0.46,
+      KENO: 0.35,
+      CRAPS: 0.48,
+      BOOKIE: 0.45,
       LOTTERY: 0.15,
-      BLACKJACK: 0.49,
+      BLACKJACK: 0.48,
     };
 
     const multipliers: Record<string, number> = {
@@ -1892,9 +1893,40 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       BLACKJACK: 2,
     };
 
-    const winProb = odds[game] || 0.48;
+    // 1. Dynamic Bet Sizing Adjustment (Compared to In-Game Items)
+    // Small bets (<= 50 GREEN: bread, ramen, basic snacks): High win rate to create dopamine loops!
+    // Large bets (1,000+ GREEN: firearms, luxury vehicles): Steep house edge to drain liquidity.
+    let betAdjustment = 0;
+    if (bet <= 50) {
+      betAdjustment = +0.16; // Small bet dopamine hit
+    } else if (bet <= 200) {
+      betAdjustment = +0.06;
+    } else if (bet <= 1000) {
+      betAdjustment = -0.06;
+    } else if (bet <= 5000) {
+      betAdjustment = -0.16; // High bet penalty
+    } else {
+      betAdjustment = -0.24; // Whale bet steep house advantage
+    }
+
+    // 2. Beginner's Luck Hook (Joined within 2-3 days & low starting funds)
+    const isNewPlayer = (player.ageDays || 0) <= 3;
+    const isLowMoney = player.money <= 500;
+    let beginnerBoost = 0;
+
+    if (isNewPlayer && isLowMoney) {
+      beginnerBoost = +0.24; // Massive win streak hook for beginners!
+    } else if (isNewPlayer) {
+      beginnerBoost = +0.10;
+    } else if (player.money > 10000) {
+      // Wealthy seasoned operatives: House takes its cut!
+      beginnerBoost = -0.10;
+    }
+
+    // Final Win Probability clamped between 8% and 85%
+    const finalWinProb = Math.min(0.85, Math.max(0.08, (baseOdds[game] || 0.45) + betAdjustment + beginnerBoost));
     const mult = multipliers[game] || 2;
-    const won = Math.random() < winProb;
+    const won = Math.random() < finalWinProb;
 
     if (won) {
       const winPayout = Math.round(bet * mult);
@@ -1903,11 +1935,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         money: prev.money + (winPayout - bet),
         hasUnsavedActions: true,
       }));
+      SoundEngine.playCash(player.soundEnabled);
       addLog({
         type: 'CIVILIAN',
-        message: `🎰 CASINO WIN: Won $${winPayout.toLocaleString()} on ${game}!`,
+        message: `🎰 CASINO WIN: Won +🌿 ${winPayout.toLocaleString()} GREEN on ${game}!`,
       });
-      return { won: true, payout: winPayout, message: `🎉 WIN! You won $${winPayout.toLocaleString()} on ${game}!` };
+      return { won: true, payout: winPayout, message: `🎉 WIN! You won +🌿 ${winPayout.toLocaleString()} GREEN on ${game}!` };
     } else {
       setPlayer((prev) => ({
         ...prev,
@@ -1916,9 +1949,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }));
       addLog({
         type: 'CIVILIAN',
-        message: `❌ CASINO LOSS: Lost $${bet.toLocaleString()} on ${game}.`,
+        message: `❌ CASINO LOSS: Lost 🌿 ${bet.toLocaleString()} GREEN on ${game}.`,
       });
-      return { won: false, payout: 0, message: `The house won. Lost $${bet.toLocaleString()} on ${game}.` };
+      return { won: false, payout: 0, message: `The house won. Lost 🌿 ${bet.toLocaleString()} GREEN on ${game}.` };
     }
   };
 

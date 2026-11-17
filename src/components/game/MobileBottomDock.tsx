@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useGame } from './GameContext';
-import { Home, Flame, Zap, Store, Menu } from 'lucide-react';
+import { Home, Flame, Zap, Store, Menu, Dice5 } from 'lucide-react';
 
 interface MobileBottomDockProps {
   currentView: string;
@@ -19,7 +19,7 @@ export default function MobileBottomDock({
 
   const primaryTabs = [
     { id: 'HOME', label: 'Home', icon: Home },
-    { id: 'CRIMES', label: 'Crimes', icon: Flame },
+    { id: 'CASINO', label: 'Casino', icon: Dice5, isDice: true },
     { id: 'DREAM_TAP', label: 'Tap Refill', icon: Zap, isSpecial: true },
     { id: 'BAZAAR', label: 'Bazaar', icon: Store },
   ];

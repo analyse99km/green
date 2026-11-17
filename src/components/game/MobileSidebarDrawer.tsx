@@ -59,10 +59,11 @@ export default function MobileSidebarDrawer({
       items: [
         { id: 'HOME', label: 'Home Dashboard', icon: Home },
         { id: 'ITEMS', label: '🎒 Backpack & Items', icon: Package, highlight: true },
+        { id: 'BAZAAR', label: 'Item Market & Bazaar', icon: Store },
+        { id: 'CASINO', label: '🎰 2D Velvet Casino', icon: Dice5, highlight: true },
         { id: 'DREAM_TAP', label: '⚡ Lucid Dream Tap', icon: Zap },
         { id: 'CRIMES', label: 'Crimes (2.0)', icon: Flame },
         { id: 'ATTACK', label: 'Attacks & Bounties', icon: Swords },
-        { id: 'BAZAAR', label: 'Item Market & Bazaar', icon: Store },
       ],
     },
     {
@@ -80,7 +81,6 @@ export default function MobileSidebarDrawer({
       items: [
         { id: 'WHEEL', label: 'Daily Lucky Wheel', icon: RotateCw },
         { id: 'BANK', label: 'Reserve Bank & Vault', icon: Landmark },
-        { id: 'CASINO', label: 'Red-Light Casino', icon: Dice5 },
         { id: 'NEWSPAPER', label: 'The Chronicle Press', icon: Newspaper },
         { id: 'CITY_HALL', label: 'City Hall Deeds', icon: Scroll },
       ],
