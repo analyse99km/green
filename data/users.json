@@ -20,5 +20,16 @@
     "referredBy": null,
     "createdAt": 1794931736869,
     "lastLoginAt": 1794931736869
+  },
+  "testoperative@metropolis.city": {
+    "userId": "usr_09bd27d1fefa60a7",
+    "email": "testoperative@metropolis.city",
+    "name": "testoperative",
+    "salt": "47745618e3be6534a5a35f50dfaa206e",
+    "passwordHash": "5b333f7cbb92d54a1ec070c8c3550c9ea7feb6bf86fc7a61b0f8a452b3b56234b98a203c5d5afc5450c6af936b12ea9744fc87b82cbf9f98772c95b057980fb4",
+    "userReferralCode": "NEON-09BD27D1",
+    "referredBy": null,
+    "createdAt": 1794941189188,
+    "lastLoginAt": 1794941189188
   }
 }

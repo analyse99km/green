@@ -45,7 +45,22 @@ export default function DreamTapView() {
     installBodyAugmentation,
   } = useGame();
 
-  const [activeSubTab, setActiveSubTab] = useState<'TAP_CORE' | 'IDLE_CARDS' | 'PLANTS' | 'MARKET' | 'REFERRALS'>('TAP_CORE');
+  const [activeSubTab, setActiveSubTab] = useState<
+    'ALL' | 'TAP_CORE' | 'MARKET' | 'IDLE_CARDS' | 'PLANTS' | 'REFERRALS'
+  >('ALL');
+
+  const handleTabClick = (tab: 'ALL' | 'TAP_CORE' | 'MARKET' | 'IDLE_CARDS' | 'PLANTS' | 'REFERRALS') => {
+    setActiveSubTab(tab);
+    if (tab !== 'ALL') {
+      setTimeout(() => {
+        const targetId = `section-${tab.toLowerCase().replace('_', '-')}`;
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 60);
+    }
+  };
   const [selectedCategory, setSelectedCategory] = useState<BotanicalCategory>('ALL');
   const [combo, setCombo] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -618,67 +633,111 @@ export default function DreamTapView() {
         </div>
       )}
 
-      {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-neutral-900 rounded-xl border border-neutral-800 max-w-full overflow-x-auto text-xs font-mono">
-        <button
-          onClick={() => setActiveSubTab('TAP_CORE')}
-          className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'TAP_CORE'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-          }`}
-        >
-          <span>🌱 Plant Core</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('IDLE_CARDS')}
-          className={`flex-1 min-w-[110px] py-2 px-3 rounded-lg font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'IDLE_CARDS'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-          }`}
-        >
-          <span>🃏 Botanical Cards (16)</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('PLANTS')}
-          className={`flex-1 min-w-[110px] py-2 px-3 rounded-lg font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'PLANTS'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-          }`}
-        >
-          <span>🌳 Tree Evolution (8)</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('MARKET')}
-          className={`flex-1 min-w-[110px] py-2 px-3 rounded-lg font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'MARKET'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-          }`}
-        >
-          <span>🏪 Dream Market</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('REFERRALS')}
-          className={`flex-1 min-w-[120px] py-2 px-3 rounded-lg font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'REFERRALS'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-          }`}
-        >
-          <span>👥 Syndicate Referrals</span>
-        </button>
+      {/* Beginner Awakening Steps Guide */}
+      <div className="bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-cyan-950/40 border border-emerald-500/30 rounded-2xl p-4 font-mono text-xs space-y-2">
+        <div className="flex items-center gap-2 text-emerald-300 font-bold">
+          <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <span>Beginner Quick Roadmap: 3 Steps to Awaken Metropolis</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+          <div className="p-2 rounded-xl bg-neutral-950/80 border border-neutral-800 flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
+            <div>
+              <strong className="text-white block">Tap the Node Below</strong>
+              <span className="text-neutral-400">Harvest Dream Sparks with each tap!</span>
+            </div>
+          </div>
+          <div className="p-2 rounded-xl bg-neutral-950/80 border border-neutral-800 flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">2</span>
+            <div>
+              <strong className="text-white block">Refill 6 Vitals in Market</strong>
+              <span className="text-neutral-400">Scroll down & exchange Sparks for Energy, Life, & GREEN!</span>
+            </div>
+          </div>
+          <div className="p-2 rounded-xl bg-neutral-950/80 border border-neutral-800 flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">3</span>
+            <div>
+              <strong className="text-white block">Metropolis Unlocks!</strong>
+              <span className="text-neutral-400">Once all 6 stats &gt; 0, all city features awaken!</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* SUB-TAB 1: PLANT TAP CORE */}
-      {activeSubTab === 'TAP_CORE' && (
-        <div className="space-y-6">
+      {/* Sticky Quick-Jump Navigation Bar for Smooth Scrolling */}
+      <div className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-md py-2 px-1 border-b border-neutral-800 -mx-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar text-xs font-mono select-none">
+          <button
+            onClick={() => handleTabClick('ALL')}
+            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeSubTab === 'ALL'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400'
+                : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
+            }`}
+          >
+            <span>🌟 All-In-One Scroll</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick('TAP_CORE')}
+            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeSubTab === 'TAP_CORE'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+            }`}
+          >
+            <span>⚡ Tap Core</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick('MARKET')}
+            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeSubTab === 'MARKET'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'bg-neutral-900 text-emerald-300 hover:text-white border border-emerald-500/30'
+            }`}
+          >
+            <span>🛒 Instant Refills</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick('IDLE_CARDS')}
+            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeSubTab === 'IDLE_CARDS'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+            }`}
+          >
+            <span>🌱 Idle Cards ({botanicalCards.length})</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick('PLANTS')}
+            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeSubTab === 'PLANTS'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+            }`}
+          >
+            <span>🌳 Tree Evolution ({plantEvolutionStages.length})</span>
+          </button>
+
+          <button
+            onClick={() => handleTabClick('REFERRALS')}
+            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeSubTab === 'REFERRALS'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+            }`}
+          >
+            <span>👥 Referrals</span>
+          </button>
+        </div>
+      </div>
+
+      {/* SECTION 1: PLANT TAP CORE */}
+      {(activeSubTab === 'ALL' || activeSubTab === 'TAP_CORE') && (
+        <div id="section-tap-core" className="scroll-mt-16 space-y-6">
           <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl">
             {/* Background Radial Glow */}
             <div className="absolute inset-0 bg-radial from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
@@ -772,228 +831,36 @@ export default function DreamTapView() {
         </div>
       )}
 
-      {/* SUB-TAB 2: BOTANICAL IDLE CARDS (16 CARDS ORGANIZED IN 4 CATEGORIES) */}
-      {activeSubTab === 'IDLE_CARDS' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono">
-            <span className="text-neutral-300">
-              Idle Botanical Cards generate round-the-clock sparks automatically even while offline!
-            </span>
-            <span className="text-emerald-400 font-bold">
-              Total Production: +{autoSparksPerSec} Sparks/sec
-            </span>
-          </div>
-
-          {/* Section Category Filter Tabs (Mini Spores, Shrubs/Flora, Big Trees, Cosmic World Trees) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto p-1 bg-neutral-900 rounded-xl border border-neutral-800 text-xs font-mono">
-            <button
-              onClick={() => setSelectedCategory('ALL')}
-              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
-                selectedCategory === 'ALL'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-            >
-              All Cards ({botanicalCards.length})
-            </button>
-            <button
-              onClick={() => setSelectedCategory('SPORES')}
-              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
-                selectedCategory === 'SPORES'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-            >
-              🍄 Mini Spores & Fungi (5)
-            </button>
-            <button
-              onClick={() => setSelectedCategory('FLORA')}
-              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
-                selectedCategory === 'FLORA'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-            >
-              🌿 Shrubs & Flora (4)
-            </button>
-            <button
-              onClick={() => setSelectedCategory('BIG_TREES')}
-              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
-                selectedCategory === 'BIG_TREES'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-            >
-              🌴 Big Trees (Mango/Coconut) (4)
-            </button>
-            <button
-              onClick={() => setSelectedCategory('COSMIC')}
-              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
-                selectedCategory === 'COSMIC'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-            >
-              ⚡ Cosmic World Trees (4)
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {botanicalCards
-              .filter((card) => selectedCategory === 'ALL' || card.category === selectedCategory)
-              .map((card) => {
-              const currentLvl = cards[card.id] || 0;
-              const nextCost = Math.round(card.baseCost * Math.pow(1.35, currentLvl));
-              const canAfford = (player.dreamPoints || 0) >= nextCost;
-
-              return (
-                <div
-                  key={card.id}
-                  className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 hover:border-emerald-500/40 transition-all"
-                >
-                  <div className="space-y-1.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-2xl p-2 bg-neutral-950 rounded-xl border border-neutral-800">
-                          {card.icon}
-                        </span>
-                        <div>
-                          <h4 className="font-bold text-white text-xs sm:text-sm">{card.title}</h4>
-                          <span className="text-[10px] font-mono text-emerald-400 font-semibold">
-                            Level {currentLvl} • Produces +{card.sparksPerSec * currentLvl} Sparks/s
-                          </span>
-                        </div>
-                      </div>
-
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-950 text-neutral-400 border border-neutral-800">
-                        Base: +{card.sparksPerSec}/s
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-neutral-400 leading-relaxed">{card.flavor}</p>
-                  </div>
-
-                  <button
-                    onClick={() => handleCardUpgrade(card.id)}
-                    className={`w-full py-2 px-3 rounded-xl font-bold font-mono text-xs flex items-center justify-between transition-all cursor-pointer shadow active:scale-95 ${
-                      canAfford
-                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
-                        : 'bg-neutral-800 hover:bg-neutral-750 text-neutral-400 border border-neutral-700/60'
-                    }`}
-                  >
-                    <span>Upgrade to Lvl {currentLvl + 1}</span>
-                    <span className="text-[11px] font-normal">{nextCost.toLocaleString()} Sparks</span>
-                  </button>
-
-                  {lastCardUpgrade?.cardId === card.id && (
-                    <div
-                      className={`mt-2 p-2 rounded-xl text-[11px] font-mono animate-fadeIn flex items-center gap-1.5 shadow ${
-                        lastCardUpgrade.success
-                          ? 'bg-emerald-950/90 border border-emerald-500/50 text-emerald-300'
-                          : 'bg-rose-950/90 border border-rose-500/50 text-rose-300'
-                      }`}
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 animate-pulse" />
-                      <span>{lastCardUpgrade.message}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 3: PLANT & TREE EVOLUTION STAGES (8 STAGES) */}
-      {activeSubTab === 'PLANTS' && (
-        <div className="space-y-4">
-          <div className="p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono text-neutral-300">
-            Evolve your inner plant species to permanently multiply your sparks per tap! Each stage embodies a distinct tree archetype.
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {plantEvolutionStages.map((plant) => {
-              const isUnlocked = unlockedPlants.includes(plant.id);
-              const isActive = activePlant === plant.id;
-              const canAfford =
-                (player.dreamPoints || 0) >= plant.sparksCost &&
-                (plant.greenCost === 0 || (player.money || 0) >= plant.greenCost);
-
-              return (
-                <div
-                  key={plant.id}
-                  className={`p-4 rounded-2xl border transition-all ${
-                    isActive
-                      ? 'bg-emerald-950/30 border-emerald-500/60 shadow-lg shadow-emerald-950/30'
-                      : 'bg-neutral-900 border-neutral-800'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-3xl p-2 bg-neutral-950 rounded-xl border border-neutral-800">
-                        {plant.icon}
-                      </span>
-                      <div>
-                        <h4 className="font-bold text-white text-xs sm:text-sm">{plant.name}</h4>
-                        <span className="text-[10px] font-mono text-emerald-400 font-bold block">
-                          {plant.bonus}
-                        </span>
-                      </div>
-                    </div>
-
-                    {isActive && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/30">
-                        ACTIVE
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-[11px] text-neutral-400 mb-3">{plant.desc}</p>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="text-[11px] font-mono text-neutral-400">
-                      {isUnlocked ? (
-                        <span className="text-emerald-400 font-bold">✓ Unlocked</span>
-                      ) : (
-                        <span>
-                          Cost: {plant.sparksCost.toLocaleString()} Sparks
-                          {plant.greenCost > 0 ? ` + 🌿 ${plant.greenCost} GREEN` : ''}
-                        </span>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => handlePlantAction(plant.id)}
-                      disabled={!isUnlocked && !canAfford}
-                      className={`px-4 py-1.5 rounded-xl font-bold font-mono text-xs transition-all cursor-pointer ${
-                        isActive
-                          ? 'bg-neutral-800 text-neutral-500 cursor-default'
-                          : isUnlocked
-                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow'
-                          : canAfford
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 shadow'
-                          : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
-                      }`}
-                    >
-                      {isActive ? 'Equipped' : isUnlocked ? 'Equip Species' : 'Evolve Plant'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* SUB-TAB 4: DREAM MARKET & EXCHANGE */}
-      {activeSubTab === 'MARKET' && (
-        <div className="space-y-6">
+      {/* SUB-TAB 2: DREAM MARKET & INSTANT REFILLS */}
+      {(activeSubTab === 'ALL' || activeSubTab === 'MARKET') && (
+        <div id="section-market" className="scroll-mt-16 space-y-6">
           {/* Section 1: Vitals & Energy Stems */}
           <div>
             <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-emerald-400" /> Botanical Vitality Stems
+              <Zap className="w-4 h-4 text-emerald-400" /> Botanical Vitality Stems & Instant Refills
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Full Restoration Bundle Card */}
+              <div className="bg-gradient-to-br from-emerald-950/60 via-teal-950/40 to-neutral-900 border border-emerald-500/50 p-3.5 rounded-xl flex flex-col justify-between space-y-2 col-span-1 sm:col-span-2 lg:col-span-4 shadow-lg">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-300 font-mono">
+                      <span>✨ Full Restoration Awakening Bundle</span>
+                      <span className="text-amber-400 font-bold">80 Sparks</span>
+                    </div>
+                    <p className="text-[11px] text-neutral-300 mt-0.5">
+                      1-click awakening revive: grants +10 Energy, +5 Nerve, +50 Life, +25 Happy, +35 Food Satiety & mints +🌿 10 GREEN!
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleExchange('FULL_REVIVE')}
+                    className="py-1.5 px-4 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs font-mono transition-all cursor-pointer shadow active:scale-95 whitespace-nowrap"
+                  >
+                    Activate Bundle (80 Sparks)
+                  </button>
+                </div>
+              </div>
+
               <div className="bg-neutral-900 border border-neutral-800 p-3.5 rounded-xl flex flex-col justify-between space-y-2">
                 <div>
                   <div className="flex justify-between items-center text-xs font-bold text-emerald-400 font-mono">
@@ -1255,9 +1122,224 @@ export default function DreamTapView() {
         </div>
       )}
 
+      {/* SUB-TAB 3: BOTANICAL IDLE CARDS (16 CARDS ORGANIZED IN 4 CATEGORIES) */}
+      {(activeSubTab === 'ALL' || activeSubTab === 'IDLE_CARDS') && (
+        <div id="section-idle-cards" className="scroll-mt-16 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono">
+            <span className="text-neutral-300">
+              Idle Botanical Cards generate round-the-clock sparks automatically even while offline!
+            </span>
+            <span className="text-emerald-400 font-bold">
+              Total Production: +{autoSparksPerSec} Sparks/sec
+            </span>
+          </div>
+
+          {/* Section Category Filter Tabs (Mini Spores, Shrubs/Flora, Big Trees, Cosmic World Trees) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto p-1 bg-neutral-900 rounded-xl border border-neutral-800 text-xs font-mono">
+            <button
+              onClick={() => setSelectedCategory('ALL')}
+              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                selectedCategory === 'ALL'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              All Cards ({botanicalCards.length})
+            </button>
+            <button
+              onClick={() => setSelectedCategory('SPORES')}
+              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                selectedCategory === 'SPORES'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              🍄 Mini Spores & Fungi (5)
+            </button>
+            <button
+              onClick={() => setSelectedCategory('FLORA')}
+              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                selectedCategory === 'FLORA'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              🌿 Shrubs & Flora (4)
+            </button>
+            <button
+              onClick={() => setSelectedCategory('BIG_TREES')}
+              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                selectedCategory === 'BIG_TREES'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              🌴 Big Trees (Mango/Coconut) (4)
+            </button>
+            <button
+              onClick={() => setSelectedCategory('COSMIC')}
+              className={`py-1.5 px-3 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                selectedCategory === 'COSMIC'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+            >
+              ⚡ Cosmic World Trees (4)
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {botanicalCards
+              .filter((card) => selectedCategory === 'ALL' || card.category === selectedCategory)
+              .map((card) => {
+              const currentLvl = cards[card.id] || 0;
+              const nextCost = Math.round(card.baseCost * Math.pow(1.35, currentLvl));
+              const canAfford = (player.dreamPoints || 0) >= nextCost;
+
+              return (
+                <div
+                  key={card.id}
+                  className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 hover:border-emerald-500/40 transition-all"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl p-2 bg-neutral-950 rounded-xl border border-neutral-800">
+                          {card.icon}
+                        </span>
+                        <div>
+                          <h4 className="font-bold text-white text-xs sm:text-sm">{card.title}</h4>
+                          <span className="text-[10px] font-mono text-emerald-400 font-semibold">
+                            Level {currentLvl} • Produces +{card.sparksPerSec * currentLvl} Sparks/s
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-950 text-neutral-400 border border-neutral-800">
+                        Base: +{card.sparksPerSec}/s
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">{card.flavor}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleCardUpgrade(card.id)}
+                    className={`w-full py-2 px-3 rounded-xl font-bold font-mono text-xs flex items-center justify-between transition-all cursor-pointer shadow active:scale-95 ${
+                      canAfford
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
+                        : 'bg-neutral-800 hover:bg-neutral-750 text-neutral-400 border border-neutral-700/60'
+                    }`}
+                  >
+                    <span>Upgrade to Lvl {currentLvl + 1}</span>
+                    <span className="text-[11px] font-normal">{nextCost.toLocaleString()} Sparks</span>
+                  </button>
+
+                  {lastCardUpgrade?.cardId === card.id && (
+                    <div
+                      className={`mt-2 p-2 rounded-xl text-[11px] font-mono animate-fadeIn flex items-center gap-1.5 shadow ${
+                        lastCardUpgrade.success
+                          ? 'bg-emerald-950/90 border border-emerald-500/50 text-emerald-300'
+                          : 'bg-rose-950/90 border border-rose-500/50 text-rose-300'
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 animate-pulse" />
+                      <span>{lastCardUpgrade.message}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 3: PLANT & TREE EVOLUTION STAGES (8 STAGES) */}
+      {(activeSubTab === 'ALL' || activeSubTab === 'PLANTS') && (
+        <div id="section-plants" className="scroll-mt-16 space-y-4">
+          <div className="p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono text-neutral-300">
+            Evolve your inner plant species to permanently multiply your sparks per tap! Each stage embodies a distinct tree archetype.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {plantEvolutionStages.map((plant) => {
+              const isUnlocked = unlockedPlants.includes(plant.id);
+              const isActive = activePlant === plant.id;
+              const canAfford =
+                (player.dreamPoints || 0) >= plant.sparksCost &&
+                (plant.greenCost === 0 || (player.money || 0) >= plant.greenCost);
+
+              return (
+                <div
+                  key={plant.id}
+                  className={`p-4 rounded-2xl border transition-all ${
+                    isActive
+                      ? 'bg-emerald-950/30 border-emerald-500/60 shadow-lg shadow-emerald-950/30'
+                      : 'bg-neutral-900 border-neutral-800'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-3xl p-2 bg-neutral-950 rounded-xl border border-neutral-800">
+                        {plant.icon}
+                      </span>
+                      <div>
+                        <h4 className="font-bold text-white text-xs sm:text-sm">{plant.name}</h4>
+                        <span className="text-[10px] font-mono text-emerald-400 font-bold block">
+                          {plant.bonus}
+                        </span>
+                      </div>
+                    </div>
+
+                    {isActive && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/30">
+                        ACTIVE
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-neutral-400 mb-3">{plant.desc}</p>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="text-[11px] font-mono text-neutral-400">
+                      {isUnlocked ? (
+                        <span className="text-emerald-400 font-bold">✓ Unlocked</span>
+                      ) : (
+                        <span>
+                          Cost: {plant.sparksCost.toLocaleString()} Sparks
+                          {plant.greenCost > 0 ? ` + 🌿 ${plant.greenCost} GREEN` : ''}
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handlePlantAction(plant.id)}
+                      disabled={!isUnlocked && !canAfford}
+                      className={`px-4 py-1.5 rounded-xl font-bold font-mono text-xs transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-neutral-800 text-neutral-500 cursor-default'
+                          : isUnlocked
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow'
+                          : canAfford
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 shadow'
+                          : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
+                      }`}
+                    >
+                      {isActive ? 'Equipped' : isUnlocked ? 'Equip Species' : 'Evolve Plant'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+
+
       {/* SUB-TAB 5: SYNDICATE REFERRALS & TILL (ACCESSIBLE IN DREAM TAP) */}
-      {activeSubTab === 'REFERRALS' && (
-        <div className="space-y-4">
+      {(activeSubTab === 'ALL' || activeSubTab === 'REFERRALS') && (
+        <div id="section-referrals" className="scroll-mt-16 space-y-4">
           <div className="p-3.5 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-between text-xs font-mono">
             <span className="text-neutral-300">
               🌿 Cultivate your viral syndicate! Recruits earn you passive lifetime 10% GREEN royalties.

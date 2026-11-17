@@ -119,7 +119,7 @@ export function TornCityContent() {
             </div>
           ) : (
             <>
-              {currentView === 'HOME' && <TornHomeView />}
+              {currentView === 'HOME' && <TornHomeView onNavigate={setCurrentView} />}
               {currentView === 'DREAM_TAP' && <DreamTapView />}
               {currentView === 'REFERRAL' && <ReferralView />}
               {currentView === 'ITEMS' && <TornItemsView />}

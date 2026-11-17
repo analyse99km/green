@@ -2779,7 +2779,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return { success: true, message: '+25 Happy Restored!' };
     }
 
-    if (exchangeId === 'LIFE_SAP') {
+    if (exchangeId === 'LIFE_SAP' || exchangeId === 'LIFE_RESTORE') {
       if (sparks < 35) {
         triggerInsufficientFunds({
           currency: 'SPARKS',
@@ -2799,8 +2799,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return { success: true, message: '+50 Life Restored!' };
     }
 
-    if (exchangeId === 'FOOD_SOURDOUGH' || exchangeId === 'DREAM_FEAST') {
-      const cost = exchangeId === 'DREAM_FEAST' ? 25 : 40;
+    if (exchangeId === 'FOOD_SOURDOUGH' || exchangeId === 'DREAM_FEAST' || exchangeId === 'FOOD_RATION') {
+      const cost = exchangeId === 'DREAM_FEAST' ? 25 : exchangeId === 'FOOD_RATION' ? 20 : 40;
       if (sparks < cost) {
         triggerInsufficientFunds({
           currency: 'SPARKS',
@@ -2820,6 +2820,34 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       SoundEngine.playEat(player.soundEnabled);
       addLog({ type: 'FOOD', message: 'Dream Market: Organic Sprout Bread filled +35 Satiety!' });
       return { success: true, message: '+35 Satiety & +15 Happy Restored!' };
+    }
+
+    if (exchangeId === 'FULL_REVIVE') {
+      const cost = 80;
+      if (sparks < cost) {
+        triggerInsufficientFunds({
+          currency: 'SPARKS',
+          requiredAmount: cost,
+          currentBalance: sparks,
+          itemName: 'Full Restoration Bundle',
+        });
+        return { success: false, message: `Need ${cost} Dream Sparks.` };
+      }
+      setPlayer((prev) => ({
+        ...prev,
+        dreamPoints: prev.dreamPoints - cost,
+        energy: Math.min(prev.maxEnergy, prev.energy + 10),
+        nerve: Math.min(prev.maxNerve, prev.nerve + 5),
+        life: Math.min(prev.maxLife, prev.life + 50),
+        happy: Math.min(prev.maxHappy, prev.happy + 25),
+        food: Math.min(prev.maxFood || 100, (prev.food || 70) + 35),
+        money: (prev.money || 0) + 10,
+        greenTokens: (prev.greenTokens || 0) + 10,
+        hasUnsavedActions: true,
+      }));
+      SoundEngine.playVictory(player.soundEnabled);
+      addLog({ type: 'CIVILIAN', message: 'Dream Market: Full Restoration Bundle revived all vitals & minted +🌿 10 GREEN!' });
+      return { success: true, message: 'Full Restoration Bundle activated!' };
     }
 
     if (exchangeId === 'FOOD_SUPERFOOD') {
