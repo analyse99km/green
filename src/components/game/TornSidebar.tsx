@@ -52,8 +52,8 @@ export default function TornSidebar({ currentView, onSelectView }: TornSidebarPr
   const navItems = [
     { id: 'HOME', label: 'Home', icon: Home },
     { id: 'ITEMS', label: '🎒 Items & Outfitter', icon: Package },
+    { id: 'CASINO', label: 'Casino', icon: Dice5, highlight: true },
     { id: 'BAZAAR', label: 'Item Market & Bazaar', icon: Store },
-    { id: 'CASINO', label: '🎰 2D Velvet Casino', icon: Dice5, highlight: true },
     { id: 'DREAM_TAP', label: '⚡ Lucid Dream Tap', icon: Zap },
     { id: 'CRIMES', label: 'Crimes (2.0)', icon: Flame },
     { id: 'ATTACK', label: 'Attacks & Bounties', icon: Swords },

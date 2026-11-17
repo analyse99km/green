@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import ReferralView from './ReferralView';
+import { SoundEngine } from '../gameAudio';
 
 interface FloatingText {
   id: number;
@@ -97,6 +98,7 @@ export default function DreamTapView() {
     }
 
     const res = tapDreamEnergy();
+    SoundEngine.playTap(player.soundEnabled);
     setCombo(res.comboStreak);
 
     let clientX = 0;

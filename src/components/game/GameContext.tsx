@@ -967,6 +967,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         type: 'CRIME',
         message: `Crime Success: "${crime.name}" executed! Escaped with 🌿 ${reward.toLocaleString()} GREEN!`,
       });
+      SoundEngine.playCash(player.soundEnabled);
       return { success: true, message: `+🌿 ${reward.toLocaleString()} GREEN!` };
     } else {
       const jailSecs = crime.jailTimeMinutes * 60;
@@ -1687,6 +1688,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       type: 'TRAIN',
       message: `Trained ${stat.toUpperCase()}! Gained +${gain} stat points.`,
     });
+    SoundEngine.playGym(player.soundEnabled);
     return { success: true, message: `+${gain} ${stat.toUpperCase()} gained!` };
   };
 
