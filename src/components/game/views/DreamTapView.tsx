@@ -56,6 +56,15 @@ export default function DreamTapView() {
   const [floaters, setFloaters] = useState<FloatingText[]>([]);
   const [isPressing, setIsPressing] = useState(false);
 
+  const isAwakened = Boolean(
+    (player.money || 0) > 0 &&
+    (player.energy || 0) > 0 &&
+    (player.nerve || 0) > 0 &&
+    (player.happy || 0) > 0 &&
+    (player.life || 0) > 0 &&
+    (player.food || 0) > 0
+  );
+
   const cards = player.dreamCards || {};
   const unlockedPlants = player.unlockedTapperSkins || ['tree_sprout'];
   const activePlant = player.activeTapperSkinId || 'tree_sprout';
@@ -500,6 +509,112 @@ export default function DreamTapView() {
           </div>
         )}
       </div>
+
+      {/* Operative Awakening Banner & Vital Checklist (Shown when any vital is 0) */}
+      {!isAwakened && (
+        <div className="bg-gradient-to-r from-emerald-950/80 via-neutral-900 to-indigo-950/80 border border-emerald-500/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3 animate-fadeIn">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/30 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🌱</span>
+              <h3 className="font-bold text-white text-sm sm:text-base">
+                Pioneer Awakening: Restore All 6 Vitals to Unlock Metropolis
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+              AWAKENING PHASE
+            </span>
+          </div>
+          <p className="text-xs text-neutral-300 leading-relaxed">
+            All new operatives begin at zero. Tap the <strong>Plant Core</strong> below to harvest Dream Sparks, then visit the <strong>Dream Market</strong> tab to make all 6 vitals above zero!
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1 font-mono text-xs">
+            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.money > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
+              <div>
+                <span className="text-[10px] text-neutral-500 block">1. Currency</span>
+                <span className="font-bold text-white">🌿 GREEN</span>
+              </div>
+              {player.money > 0 ? (
+                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.money} Coins</span>
+              ) : (
+                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('GREEN_STARTER'); }} className="py-1 px-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition-all cursor-pointer">
+                  Mint (15✨)
+                </button>
+              )}
+            </div>
+
+            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.energy > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
+              <div>
+                <span className="text-[10px] text-neutral-500 block">2. Energy</span>
+                <span className="font-bold text-white">⚡ Stamina</span>
+              </div>
+              {player.energy > 0 ? (
+                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.energy} Energy</span>
+              ) : (
+                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('ENERGY_STEM'); }} className="py-1 px-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition-all cursor-pointer">
+                  Stem (25✨)
+                </button>
+              )}
+            </div>
+
+            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.nerve > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
+              <div>
+                <span className="text-[10px] text-neutral-500 block">3. Nerve</span>
+                <span className="font-bold text-white">🛡️ Courage</span>
+              </div>
+              {player.nerve > 0 ? (
+                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.nerve} Nerve</span>
+              ) : (
+                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('NERVE_NECTAR'); }} className="py-1 px-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold transition-all cursor-pointer">
+                  Nectar (30✨)
+                </button>
+              )}
+            </div>
+
+            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.happy > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
+              <div>
+                <span className="text-[10px] text-neutral-500 block">4. Happy</span>
+                <span className="font-bold text-white">😊 Morale</span>
+              </div>
+              {player.happy > 0 ? (
+                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.happy} Happy</span>
+              ) : (
+                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('HAPPY_FLORA'); }} className="py-1 px-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold transition-all cursor-pointer">
+                  Flora (20✨)
+                </button>
+              )}
+            </div>
+
+            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.life > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
+              <div>
+                <span className="text-[10px] text-neutral-500 block">5. Life</span>
+                <span className="font-bold text-white">💖 Health</span>
+              </div>
+              {player.life > 0 ? (
+                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.life} Life</span>
+              ) : (
+                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('LIFE_SAP'); }} className="py-1 px-1.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold transition-all cursor-pointer">
+                  Sap (35✨)
+                </button>
+              )}
+            </div>
+
+            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.food > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
+              <div>
+                <span className="text-[10px] text-neutral-500 block">6. Food</span>
+                <span className="font-bold text-white">🍞 Satiety</span>
+              </div>
+              {player.food > 0 ? (
+                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.food} Food</span>
+              ) : (
+                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('FOOD_SOURDOUGH'); }} className="py-1 px-1.5 rounded bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-bold transition-all cursor-pointer">
+                  Sourdough (40✨)
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Sub-Tabs */}
       <div className="flex items-center gap-1.5 p-1 bg-neutral-900 rounded-xl border border-neutral-800 max-w-full overflow-x-auto text-xs font-mono">
@@ -1010,7 +1125,23 @@ export default function DreamTapView() {
             <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-1.5">
               <span>🌿</span> Sparks-to-GREEN Currency Mint
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-gradient-to-br from-emerald-950/40 via-neutral-900 to-neutral-900 border border-emerald-500/40 p-3.5 rounded-xl flex flex-col justify-between space-y-2">
+                <div>
+                  <div className="flex justify-between items-center text-xs font-bold text-emerald-400 font-mono">
+                    <span>🌿 Starter Mint: 10 GREEN</span>
+                    <span className="text-amber-400">15 Sparks</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-400 mt-1">Awaken your currency! Converts 15 sparks into 10 liquid GREEN coins.</p>
+                </div>
+                <button
+                  onClick={() => handleExchange('GREEN_STARTER')}
+                  className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs font-mono transition-all cursor-pointer shadow active:scale-95"
+                >
+                  Mint 🌿 10 GREEN (15 Sparks)
+                </button>
+              </div>
+
               <div className="bg-neutral-900 border border-neutral-800 p-3.5 rounded-xl flex flex-col justify-between space-y-2">
                 <div>
                   <div className="flex justify-between items-center text-xs font-bold text-emerald-400 font-mono">

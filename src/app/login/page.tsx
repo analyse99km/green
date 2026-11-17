@@ -153,7 +153,7 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
 
       const uniqueRef = data.userReferralCode || `NEON-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      if (!playerState) {
+      if (!playerState || isRegister) {
         const uniqueXid = String(Math.floor(1000000 + Math.random() * 9000000));
         playerState = {
           id: data.userId || `usr_${Date.now()}`,
@@ -164,22 +164,24 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
           level: 1,
           xp: 0,
           xpNeeded: 100,
-          money: 150,
+          // All initial vitals strictly 0 as required!
+          money: 0,
           bankMoney: 0,
           points: 0,
-          energy: 20,
-          maxEnergy: 20,
-          nerve: 10,
+          energy: 0,
+          maxEnergy: 100,
+          nerve: 0,
           maxNerve: 10,
-          happy: 50,
-          maxHappy: 50,
-          life: 100,
+          happy: 0,
+          maxHappy: 100,
+          life: 0,
           maxLife: 100,
-          food: 100,
+          food: 0,
           maxFood: 100,
-          dreamPoints: 0,
+          dreamPoints: 0, // 0 Sparks - tap in Dream to earn!
           tapStamina: 100,
           maxTapStamina: 100,
+          isAwakened: false,
           referrals: {
             referralCode: uniqueRef,
             totalRecruits: 0,
@@ -187,12 +189,11 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             lifetimeCommissionGreen: 0,
             recruits: [],
             claimedMilestones: [],
+            referredBy: isRegister && referralInput.trim() ? referralInput.trim().toUpperCase() : undefined,
+            hasClaimedWelcomeBonus: false,
           },
         };
       } else {
-        if (isRegister && operativeName.trim()) {
-          playerState.name = chosenName;
-        }
         if (!playerState.referrals) {
           playerState.referrals = {
             referralCode: uniqueRef,
@@ -204,27 +205,6 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
           };
         } else if (data.userReferralCode) {
           playerState.referrals.referralCode = data.userReferralCode;
-        }
-      }
-
-      // If registered with optional referral code
-      if (isRegister && referralInput.trim()) {
-        const cleanRef = referralInput.trim().toUpperCase();
-        if (!playerState.referrals) {
-          playerState.referrals = {
-            referralCode: `NEON-${Math.floor(10000 + Math.random() * 90000)}`,
-            totalRecruits: 0,
-            unclaimedCommissionGreen: 0,
-            lifetimeCommissionGreen: 0,
-            recruits: [],
-            claimedMilestones: [],
-          };
-        }
-        if (!playerState.referrals.referredBy) {
-          playerState.referrals.referredBy = cleanRef;
-          playerState.referrals.hasClaimedWelcomeBonus = true;
-          playerState.money = (playerState.money || 0) + 50; // Welcome starter kit
-          playerState.energy = Math.min(playerState.maxEnergy || 20, (playerState.energy || 20) + 10);
         }
       }
 
@@ -407,7 +387,7 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="operative@metropolis.city"
+                    placeholder="Enter your email address (e.g. user@gmail.com)"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-emerald-500 text-white text-xs font-mono outline-hidden transition-colors"
                   />
                 </div>

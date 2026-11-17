@@ -36,8 +36,19 @@ import InsufficientFundsModal from '@/components/game/InsufficientFundsModal';
 
 export function TornCityContent() {
   const { player, insufficientFundsModal, closeInsufficientFunds } = useGame();
-  const [currentView, setCurrentView] = useState('HOME');
+  // Default first page is Lucid Dream tapping page as required!
+  const [currentView, setCurrentView] = useState('DREAM_TAP');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Awakening check: all 6 vitals must be above 0
+  const isAwakened = Boolean(
+    (player.money || 0) > 0 &&
+    (player.energy || 0) > 0 &&
+    (player.nerve || 0) > 0 &&
+    (player.happy || 0) > 0 &&
+    (player.life || 0) > 0 &&
+    (player.food || 0) > 0
+  );
 
   return (
     <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-neutral-950 text-neutral-100 flex flex-col font-sans select-none">
@@ -60,42 +71,92 @@ export function TornCityContent() {
 
         {/* Center Main Stage */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 bg-neutral-950 overflow-y-auto">
-          {currentView === 'HOME' && <TornHomeView />}
-          {currentView === 'DREAM_TAP' && <DreamTapView />}
-          {currentView === 'REFERRAL' && <ReferralView />}
-          {currentView === 'ITEMS' && <TornItemsView />}
-          {currentView === 'BAZAAR' && <BazaarView />}
-          {currentView === 'ATTACK' && <AttackView />}
-          {currentView === 'WHEEL' && <LuckyWheelView />}
-          {currentView === 'CITY' && <TornCityMapView onNavigate={setCurrentView} />}
-          {currentView === 'NEWSPAPER' && <TornNewspaperView />}
-          {currentView === 'MISSIONS' && <TornMissionsView />}
-          {currentView === 'JOB' && <TornJobView />}
-          {currentView === 'GYM' && <TornGymView />}
-          {currentView === 'PROPERTIES' && <TornPropertiesView onNavigate={setCurrentView} />}
-          {currentView === 'EDUCATION' && <TornEducationView />}
-          {currentView === 'CRIMES' && <TornCrimesView />}
-          {currentView === 'CITY_HALL' && <TornCityHallView />}
-          {currentView === 'BANK' && <TornBankView />}
-          {currentView === 'HOSPITAL' && <TornHospitalView />}
-          {currentView === 'CASINO' && <TornCasinoView />}
-          {currentView === 'FACTION' && <TornFactionView />}
-          {currentView === 'JAIL' && (
-            <div className="p-8 text-center bg-neutral-900 rounded-2xl border border-neutral-800">
-              <h2 className="text-xl font-bold text-white mb-2">Metropolis Correctional Facility & Holding Cells</h2>
-              <p className="text-xs text-neutral-400">
-                Detention block for failed heists and apprehended street criminals.
+          {!isAwakened && currentView !== 'DREAM_TAP' && currentView !== 'REFERRAL' ? (
+            <div className="max-w-2xl mx-auto p-6 bg-gradient-to-br from-neutral-900 via-indigo-950/40 to-neutral-900 border border-emerald-500/50 rounded-2xl text-center space-y-4 shadow-2xl animate-fadeIn">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-3xl mx-auto shadow-inner">
+                🔒
+              </div>
+              <h2 className="text-xl font-bold text-white">Metropolis District Locked: Awakening Required</h2>
+              <p className="text-xs text-neutral-300 leading-relaxed max-w-xl mx-auto">
+                Your operative vitals are at zero. Tap the <strong>Lucid Dream Nexus</strong> to earn sparks, then enter the <strong>Dream Market</strong> to make all 6 vitals above zero. Once awakened, the entire Metropolis will unlock!
               </p>
-              {player.jailTimeRemainingSeconds > 0 ? (
-                <div className="mt-4 text-rose-400 font-bold font-mono">
-                  Serving Sentence: {player.jailTimeRemainingSeconds} seconds remaining.
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-mono py-2 max-w-lg mx-auto">
+                <div className={`p-2.5 rounded-xl border text-left ${player.money > 0 ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-500'}`}>
+                  <span className="block text-[10px] text-neutral-400">1. Currency</span>
+                  🌿 GREEN: <strong>{player.money > 0 ? `+${player.money} ✓` : '0/10 Mint'}</strong>
                 </div>
-              ) : (
-                <div className="mt-4 text-emerald-400 font-mono text-xs">
-                  ✓ You currently have no outstanding jail sentences. Keep it that way!
+                <div className={`p-2.5 rounded-xl border text-left ${player.energy > 0 ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-500'}`}>
+                  <span className="block text-[10px] text-neutral-400">2. Stamina</span>
+                  ⚡ Energy: <strong>{player.energy > 0 ? `${player.energy} ✓` : '0/10 Stem'}</strong>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-left ${player.nerve > 0 ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-500'}`}>
+                  <span className="block text-[10px] text-neutral-400">3. Courage</span>
+                  🛡️ Nerve: <strong>{player.nerve > 0 ? `${player.nerve} ✓` : '0/5 Nectar'}</strong>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-left ${player.happy > 0 ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-500'}`}>
+                  <span className="block text-[10px] text-neutral-400">4. Morale</span>
+                  😊 Happy: <strong>{player.happy > 0 ? `${player.happy} ✓` : '0/25 Flora'}</strong>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-left ${player.life > 0 ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-500'}`}>
+                  <span className="block text-[10px] text-neutral-400">5. Health</span>
+                  💖 Life: <strong>{player.life > 0 ? `${player.life} ✓` : '0/50 Sap'}</strong>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-left ${player.food > 0 ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-500'}`}>
+                  <span className="block text-[10px] text-neutral-400">6. Nutrition</span>
+                  🍞 Satiety: <strong>{player.food > 0 ? `${player.food} ✓` : '0/35 Bread'}</strong>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setCurrentView('DREAM_TAP')}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-bold text-xs font-mono shadow-lg transition-all cursor-pointer active:scale-95"
+                >
+                  Enter Lucid Dream & Awaken Vitals →
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {currentView === 'HOME' && <TornHomeView />}
+              {currentView === 'DREAM_TAP' && <DreamTapView />}
+              {currentView === 'REFERRAL' && <ReferralView />}
+              {currentView === 'ITEMS' && <TornItemsView />}
+              {currentView === 'BAZAAR' && <BazaarView />}
+              {currentView === 'ATTACK' && <AttackView />}
+              {currentView === 'WHEEL' && <LuckyWheelView />}
+              {currentView === 'CITY' && <TornCityMapView onNavigate={setCurrentView} />}
+              {currentView === 'NEWSPAPER' && <TornNewspaperView />}
+              {currentView === 'MISSIONS' && <TornMissionsView />}
+              {currentView === 'JOB' && <TornJobView />}
+              {currentView === 'GYM' && <TornGymView />}
+              {currentView === 'PROPERTIES' && <TornPropertiesView onNavigate={setCurrentView} />}
+              {currentView === 'EDUCATION' && <TornEducationView />}
+              {currentView === 'CRIMES' && <TornCrimesView />}
+              {currentView === 'CITY_HALL' && <TornCityHallView />}
+              {currentView === 'BANK' && <TornBankView />}
+              {currentView === 'HOSPITAL' && <TornHospitalView />}
+              {currentView === 'CASINO' && <TornCasinoView />}
+              {currentView === 'FACTION' && <TornFactionView />}
+              {currentView === 'JAIL' && (
+                <div className="p-8 text-center bg-neutral-900 rounded-2xl border border-neutral-800">
+                  <h2 className="text-xl font-bold text-white mb-2">Metropolis Correctional Facility & Holding Cells</h2>
+                  <p className="text-xs text-neutral-400">
+                    Detention block for failed heists and apprehended street criminals.
+                  </p>
+                  {player.jailTimeRemainingSeconds > 0 ? (
+                    <div className="mt-4 text-rose-400 font-bold font-mono">
+                      Serving Sentence: {player.jailTimeRemainingSeconds} seconds remaining.
+                    </div>
+                  ) : (
+                    <div className="mt-4 text-emerald-400 font-mono text-xs">
+                      ✓ You currently have no outstanding jail sentences. Keep it that way!
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Activity Log at Bottom of views */}

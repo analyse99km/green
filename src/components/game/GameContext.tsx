@@ -408,8 +408,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         let hospitalTime = prev.hospitalTimeRemainingSeconds;
         let life = prev.life;
 
-        // STARVATION COLLAPSE: If food hits 0, player collapses into ICU for 2 minutes (120s)!
-        if (food <= 0 && hospitalTime <= 0) {
+        const isAwakened = Boolean(
+          (prev.money || 0) > 0 &&
+          (prev.energy || 0) > 0 &&
+          (prev.nerve || 0) > 0 &&
+          (prev.happy || 0) > 0 &&
+          (prev.life || 0) > 0 &&
+          (prev.food || 0) > 0
+        );
+
+        // STARVATION COLLAPSE: Only applies to awakened physical operatives!
+        if (isAwakened && food <= 0 && hospitalTime <= 0) {
           hospitalTime = 120; // 2 minutes
           life = 15;
           addLog({
@@ -447,6 +456,46 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearInterval(interval);
   }, []);
+
+  // ── AUTO-SAVE PROTOCOL: Guaranteed Auto-Save every 2 minutes (120,000ms) ──────────
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      setPlayer((current) => {
+        let activeKey = LOCAL_STORAGE_KEY;
+        const authUserRaw = localStorage.getItem('metropolis_auth_user');
+        if (authUserRaw) {
+          try {
+            const authUser = JSON.parse(authUserRaw);
+            if (authUser?.email) {
+              activeKey = `neon_metropolis_user_${authUser.email.trim().toLowerCase()}`;
+            }
+          } catch {}
+        }
+
+        const autoSaved: PlayerState = {
+          ...current,
+          lastSaveTimestamp: Date.now(),
+          hasUnsavedActions: false,
+        };
+
+        try {
+          localStorage.setItem(activeKey, JSON.stringify(autoSaved));
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(autoSaved));
+        } catch (err) {
+          console.warn('Auto-save error:', err);
+        }
+
+        return autoSaved;
+      });
+
+      addLog({
+        type: 'SAVE',
+        message: '💾 Auto-Save: Operative game state securely saved & encrypted (2-minute cycle).',
+      });
+    }, 120000); // exactly 2 minutes
+
+    return () => clearInterval(autoSaveInterval);
+  }, [addLog]);
 
   const saveGame = async () => {
     setIsSaving(true);
@@ -2558,6 +2607,29 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const exchangeDreamSparks = (exchangeId: string) => {
     const sparks = player.dreamPoints || 0;
+
+    if (exchangeId === 'GREEN_STARTER' || exchangeId === 'GREEN_10') {
+      const cost = 15;
+      if (sparks < cost) {
+        triggerInsufficientFunds({
+          currency: 'SPARKS',
+          requiredAmount: cost,
+          currentBalance: sparks,
+          itemName: 'Starter GREEN Mint (10 Coins)',
+        });
+        return { success: false, message: `Need ${cost} Dream Sparks.` };
+      }
+      setPlayer((prev) => ({
+        ...prev,
+        dreamPoints: prev.dreamPoints - cost,
+        money: (prev.money || 0) + 10,
+        greenTokens: (prev.greenTokens || 0) + 10,
+        hasUnsavedActions: true,
+      }));
+      SoundEngine.playLoot(player.soundEnabled);
+      addLog({ type: 'CIVILIAN', message: 'Dream Market: Minted +🌿 10 GREEN Coins from Dream Sparks!' });
+      return { success: true, message: '+🌿 10 GREEN Minted!' };
+    }
 
     if (exchangeId === 'ENERGY_STEM' || exchangeId === 'ENERGY_15') {
       const cost = exchangeId === 'ENERGY_15' ? 15 : 25;

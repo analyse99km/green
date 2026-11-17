@@ -318,6 +318,7 @@ export interface PlayerState {
   maxFood: number;
   chain: number;
   maxChain: number;
+  isAwakened?: boolean; // Whether all 6 vitals have been restored above 0 from Dream Market!
 
   // Stats
   battleStats: BattleStats;

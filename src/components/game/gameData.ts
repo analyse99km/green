@@ -1074,20 +1074,20 @@ export const DEFAULT_METROPOLIS_PLAYER: PlayerState = {
   maritalStatus: 'Single',
   networth: 150,
 
-  // Vitals - Starting from scratch with low initial capacities!
-  money: 150, // 🌿 150 GREEN Coins
+  // Vitals - Starting from scratch with 0 as required!
+  money: 0, // 🌿 0 GREEN Coins (Must earn sparks & mint in Dream Market)
   bankMoney: 0,
   points: 0,
   missionCredits: 0,
-  life: 100,
+  life: 0, // Awakens via Life Sap in Dream Market
   maxLife: 100,
-  energy: 20,
-  maxEnergy: 20,
-  nerve: 10,
+  energy: 0, // Awakens via Energy Stem in Dream Market
+  maxEnergy: 100,
+  nerve: 0, // Awakens via Nerve Nectar in Dream Market
   maxNerve: 10,
-  happy: 50,
-  maxHappy: 50,
-  food: 70,
+  happy: 0, // Awakens via Happy Blossom in Dream Market
+  maxHappy: 100,
+  food: 0, // Awakens via Sprout Sourdough in Dream Market
   maxFood: 100,
   chain: 0,
   maxChain: 10,
@@ -1141,38 +1141,7 @@ export const DEFAULT_METROPOLIS_PLAYER: PlayerState = {
   missions: INITIAL_MISSIONS,
   properties: INITIAL_PROPERTIES,
   currentPropertyId: 'prop_apt',
-  inventory: [
-    {
-      id: 'inv_sub_starter',
-      name: 'Organic Deli Baguette',
-      description: 'Fresh baked sandwich: +30 Food, +10 Energy, +10 Happy.',
-      category: 'FOOD',
-      rarity: 'COMMON',
-      price: 25,
-      marketValue: 25,
-      shopliftDifficulty: 10,
-      foodRestore: 30,
-      energyRestore: 10,
-      happyRestore: 10,
-      icon: '🥪',
-      quantity: 2,
-    },
-    {
-      id: 'inv_knuckles_starter',
-      name: 'Heavy Brass Knuckles',
-      description: 'Close-quarters melee weapon. Damage: 18.5, Acc: 70.0.',
-      category: 'WEAPON',
-      rarity: 'COMMON',
-      price: 120,
-      marketValue: 120,
-      shopliftDifficulty: 20,
-      damage: 18.5,
-      accuracy: 70.0,
-      icon: '🥊',
-      quantity: 1,
-      upgradeLevel: 0,
-    },
-  ],
+  inventory: [],
   bazaarListings: [],
   bazaarTillCash: 0,
   dailyWheelSpinsAvailable: 1,
@@ -1210,7 +1179,7 @@ export const DEFAULT_METROPOLIS_PLAYER: PlayerState = {
   settledReceiptIds: [],
 
   // GREEN Token Economy & Coin Logic
-  greenTokens: 150,
+  greenTokens: 0,
 
   // Daily Streak Clipper
   dailyStreak: 1,
