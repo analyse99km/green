@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGame } from '../GameContext';
 import { SoundEngine } from '../gameAudio';
+import RouletteWheelCanvas from '../RouletteWheelCanvas';
 import {
   Dice5,
   Sparkles,
@@ -241,8 +242,9 @@ export default function TornCasinoView() {
   // ─────────────────────────────────────────────────────────────────────────────
   const [rouletteBets, setRouletteBets] = useState<{ [key: string]: number }>({});
   const [isSpinningRoulette, setIsSpinningRoulette] = useState(false);
+  const [targetWinningNumber, setTargetWinningNumber] = useState<number | null>(null);
+  const [pendingWinPocket, setPendingWinPocket] = useState<RoulettePocket | null>(null);
   const [rouletteWinningPocket, setRouletteWinningPocket] = useState<RoulettePocket | null>(null);
-  const [rouletteWheelDeg, setRouletteWheelDeg] = useState(0);
   const [rouletteResultMsg, setRouletteResultMsg] = useState<string | null>(null);
 
   const totalRouletteBet = Object.values(rouletteBets).reduce((acc, v) => acc + v, 0);
@@ -285,54 +287,46 @@ export default function TornCasinoView() {
       return;
     }
 
-    setIsSpinningRoulette(true);
-    setRouletteResultMsg(null);
-
     // Pick winning pocket
     const winPocketIndex = Math.floor(Math.random() * ROULETTE_POCKETS.length);
     const winPocket = ROULETTE_POCKETS[winPocketIndex];
 
-    // Wheel ticking peg sound
-    let ticks = 0;
-    const tickTimer = setInterval(() => {
-      SoundEngine.playWheelTick(player.soundEnabled);
-      ticks++;
-      if (ticks > 14) clearInterval(tickTimer);
-    }, 130);
+    setPendingWinPocket(winPocket);
+    setTargetWinningNumber(winPocket.num);
+    setIsSpinningRoulette(true);
+    setRouletteResultMsg('Wheel spinning... Ball circling the track!');
+  };
 
-    const extraRotations = 1440 + winPocketIndex * (360 / ROULETTE_POCKETS.length);
-    setRouletteWheelDeg((prev) => prev + extraRotations);
+  const handleRouletteSpinComplete = () => {
+    if (!pendingWinPocket) return;
 
-    setTimeout(() => {
-      setRouletteWinningPocket(winPocket);
-      setIsSpinningRoulette(false);
-      SoundEngine.playBallDrop(player.soundEnabled);
+    setIsSpinningRoulette(false);
+    setRouletteWinningPocket(pendingWinPocket);
 
-      // Evaluate actual winnings based strictly on table bets
-      let totalWon = 0;
-      const num = winPocket.num;
-      const col = winPocket.color;
+    // Evaluate actual winnings based strictly on table bets
+    let totalWon = 0;
+    const num = pendingWinPocket.num;
+    const col = pendingWinPocket.color;
 
-      if (rouletteBets[`${num}`]) totalWon += rouletteBets[`${num}`] * 36;
-      if (col === 'red' && rouletteBets['RED']) totalWon += rouletteBets['RED'] * 2;
-      if (col === 'black' && rouletteBets['BLACK']) totalWon += rouletteBets['BLACK'] * 2;
-      if (num > 0 && num % 2 === 0 && rouletteBets['EVEN']) totalWon += rouletteBets['EVEN'] * 2;
-      if (num > 0 && num % 2 !== 0 && rouletteBets['ODD']) totalWon += rouletteBets['ODD'] * 2;
-      if (num >= 1 && num <= 18 && rouletteBets['1-18']) totalWon += rouletteBets['1-18'] * 2;
-      if (num >= 19 && num <= 36 && rouletteBets['19-36']) totalWon += rouletteBets['19-36'] * 2;
-      if (num >= 1 && num <= 12 && rouletteBets['1st_12']) totalWon += rouletteBets['1st_12'] * 3;
-      if (num >= 13 && num <= 24 && rouletteBets['2nd_12']) totalWon += rouletteBets['2nd_12'] * 3;
-      if (num >= 25 && num <= 36 && rouletteBets['3rd_12']) totalWon += rouletteBets['3rd_12'] * 3;
+    if (rouletteBets[`${num}`]) totalWon += rouletteBets[`${num}`] * 36;
+    if (col === 'red' && rouletteBets['RED']) totalWon += rouletteBets['RED'] * 2;
+    if (col === 'black' && rouletteBets['BLACK']) totalWon += rouletteBets['BLACK'] * 2;
+    if (num > 0 && num % 2 === 0 && rouletteBets['EVEN']) totalWon += rouletteBets['EVEN'] * 2;
+    if (num > 0 && num % 2 !== 0 && rouletteBets['ODD']) totalWon += rouletteBets['ODD'] * 2;
+    if (num >= 1 && num <= 18 && rouletteBets['1-18']) totalWon += rouletteBets['1-18'] * 2;
+    if (num >= 19 && num <= 36 && rouletteBets['19-36']) totalWon += rouletteBets['19-36'] * 2;
+    if (num >= 1 && num <= 12 && rouletteBets['1st_12']) totalWon += rouletteBets['1st_12'] * 3;
+    if (num >= 13 && num <= 24 && rouletteBets['2nd_12']) totalWon += rouletteBets['2nd_12'] * 3;
+    if (num >= 25 && num <= 36 && rouletteBets['3rd_12']) totalWon += rouletteBets['3rd_12'] * 3;
 
-      if (totalWon > 0) {
-        awardMoney(totalWon, `Roulette Win on ${num} (${col})`);
-        SoundEngine.playVictory(player.soundEnabled);
-        setRouletteResultMsg(`🎉 Landed on ${num} (${col.toUpperCase()})! Won +🌿 ${totalWon.toLocaleString()} GREEN!`);
-      } else {
-        SoundEngine.playLoss(player.soundEnabled);
-        setRouletteResultMsg(`Landed on ${num} (${col.toUpperCase()}). No winning bets. Lost 🌿 ${totalRouletteBet.toLocaleString()} GREEN.`);
-      }
-    }, 2200);
+    if (totalWon > 0) {
+      awardMoney(totalWon, `Roulette Win on ${num} (${col})`);
+      SoundEngine.playVictory(player.soundEnabled);
+      setRouletteResultMsg(`🎉 Ball dropped into ${num} (${col.toUpperCase()})! Won +🌿 ${totalWon.toLocaleString()} GREEN!`);
+    } else {
+      SoundEngine.playLoss(player.soundEnabled);
+      setRouletteResultMsg(`Ball dropped into ${num} (${col.toUpperCase()}). No winning bets. Lost 🌿 ${totalRouletteBet.toLocaleString()} GREEN.`);
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1053,87 +1047,121 @@ export default function TornCasinoView() {
             </h3>
           </div>
 
-          <div className="py-4 space-y-6">
-            <div className="flex flex-col items-center justify-center">
-              <div
-                style={{
-                  transform: `rotate(${rouletteWheelDeg}deg)`,
-                  transition: isSpinningRoulette ? 'transform 2.2s cubic-bezier(0.15, 0.9, 0.25, 1)' : 'none',
-                }}
-                className="w-48 h-48 sm:w-56 sm:h-56 rounded-full border-8 border-amber-900/80 bg-neutral-950 shadow-2xl flex items-center justify-center relative select-none"
-              >
-                <div className="w-36 h-36 rounded-full border-4 border-amber-600/40 bg-gradient-to-br from-emerald-950 to-neutral-900 flex items-center justify-center text-xs font-mono font-bold text-amber-200">
-                  {rouletteWinningPocket ? (
-                    <div className="text-center">
-                      <span className="text-2xl font-black">{rouletteWinningPocket.num}</span>
-                      <span className="block text-[10px] uppercase text-neutral-400">{rouletteWinningPocket.color}</span>
-                    </div>
-                  ) : (
-                    'SPIN WHEEL'
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="max-w-2xl mx-auto space-y-2 select-none font-mono">
-              <div className="grid grid-cols-6 gap-1 text-[11px] font-bold text-center">
-                {['1-18', 'EVEN', 'RED', 'BLACK', 'ODD', '19-36'].map((spot) => (
-                  <button
-                    key={spot}
-                    onClick={() => placeRouletteBet(spot)}
-                    className={`p-2 rounded-lg border transition-all cursor-pointer ${
-                      spot === 'RED'
-                        ? 'bg-rose-900/60 border-rose-500 text-rose-200'
-                        : spot === 'BLACK'
-                        ? 'bg-neutral-950 border-neutral-700 text-neutral-300'
-                        : 'bg-neutral-800/80 border-neutral-700 text-neutral-200'
-                    }`}
-                  >
-                    {spot} {rouletteBets[spot] ? `(${rouletteBets[spot]})` : ''}
-                  </button>
-                ))}
+          <div className="py-4">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+              {/* Authentic 2D Canvas European Wheel (Mahogany wood, 37 pocket ring, brass turret & ball physics) */}
+              <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-neutral-950/80 border border-neutral-800 shadow-inner shrink-0">
+                <RouletteWheelCanvas
+                  isSpinning={isSpinningRoulette}
+                  winningNumber={targetWinningNumber}
+                  onSpinComplete={handleRouletteSpinComplete}
+                  soundEnabled={player.soundEnabled}
+                />
+                {rouletteWinningPocket && (
+                  <div className="mt-2.5 flex items-center gap-2 text-xs font-mono font-bold">
+                    <span className="text-neutral-400">Winning Pocket:</span>
+                    <span className={`px-2 py-0.5 rounded text-white ${
+                      rouletteWinningPocket.color === 'green' ? 'bg-emerald-600' : rouletteWinningPocket.color === 'red' ? 'bg-rose-600' : 'bg-neutral-800 border border-neutral-700'
+                    }`}>
+                      {rouletteWinningPocket.num} ({rouletteWinningPocket.color.toUpperCase()})
+                    </span>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-12 gap-1 text-[10px] font-bold text-center">
-                {Array.from({ length: 36 }, (_, i) => i + 1).map((num) => {
-                  const isRed = RED_NUMBERS.includes(num);
-                  return (
+              {/* European Green Felt Betting Table */}
+              <div className="flex-1 w-full space-y-2.5 select-none font-mono">
+                {/* Outside Bets (Top Row) */}
+                <div className="grid grid-cols-6 gap-1 text-[11px] font-bold text-center">
+                  {['1-18', 'EVEN', 'RED', 'BLACK', 'ODD', '19-36'].map((spot) => (
                     <button
-                      key={num}
-                      onClick={() => placeRouletteBet(`${num}`)}
-                      className={`p-2 rounded border cursor-pointer ${
-                        isRed
-                          ? 'bg-rose-950 border-rose-800 text-rose-300 hover:bg-rose-900'
-                          : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
+                      key={spot}
+                      onClick={() => placeRouletteBet(spot)}
+                      className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                        spot === 'RED'
+                          ? 'bg-rose-900/60 border-rose-500 text-rose-200 hover:bg-rose-800/80'
+                          : spot === 'BLACK'
+                          ? 'bg-neutral-950 border-neutral-700 text-neutral-300 hover:bg-neutral-900'
+                          : 'bg-neutral-800/80 border-neutral-700 text-neutral-200 hover:bg-neutral-700'
                       }`}
                     >
-                      {num} {rouletteBets[`${num}`] ? `(${rouletteBets[`${num}`]})` : ''}
+                      {spot} {rouletteBets[spot] ? `(${rouletteBets[spot]})` : ''}
                     </button>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
 
-              <div className="flex items-center justify-between gap-3 pt-2">
-                <span className="text-xs text-neutral-400">Total Wager: <strong className="text-emerald-400">🌿 {totalRouletteBet} GREEN</strong></span>
-                <div className="flex gap-2">
-                  <button onClick={clearRouletteBets} className="px-3 py-2 rounded-xl bg-neutral-800 text-xs font-bold text-neutral-300 cursor-pointer">
-                    Clear Bets
-                  </button>
+                {/* Number Felt (0 to 36) */}
+                <div className="flex gap-1">
+                  {/* Single 0 Green Felt */}
                   <button
-                    onClick={handleSpinRoulette}
-                    disabled={isSpinningRoulette || totalRouletteBet === 0}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase cursor-pointer"
+                    onClick={() => placeRouletteBet('0')}
+                    className="w-12 rounded-lg bg-emerald-950 border border-emerald-600 text-emerald-300 hover:bg-emerald-900 font-black text-sm flex items-center justify-center cursor-pointer"
                   >
-                    {isSpinningRoulette ? 'Spinning...' : 'Spin Wheel'}
+                    0 {rouletteBets['0'] ? `(${rouletteBets['0']})` : ''}
+                  </button>
+
+                  {/* 1-36 Numbers Grid (3 rows x 12 cols) */}
+                  <div className="flex-1 grid grid-cols-12 gap-1 text-[10px] font-bold text-center">
+                    {Array.from({ length: 36 }, (_, i) => i + 1).map((num) => {
+                      const isRed = RED_NUMBERS.includes(num);
+                      return (
+                        <button
+                          key={num}
+                          onClick={() => placeRouletteBet(`${num}`)}
+                          className={`p-2 rounded border cursor-pointer transition-all ${
+                            isRed
+                              ? 'bg-rose-950 border-rose-800 text-rose-300 hover:bg-rose-900'
+                              : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:bg-neutral-800'
+                          }`}
+                        >
+                          {num} {rouletteBets[`${num}`] ? `(${rouletteBets[`${num}`]})` : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Dozens Row */}
+                <div className="grid grid-cols-3 gap-1 text-[11px] font-bold text-center">
+                  <button onClick={() => placeRouletteBet('1st_12')} className="p-2 rounded bg-neutral-900 border border-neutral-800 text-neutral-300 hover:bg-neutral-800 cursor-pointer">
+                    1st 12 (1-12) {rouletteBets['1st_12'] ? `(${rouletteBets['1st_12']})` : ''}
+                  </button>
+                  <button onClick={() => placeRouletteBet('2nd_12')} className="p-2 rounded bg-neutral-900 border border-neutral-800 text-neutral-300 hover:bg-neutral-800 cursor-pointer">
+                    2nd 12 (13-24) {rouletteBets['2nd_12'] ? `(${rouletteBets['2nd_12']})` : ''}
+                  </button>
+                  <button onClick={() => placeRouletteBet('3rd_12')} className="p-2 rounded bg-neutral-900 border border-neutral-800 text-neutral-300 hover:bg-neutral-800 cursor-pointer">
+                    3rd 12 (25-36) {rouletteBets['3rd_12'] ? `(${rouletteBets['3rd_12']})` : ''}
                   </button>
                 </div>
-              </div>
 
-              {rouletteResultMsg && (
-                <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-center font-bold text-xs text-neutral-200">
-                  {rouletteResultMsg}
+                {/* Actions & Result */}
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <span className="text-xs text-neutral-400">Total Wager: <strong className="text-emerald-400">🌿 {totalRouletteBet.toLocaleString()} GREEN</strong></span>
+                  <div className="flex gap-2">
+                    <button onClick={clearRouletteBets} disabled={isSpinningRoulette || totalRouletteBet === 0} className="px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-xs font-bold text-neutral-300 cursor-pointer">
+                      Clear Bets
+                    </button>
+                    <button
+                      onClick={handleSpinRoulette}
+                      disabled={isSpinningRoulette || totalRouletteBet === 0}
+                      className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow cursor-pointer flex items-center gap-1.5 ${
+                        isSpinningRoulette
+                          ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40 active:scale-95'
+                      }`}
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 ${isSpinningRoulette ? 'animate-spin' : ''}`} />
+                      <span>{isSpinningRoulette ? 'Spinning...' : 'Spin Wheel'}</span>
+                    </button>
+                  </div>
                 </div>
-              )}
+
+                {rouletteResultMsg && (
+                  <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-center font-bold text-xs text-neutral-200">
+                    {rouletteResultMsg}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
