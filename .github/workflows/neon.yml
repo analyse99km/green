@@ -1,0 +1,292 @@
+name: Neon
+
+on:
+  repository_dispatch:
+    types: [neon-start, metropolis-start, green-start]
+  workflow_dispatch:
+    inputs:
+      run_hours:
+        description: "Hours to run override"
+        required: false
+        type: string
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - 'status.json'
+      - 'data/**'
+      - 'README.md'
+
+concurrency:
+  group: neon-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  PORT: "3000"
+  NODE_VERSION: "20"
+  SHARED_STORAGE_REPO: "pocomon9/neon-status"
+
+jobs:
+  run:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 350
+
+    steps:
+      # ── 1. Determine slot & staggered runtime from repo owner ────────────
+      - name: Set account slot and staggered runtime
+        run: |
+          case "${{ github.repository_owner }}" in
+            "pocomon9")
+              echo "SLOT=1" >> $GITHUB_ENV
+              echo "SLOT_RUN_HOURS=3.0" >> $GITHUB_ENV
+              ;;
+            "sifihub")
+              echo "SLOT=2" >> $GITHUB_ENV
+              echo "SLOT_RUN_HOURS=4.0" >> $GITHUB_ENV
+              ;;
+            "analyse99km")
+              echo "SLOT=3" >> $GITHUB_ENV
+              echo "SLOT_RUN_HOURS=3.5" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "SLOT=0" >> $GITHUB_ENV
+              echo "SLOT_RUN_HOURS=3.0" >> $GITHUB_ENV
+              ;;
+          esac
+          echo "✅ Configured slot for ${{ github.repository_owner }}"
+
+      # ── 2. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout Neon
+        uses: actions/checkout@v4
+
+      # ── 3. Synchronize Unified Master Database (Zero Data Loss) ───────────
+      - name: Sync Master Database from Shared Cluster Storage
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          mkdir -p data
+          echo "📥 Fetching global master database from ${{ env.SHARED_STORAGE_REPO }}..."
+          
+          HTTP_CODE=$(curl -s -w "%{http_code}" -o data/database.json \
+            -H "Authorization: Bearer $GH_PAT" \
+            -H "Accept: application/vnd.github.v3.raw" \
+            "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" || true)
+
+          # Fallback to green-status if neon-status not yet migrated
+          if [ "$HTTP_CODE" != "200" ]; then
+            HTTP_CODE=$(curl -s -w "%{http_code}" -o data/database.json \
+              -H "Authorization: Bearer $GH_PAT" \
+              -H "Accept: application/vnd.github.v3.raw" \
+              "https://api.github.com/repos/pocomon9/green-status/contents/database.json" || true)
+          fi
+
+          if [ "$HTTP_CODE" = "200" ] && [ -s data/database.json ]; then
+            echo "✅ Master database successfully loaded from shared storage ($(wc -c < data/database.json) bytes)!"
+          else
+            echo "ℹ️ Master database not found or empty (HTTP $HTTP_CODE). Checking local fallback..."
+            if [ ! -s data/database.json ]; then
+              echo '{"stores":[],"products":[],"orders":[],"reservations":[]}' > data/database.json
+              echo "✅ Clean initial database created"
+            fi
+          fi
+
+      # ── 4. Cache database locally as backup ────────────────────────────────
+      - name: Restore database local fallback cache
+        uses: actions/cache@v4
+        with:
+          path: data/database.json
+          key: neon-db-slot${{ env.SLOT }}-v2
+          restore-keys: neon-db-slot${{ env.SLOT }}-
+
+      # ── 5. Node.js + Install + Build ──────────────────────────────────────
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Neon
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+        run: npm run build
+
+      # ── 6. Install cloudflared ────────────────────────────────────────────
+      - name: Install cloudflared
+        run: |
+          curl -fsSL \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+            -o /usr/local/bin/cloudflared
+          chmod +x /usr/local/bin/cloudflared
+
+      # ── 7. Start app + tunnel + publish status ────────────────────────────
+      - name: Start Neon and publish URL
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          nohup npm start -- -p $PORT > app.log 2>&1 &
+
+          echo "⏳ Waiting for Neon..."
+          for i in $(seq 1 45); do
+            curl -sf http://localhost:$PORT/api/health > /dev/null 2>&1 && echo "✅ Neon ready!" && break
+            sleep 2
+          done
+
+          cloudflared tunnel --url http://localhost:$PORT --logfile tunnel.log 2>&1 &
+          
+          echo "⏳ Waiting for Cloudflare tunnel URL to establish..."
+          TUNNEL_URL=""
+          for i in $(seq 1 30); do
+            TUNNEL_URL=$(grep -oP 'https://[a-z0-9\-]+\.trycloudflare\.com' tunnel.log 2>/dev/null | head -1 || true)
+            if [ -n "$TUNNEL_URL" ]; then
+              echo "✅ Tunnel connected!"
+              break
+            fi
+            sleep 2
+          done
+
+          if [ -z "$TUNNEL_URL" ]; then
+            echo "❌ Cloudflare tunnel failed to allocate public URL. Log output:"
+            cat tunnel.log || true
+            exit 1
+          fi
+
+          echo "🌐 URL: $TUNNEL_URL"
+          echo "TUNNEL_URL=$TUNNEL_URL" >> $GITHUB_ENV
+          echo "SESSION_STARTED=true" >> $GITHUB_ENV
+
+          STATUS_JSON="{\"url\":\"$TUNNEL_URL\",\"ts\":$(date +%s),\"slot\":$SLOT,\"app\":\"neon\"}"
+          CONTENT=$(echo "$STATUS_JSON" | base64 -w0)
+          SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+
+          echo "Publishing status.json to GitHub..."
+          if [ -n "$SHA" ]; then
+            RESP=$(curl -s -w "\n%{http_code}" -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+              -d "{\"message\":\"status: online [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}")
+          else
+            RESP=$(curl -s -w "\n%{http_code}" -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+              -d "{\"message\":\"status: online [skip ci]\",\"content\":\"$CONTENT\"}")
+          fi
+          HTTP_STATUS=$(echo "$RESP" | tail -n1)
+          echo "GitHub API response: HTTP $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+            echo "API Error response: $RESP"
+          fi
+          echo "✅ status.json published → slot $SLOT"
+
+      # ── 8. Keep alive & periodic sync back to Master ───────────────────────
+      - name: Run Neon session
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          TUNNEL_URL: ${{ env.TUNNEL_URL }}
+        run: |
+          HOURS="${{ github.event.inputs.run_hours || env.SLOT_RUN_HOURS }}"
+          TOTAL=$(echo "$HOURS * 3600 - 240" | bc | cut -d. -f1)
+          END=$(($(date +%s) + TOTAL))
+          CYCLE=0
+
+          echo "🟢 Neon slot $SLOT starting — scheduled session: ${HOURS}h — Public: $TUNNEL_URL"
+
+          while [ $(date +%s) -lt $END ]; do
+            sleep 60
+            CYCLE=$((CYCLE+1))
+            STATUS=$(curl -sf http://localhost:$PORT/api/health > /dev/null 2>&1 && echo "UP" || echo "DOWN")
+            REMAINING=$(( ($END - $(date +%s)) / 60 ))
+            echo "$(date -u +%H:%M:%S) | Node=$STATUS | ${REMAINING}m remaining"
+
+            # Sync database & heartbeat every 5 minutes
+            if [ $((CYCLE % 5)) -eq 0 ]; then
+              # 1. Heartbeat
+              STATUS_JSON="{\"url\":\"$TUNNEL_URL\",\"ts\":$(date +%s),\"slot\":$SLOT,\"app\":\"neon\"}"
+              CONTENT=$(echo "$STATUS_JSON" | base64 -w0)
+              SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+                "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+                | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+              [ -n "$SHA" ] && curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+                -d "{\"message\":\"heartbeat [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+              
+              # 2. Sync database.json to central shared repository
+              if [ -s data/database.json ]; then
+                DB_B64=$(base64 -w0 data/database.json)
+                M_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+                  "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
+                  | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+                if [ -n "$M_SHA" ]; then
+                  curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+                    "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
+                    -d "{\"message\":\"sync master db [skip ci]\",\"content\":\"$DB_B64\",\"sha\":\"$M_SHA\"}" > /dev/null || true
+                else
+                  curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+                    "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
+                    -d "{\"message\":\"init master db [skip ci]\",\"content\":\"$DB_B64\"}" > /dev/null || true
+                fi
+                echo "💾 Master DB synced to ${{ env.SHARED_STORAGE_REPO }}"
+              fi
+            fi
+          done
+
+      # ── 9. Final Sync & Mark offline ──────────────────────────────────────
+      - name: Push final DB state to shared storage
+        if: always()
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -s data/database.json ] && [ "$SESSION_STARTED" = "true" ]; then
+            DB_B64=$(base64 -w0 data/database.json)
+            M_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+              "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+            if [ -n "$M_SHA" ]; then
+              curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
+                -d "{\"message\":\"final db sync before recycle [skip ci]\",\"content\":\"$DB_B64\",\"sha\":\"$M_SHA\"}" > /dev/null || true
+            fi
+            echo "✅ Final DB backup written to master storage"
+          fi
+
+          if [ "$SESSION_STARTED" = "true" ]; then
+            CONTENT=$(echo "{\"url\":\"offline\",\"ts\":0,\"slot\":$SLOT,\"app\":\"neon\"}" | base64 -w0)
+            SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+            [ -n "$SHA" ] && curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
+              -d "{\"message\":\"status: offline [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
+            echo "🔴 Slot $SLOT marked offline"
+          fi
+
+      # ── 10. Save cache & artifact ─────────────────────────────────────────
+      - name: Save database cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: data/database.json
+          key: neon-db-slot${{ env.SLOT }}-v2
+
+      - name: Backup database artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neon-db-slot${{ env.SLOT }}-run${{ github.run_number }}
+          path: data/database.json
+          retention-days: 90
+
+      # ── 11. Self-trigger next run ─────────────────────────────────────────
+      - name: Rebirth — trigger next run
+        if: always()
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [ "$SESSION_STARTED" != "true" ]; then
+            echo "⚠️ Session did not start normally. Pausing 5 minutes before retrying to prevent quota exhaustion..."
+            sleep 300
+          fi
+          curl -sf -X POST -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+            -d '{"event_type":"neon-start"}' && echo "♻️ Next run triggered"
