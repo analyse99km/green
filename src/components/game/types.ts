@@ -258,11 +258,22 @@ export interface GameLog {
   amount?: number;
 }
 
+export interface NetworkTierStats {
+  tier: number; // 1 = Direct, 2 = 1 Jump, 3 = 2 Jumps, etc.
+  jumpLabel: string;
+  royaltyPercent: number;
+  activeCitizensCount: number;
+  dailyGameplayVolume: number;
+  dailyDividendGreen: number;
+}
+
 export interface ReferredUser {
   id: string;
   name: string;
   joinedAt: number;
   level: number;
+  tier: number; // 1 = Direct (0 jumps), 2 = 1 Jump, 3 = 2 Jumps, etc.
+  dailyGameplayEarned: number; // Raw gameplay contribution today (crimes, tapping, etc.)
   totalGeneratedGreen: number;
   lastActive: string;
 }
@@ -279,7 +290,12 @@ export interface ReferralState {
   referralCode: string;
   referredBy?: string;
   hasClaimedWelcomeBonus: boolean;
-  totalRecruits: number;
+  lastDailyStipendClaimTimestamp?: number; // timestamp of last +50 GREEN/day recruit stipend
+  lastDailyRoyaltyClaimTimestamp?: number; // timestamp of last once-a-day royalty payout
+  dailyGameplayContribution?: number; // player's own raw gameplay GREEN earned today
+  pendingDailyRoyaltyGreen?: number;
+  totalRecruits: number; // direct recruits (tier 1)
+  networkTotalCitizens: number; // all tiers combined
   unclaimedCommissionGreen: number;
   lifetimeCommissionGreen: number;
   recruits: ReferredUser[];

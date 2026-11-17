@@ -19,6 +19,7 @@ import {
   BazaarListing,
   CombatTarget,
   ReferredUser,
+  NetworkTierStats,
 } from './types';
 import {
   DEFAULT_METROPOLIS_PLAYER,
@@ -150,8 +151,11 @@ interface GameContextType {
   importBackupJson: (jsonString: string) => { success: boolean; message: string };
   claimReferralMilestone: (recruitsRequired: number) => { success: boolean; message: string };
   collectReferralCommission: () => { success: boolean; message: string; amount: number };
+  claimDailyRecruitStipend: () => { success: boolean; message: string; amount: number };
+  claimDailyRoyaltyDividends: () => { success: boolean; message: string; amount: number; tierBreakdown: NetworkTierStats[] };
+  calculateNetworkTiers: () => NetworkTierStats[];
   redeemInviteCode: (code: string) => { success: boolean; message: string };
-  simulateNewRecruit: () => { success: boolean; recruitName: string; message: string };
+  simulateNewRecruit: (tier?: number) => { success: boolean; recruitName: string; message: string };
   updatePlayerName: (newName: string) => { success: boolean; message: string };
   insufficientFundsModal: InsufficientFundsData | null;
   triggerInsufficientFunds: (data: Omit<InsufficientFundsData, 'isOpen'>) => void;
@@ -2110,25 +2114,39 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Check if user is sponsored by another operative -> grants +50 GREEN/day recruit stipend!
+      let recruitStipendBonus = 0;
+      let newLastStipend = prev.referrals?.lastDailyStipendClaimTimestamp || 0;
+      const now = Date.now();
+      if (prev.referrals?.referredBy && (newLastStipend === 0 || now - newLastStipend >= 86400000)) {
+        recruitStipendBonus = 50;
+        newLastStipend = now;
+      }
+
       return {
         ...prev,
-        money: prev.money + (currentReward.cash || 0),
+        money: prev.money + (currentReward.cash || 0) + recruitStipendBonus,
         energy: Math.min(prev.maxEnergy, prev.energy + (currentReward.energy || 0)),
         nerve: Math.min(prev.maxNerve, prev.nerve + (currentReward.nerve || 0)),
         dreamPoints: (prev.dreamPoints || 0) + (currentReward.sparks || 0),
         greenTokens: (prev.greenTokens || 0) + (currentReward.green || 0),
         dailyStreak: (day % 7) + 1,
-        lastStreakClaimTimestamp: Date.now(),
+        lastStreakClaimTimestamp: now,
         canClaimDailyStreak: false,
         inventory: inv,
+        referrals: {
+          ...(prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
+          lastDailyStipendClaimTimestamp: newLastStipend,
+        },
         hasUnsavedActions: true,
       };
     });
 
     SoundEngine.playVictory(player.soundEnabled);
+    const hasSponsorBonus = !!(player.referrals?.referredBy && (Date.now() - (player.referrals.lastDailyStipendClaimTimestamp || 0) >= 86400000 || !player.referrals.lastDailyStipendClaimTimestamp));
     addLog({
       type: 'CIVILIAN',
-      message: `📅 DAILY CLIPPER: Claimed Day ${day} Streak: ${currentReward.title}!`,
+      message: `📅 DAILY CLIPPER: Claimed Day ${day} Streak: ${currentReward.title}!${hasSponsorBonus ? ' (+🌿 50 GREEN Recruit Stipend included!)' : ''}`,
     });
 
     return {
@@ -3331,7 +3349,157 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  const simulateNewRecruit = () => {
+  // MULTI-TIER JUMP ROYALTY COMPUTATION (Divided Once a Day based strictly on Active Gameplay)
+  const calculateNetworkTiers = useCallback((): NetworkTierStats[] => {
+    const recruits = player.referrals?.recruits || [];
+    const tierConfigs = [
+      { tier: 1, jumpLabel: 'Direct Link (0 Jumps)', percent: 10 },
+      { tier: 2, jumpLabel: '1 Jump (2nd Generation)', percent: 4 },
+      { tier: 3, jumpLabel: '2 Jumps (3rd Generation)', percent: 2 },
+      { tier: 4, jumpLabel: '3 Jumps (4th Generation)', percent: 1 },
+      { tier: 5, jumpLabel: '4+ Jumps (5th Generation)', percent: 0.5 },
+    ];
+
+    return tierConfigs.map((cfg) => {
+      const tierMembers = recruits.filter((r) => (r.tier || 1) === cfg.tier);
+      const volume = tierMembers.reduce((sum, r) => sum + (r.dailyGameplayEarned || 0), 0);
+      const dividend = Math.round(volume * (cfg.percent / 100));
+      return {
+        tier: cfg.tier,
+        jumpLabel: cfg.jumpLabel,
+        royaltyPercent: cfg.percent,
+        activeCitizensCount: tierMembers.length,
+        dailyGameplayVolume: volume,
+        dailyDividendGreen: dividend,
+      };
+    });
+  }, [player.referrals?.recruits]);
+
+  // ONCE-A-DAY ROYALTY DIVIDEND DISTRIBUTION (Based on Active Gameplay)
+  const claimDailyRoyaltyDividends = () => {
+    const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    const now = Date.now();
+    const lastClaim = refs.lastDailyRoyaltyClaimTimestamp || 0;
+    const cooldownMs = 86400000; // 24 hours
+
+    if (lastClaim > 0 && now - lastClaim < cooldownMs) {
+      const remainingHours = Math.ceil((cooldownMs - (now - lastClaim)) / (1000 * 60 * 60));
+      return {
+        success: false,
+        message: `Today's royalty dividend is already distributed. Next 24h dividend cycle opens in ~${remainingHours} hours.`,
+        amount: 0,
+        tierBreakdown: calculateNetworkTiers(),
+      };
+    }
+
+    const tiers = calculateNetworkTiers();
+    const totalDividend = tiers.reduce((sum, t) => sum + t.dailyDividendGreen, 0);
+
+    if (totalDividend <= 0 && (refs.recruits || []).length === 0) {
+      return {
+        success: false,
+        message: 'No active recruits in your network yet. Recruit operatives or simulate downlines to earn daily royalties!',
+        amount: 0,
+        tierBreakdown: tiers,
+      };
+    }
+
+    const payoutAmount = Math.max(totalDividend, 1);
+
+    setPlayer((prev) => {
+      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+      const updatedRecruits = (currentRefs.recruits || []).map((r) => {
+        const tierCfg = tiers.find((t) => t.tier === (r.tier || 1));
+        const memberDividend = Math.round((r.dailyGameplayEarned || 0) * ((tierCfg?.royaltyPercent || 10) / 100));
+        // Reset daily gameplay and generate next day's active volume (60 - 240 GREEN)
+        const nextDayActivity = Math.floor(Math.random() * 180) + 60;
+        return {
+          ...r,
+          totalGeneratedGreen: (r.totalGeneratedGreen || 0) + memberDividend,
+          dailyGameplayEarned: nextDayActivity,
+          lastActive: 'Active today (Daily gameplay verified)',
+        };
+      });
+
+      return {
+        ...prev,
+        money: prev.money + payoutAmount,
+        referrals: {
+          ...currentRefs,
+          lastDailyRoyaltyClaimTimestamp: now,
+          lifetimeCommissionGreen: (currentRefs.lifetimeCommissionGreen || 0) + payoutAmount,
+          recruits: updatedRecruits,
+        },
+        hasUnsavedActions: true,
+      };
+    });
+
+    SoundEngine.playVictory(player.soundEnabled);
+    addLog({
+      type: 'SHOP',
+      message: `👑 DAILY ROYALTY DIVIDEND: Distributed +🌿 ${payoutAmount.toLocaleString()} GREEN from Multi-Jump Syndicate Network!`,
+    });
+
+    return {
+      success: true,
+      message: `Distributed +🌿 ${payoutAmount.toLocaleString()} GREEN in daily gameplay royalties across all 5 jump tiers!`,
+      amount: payoutAmount,
+      tierBreakdown: tiers,
+    };
+  };
+
+  // RECRUIT DAILY STIPEND: +50 GREEN/day for recruited operatives
+  const claimDailyRecruitStipend = () => {
+    const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    if (!refs.referredBy) {
+      return {
+        success: false,
+        message: 'You have not redeemed a sponsor invite code yet. Enter an operative invite code to activate your 50 GREEN/day stipend!',
+        amount: 0,
+      };
+    }
+
+    const now = Date.now();
+    const lastClaim = refs.lastDailyStipendClaimTimestamp || 0;
+    const cooldownMs = 86400000; // 24 hours
+
+    if (lastClaim > 0 && now - lastClaim < cooldownMs) {
+      const remainingHours = Math.ceil((cooldownMs - (now - lastClaim)) / (1000 * 60 * 60));
+      return {
+        success: false,
+        message: `Today's recruit stipend (+50 GREEN) already claimed. Next daily stipend unlocks in ~${remainingHours} hours.`,
+        amount: 0,
+      };
+    }
+
+    setPlayer((prev) => {
+      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+      return {
+        ...prev,
+        money: prev.money + 50,
+        referrals: {
+          ...currentRefs,
+          lastDailyStipendClaimTimestamp: now,
+        },
+        hasUnsavedActions: true,
+      };
+    });
+
+    SoundEngine.playCash(player.soundEnabled);
+    addLog({
+      type: 'CIVILIAN',
+      message: `🤝 RECRUIT STIPEND: Received +🌿 50 GREEN daily sponsor allowance [Sponsor: ${refs.referredBy}]!`,
+    });
+
+    return {
+      success: true,
+      message: 'Claimed +🌿 50 GREEN daily recruit stipend!',
+      amount: 50,
+    };
+  };
+
+  // MULTI-TIER SIMULATION (supports direct tier 1 or 1-jump, 2-jump downlines)
+  const simulateNewRecruit = (targetTier: number = 1) => {
     const mockNames = [
       'CipherBlade_99',
       'NeonPhantom_X',
@@ -3343,29 +3511,50 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       'EmeraldRonin',
       'ZeroDay_Merc',
       'Solaris_Titan',
+      'AeroKnight_88',
+      'ChronoStalker',
+      'ViperGrid_01',
+      'PixelRebel_X',
+      'SynapseReaper',
     ];
     const randomName = mockNames[Math.floor(Math.random() * mockNames.length)] + '_' + Math.floor(Math.random() * 90 + 10);
-    const commissionBonus = Math.floor(Math.random() * 25) + 15; // 15 - 40 GREEN
+    // Active daily gameplay generated by recruit (80 - 320 GREEN from crimes/workouts)
+    const dailyGameplay = Math.floor(Math.random() * 240) + 80;
+
+    const tierRates: Record<number, { percent: number; label: string }> = {
+      1: { percent: 10, label: 'Direct Link (0 Jumps)' },
+      2: { percent: 4, label: '1 Jump (2nd Gen)' },
+      3: { percent: 2, label: '2 Jumps (3rd Gen)' },
+      4: { percent: 1, label: '3 Jumps (4th Gen)' },
+      5: { percent: 0.5, label: '4+ Jumps (5th Gen)' },
+    };
+
+    const tierConfig = tierRates[targetTier] || tierRates[1];
+    const instantCommission = Math.round(dailyGameplay * (tierConfig.percent / 100));
 
     const newRecruit: ReferredUser = {
-      id: 'rec_' + Date.now().toString(36),
+      id: 'rec_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
       name: randomName,
       joinedAt: Date.now(),
       level: Math.floor(Math.random() * 4) + 1,
-      totalGeneratedGreen: commissionBonus,
-      lastActive: 'Just now (Tapping Lucid Dream)',
+      tier: targetTier,
+      dailyGameplayEarned: dailyGameplay,
+      totalGeneratedGreen: instantCommission,
+      lastActive: 'Active today (Gameplay logged)',
     };
 
     setPlayer((prev) => {
       const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+      const isDirect = targetTier === 1;
       return {
         ...prev,
         referrals: {
           ...currentRefs,
-          totalRecruits: currentRefs.totalRecruits + 1,
-          unclaimedCommissionGreen: currentRefs.unclaimedCommissionGreen + commissionBonus,
-          lifetimeCommissionGreen: currentRefs.lifetimeCommissionGreen + commissionBonus,
-          recruits: [newRecruit, ...currentRefs.recruits],
+          totalRecruits: isDirect ? currentRefs.totalRecruits + 1 : currentRefs.totalRecruits,
+          networkTotalCitizens: (currentRefs.networkTotalCitizens || currentRefs.totalRecruits) + 1,
+          unclaimedCommissionGreen: currentRefs.unclaimedCommissionGreen + instantCommission,
+          lifetimeCommissionGreen: currentRefs.lifetimeCommissionGreen + instantCommission,
+          recruits: [newRecruit, ...(currentRefs.recruits || [])],
         },
         hasUnsavedActions: true,
       };
@@ -3374,13 +3563,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     SoundEngine.playCash(player.soundEnabled);
     addLog({
       type: 'CIVILIAN',
-      message: `NEW RECRUIT: Citizen "${randomName}" joined your syndicate! +🌿 ${commissionBonus} GREEN commission deposited into till!`,
+      message: `NETWORK EXPANSION: New citizen "${randomName}" joined at Tier ${targetTier} [${tierConfig.label}]! Daily Gameplay: 🌿 ${dailyGameplay} GREEN → +${tierConfig.percent}% Royalty!`,
     });
 
     return {
       success: true,
       recruitName: randomName,
-      message: `New syndicate recruit joined: ${randomName}! Generated +🌿 ${commissionBonus} GREEN royalty.`,
+      message: `Added Tier ${targetTier} citizen: ${randomName} (${tierConfig.label}). Earning +${tierConfig.percent}% daily royalty!`,
     };
   };
 
@@ -3458,6 +3647,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         importBackupJson,
         claimReferralMilestone,
         collectReferralCommission,
+        claimDailyRecruitStipend,
+        claimDailyRoyaltyDividends,
+        calculateNetworkTiers,
         redeemInviteCode,
         simulateNewRecruit,
         updatePlayerName,

@@ -58,7 +58,7 @@ export default function PreReleaseNoticeModal({ onDismiss }: PreReleaseNoticeMod
                 Official Pioneer Notice
               </span>
               <h2 className="text-xs sm:text-sm font-black text-white tracking-tight">
-                Pre-Release Testing Version
+                Pre-Release Pioneer Edition
               </h2>
             </div>
           </div>
@@ -78,10 +78,10 @@ export default function PreReleaseNoticeModal({ onDismiss }: PreReleaseNoticeMod
           <div className="p-3 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-1">
             <div className="flex items-center gap-1.5 text-white font-bold text-xs">
               <span>🚀</span>
-              <span>Active Pre-Release Alpha & Testnet Phase</span>
+              <span>Official Pre-Release Pioneer Phase</span>
             </div>
             <p className="text-neutral-400 text-[11px] leading-relaxed">
-              This is the official <strong>Pre-Release Testing Version</strong> of Neon Metropolis. Our full production version will release globally soon!
+              This is the official <strong>Pre-Release Pioneer Edition</strong> of Neon Metropolis. Full worldwide public launch will deploy globally soon!
             </p>
           </div>
 
@@ -92,7 +92,7 @@ export default function PreReleaseNoticeModal({ onDismiss }: PreReleaseNoticeMod
               <span>Guaranteed Native Crypto Airdrop ($GREEN)</span>
             </div>
             <p className="text-neutral-200 text-[11px] leading-relaxed">
-              All pioneer testers will receive an <strong>exclusive airdrop of our native ecosystem cryptocurrency ($GREEN)</strong> when testing concludes!
+              All pioneer operatives will receive an <strong>exclusive airdrop of our native ecosystem cryptocurrency ($GREEN)</strong> as the pre-release matures!
             </p>
             <div className="p-2 rounded-lg bg-neutral-950/90 border border-emerald-500/20 font-mono text-[10px] text-emerald-400 space-y-0.5">
               <span className="font-bold text-white block">📊 Airdrop Score Factors:</span>

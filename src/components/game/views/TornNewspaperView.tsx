@@ -213,7 +213,7 @@ export default function TornNewspaperView() {
                 <span>🪂</span> Pre-Release Pioneer Phase & Guaranteed Native Crypto ($GREEN) Airdrop
               </h3>
               <p className="text-xs text-neutral-300 leading-relaxed">
-                Notice to all Metropolis operatives: This version is an active <strong>Pre-Release Testing Version</strong>. The full production release will launch globally in the near future! All pioneer gameplay during this testing phase will be rewarded with a <strong>guaranteed airdrop in our native $GREEN cryptocurrency</strong> based directly on your gameplay milestones. When the full version goes live, all progress carries over seamlessly with zero restrictions!
+                Notice to all Metropolis operatives: This version is an official <strong>Pre-Release Pioneer Edition</strong>. The full production release will launch globally in the near future! All pioneer gameplay during this pre-release phase will be rewarded with a <strong>guaranteed airdrop in our native $GREEN cryptocurrency</strong> based directly on your gameplay milestones. When the full version goes live, all progress carries over seamlessly with zero restrictions!
               </p>
 
               <div className="p-3 bg-neutral-950/90 rounded-xl border border-emerald-500/30 mt-3 font-mono text-xs text-emerald-400 space-y-1">

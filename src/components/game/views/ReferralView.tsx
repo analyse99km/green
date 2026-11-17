@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../GameContext';
 import {
   Users,
@@ -19,6 +19,10 @@ import {
   DollarSign,
   QrCode,
   Flame,
+  Layers,
+  Clock,
+  ChevronRight,
+  Coins,
 } from 'lucide-react';
 
 export default function ReferralView() {
@@ -26,6 +30,9 @@ export default function ReferralView() {
     player,
     claimReferralMilestone,
     collectReferralCommission,
+    claimDailyRecruitStipend,
+    claimDailyRoyaltyDividends,
+    calculateNetworkTiers,
     redeemInviteCode,
     simulateNewRecruit,
   } = useGame();
@@ -34,12 +41,24 @@ export default function ReferralView() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [inviteInput, setInviteInput] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [selectedSimTier, setSelectedSimTier] = useState<number>(1);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   const refs = player.referrals || {
     referralCode: `NEON-${player.xid || '10001'}`,
     referredBy: undefined,
     hasClaimedWelcomeBonus: false,
+    lastDailyStipendClaimTimestamp: 0,
+    lastDailyRoyaltyClaimTimestamp: 0,
+    dailyGameplayContribution: 0,
+    pendingDailyRoyaltyGreen: 0,
     totalRecruits: 0,
+    networkTotalCitizens: 0,
     unclaimedCommissionGreen: 0,
     lifetimeCommissionGreen: 0,
     recruits: [],
@@ -47,8 +66,21 @@ export default function ReferralView() {
   };
 
   const effectiveCode = (refs.referralCode || `NEON-${player.xid || '10001'}`).replace(/^GREEN-/, 'NEON-');
-  const telegramBotUrl = 'https://t.me/NeonMetropolish_bot';
   const referralUrl = `https://t.me/NeonMetropolish_bot?start=${effectiveCode}`;
+
+  const networkTiers = calculateNetworkTiers();
+  const totalDailyDividend = networkTiers.reduce((sum, t) => sum + t.dailyDividendGreen, 0);
+  const totalNetworkCitizens = (refs.recruits || []).length;
+
+  // Check 24-hour cycle for daily royalty dividends
+  const lastRoyaltyClaim = refs.lastDailyRoyaltyClaimTimestamp || 0;
+  const isRoyaltyReady = lastRoyaltyClaim === 0 || now - lastRoyaltyClaim >= 86400000;
+  const royaltyRemainingHours = Math.max(0, Math.ceil((86400000 - (now - lastRoyaltyClaim)) / (1000 * 60 * 60)));
+
+  // Check 24-hour cycle for recruit daily stipend (+50 GREEN/day)
+  const lastStipendClaim = refs.lastDailyStipendClaimTimestamp || 0;
+  const isStipendReady = refs.referredBy && (lastStipendClaim === 0 || now - lastStipendClaim >= 86400000);
+  const stipendRemainingHours = Math.max(0, Math.ceil((86400000 - (now - lastStipendClaim)) / (1000 * 60 * 60)));
 
   const handleCopyLink = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -72,6 +104,18 @@ export default function ReferralView() {
     setTimeout(() => setFeedback(null), 3500);
   };
 
+  const handleClaimDailyDividend = () => {
+    const res = claimDailyRoyaltyDividends();
+    setFeedback(res.message);
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const handleClaimStipend = () => {
+    const res = claimDailyRecruitStipend();
+    setFeedback(res.message);
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
   const handleClaimMilestone = (count: number) => {
     const res = claimReferralMilestone(count);
     setFeedback(res.message);
@@ -85,62 +129,20 @@ export default function ReferralView() {
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  const handleSimulateRecruit = () => {
-    const res = simulateNewRecruit();
+  const handleSimulate = (tier: number) => {
+    const res = simulateNewRecruit(tier);
     setFeedback(res.message);
     setTimeout(() => setFeedback(null), 3500);
   };
 
   const milestoneLadder = [
-    {
-      recruits: 1,
-      title: 'Neon Scout Initiation',
-      green: 100,
-      sparks: 50,
-      perk: '+🌿 100 GREEN & +50 Sparks',
-    },
-    {
-      recruits: 3,
-      title: 'Underworld Enforcer',
-      green: 350,
-      sparks: 200,
-      perk: '+🌿 350 GREEN & +200 Sparks',
-    },
-    {
-      recruits: 5,
-      title: 'Syndicate Lieutenant',
-      green: 750,
-      sparks: 500,
-      perk: '+🌿 750 GREEN & +1 Stat Point',
-    },
-    {
-      recruits: 10,
-      title: 'Cartel Captain',
-      green: 2000,
-      sparks: 1500,
-      perk: '+🌿 2,000 GREEN & +5 Max Energy Cap',
-    },
-    {
-      recruits: 25,
-      title: 'Metropolis Kingpin',
-      green: 6000,
-      sparks: 5000,
-      perk: '+🌿 6,000 GREEN & +5 Max Nerve Cap',
-    },
-    {
-      recruits: 50,
-      title: 'Godfather of Neon Metropolis',
-      green: 15000,
-      sparks: 15000,
-      perk: '+🌿 15,000 GREEN & +50 Max Happy',
-    },
-    {
-      recruits: 100,
-      title: 'Supreme Sovereign & Syndicate Overlord',
-      green: 35000,
-      sparks: 30000,
-      perk: '+🌿 35,000 GREEN, +30k Sparks, +10 Energy, +10 Nerve, +100 Happy & +3 Stat Pts',
-    },
+    { recruits: 1, title: 'Neon Scout Initiation', green: 100, sparks: 50, perk: '+🌿 100 GREEN & +50 Sparks' },
+    { recruits: 3, title: 'Underworld Enforcer', green: 350, sparks: 200, perk: '+🌿 350 GREEN & +200 Sparks' },
+    { recruits: 5, title: 'Syndicate Lieutenant', green: 750, sparks: 500, perk: '+🌿 750 GREEN & +1 Stat Point' },
+    { recruits: 10, title: 'Cartel Captain', green: 2000, sparks: 1500, perk: '+🌿 2,000 GREEN & +5 Max Energy Cap' },
+    { recruits: 25, title: 'Metropolis Kingpin', green: 6000, sparks: 5000, perk: '+🌿 6,000 GREEN & +5 Max Nerve Cap' },
+    { recruits: 50, title: 'Godfather of Neon Metropolis', green: 15000, sparks: 15000, perk: '+🌿 15,000 GREEN & +50 Max Happy' },
+    { recruits: 100, title: 'Supreme Sovereign & Syndicate Overlord', green: 35000, sparks: 30000, perk: '+🌿 35,000 GREEN, +30k Sparks, +10 Energy, +10 Nerve, +100 Happy & +3 Stat Pts' },
   ];
 
   return (
@@ -151,29 +153,37 @@ export default function ReferralView() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-2xl">👥</span>
-              <h2 className="text-xl font-bold text-white">Syndicate Recruitment & Rewards</h2>
+              <h2 className="text-xl font-bold text-white">Syndicate Multi-Tier Royalty & Rewards</h2>
             </div>
             <p className="text-xs text-neutral-400 mt-1 max-w-2xl leading-relaxed">
-              Build your private underworld network. Every recruit who joins via your link earns you instant milestone bounties,
-              plus a <strong>10% lifetime royalty</strong> deposited directly into your Referral Till whenever they earn GREEN coins or tap in Lucid Dream!
+              Build your private underworld network across <strong>5 Generational Jumps</strong>. You earn ongoing daily royalties from your direct recruits,
+              plus cascading royalties from players they recruit, calculated <strong>once every day</strong> based exclusively on active gameplay!
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <div className="bg-neutral-950 px-3.5 py-2 rounded-xl border border-neutral-800 font-mono text-xs">
-              <span className="text-[10px] text-neutral-500 block">Total Recruits</span>
+              <span className="text-[10px] text-neutral-500 block">Direct Recruits</span>
               <span className="text-emerald-400 font-bold text-base flex items-center gap-1">
                 <Users className="w-4 h-4 text-emerald-400" />
-                <span>{refs.totalRecruits} Citizens</span>
+                <span>{refs.totalRecruits} Direct</span>
+              </span>
+            </div>
+
+            <div className="bg-neutral-950 px-3.5 py-2 rounded-xl border border-neutral-800 font-mono text-xs">
+              <span className="text-[10px] text-neutral-500 block">Total Network</span>
+              <span className="text-cyan-400 font-bold text-base flex items-center gap-1">
+                <Layers className="w-4 h-4 text-cyan-400" />
+                <span>{totalNetworkCitizens} Citizens</span>
               </span>
             </div>
 
             <div className="bg-neutral-950 px-3.5 py-2 rounded-xl border border-neutral-800 font-mono text-xs">
               <span className="text-[10px] text-neutral-500 block">Lifetime Royalties</span>
-              <span className="text-cyan-400 font-bold text-sm sm:text-base flex items-center gap-0.5">
+              <span className="text-amber-400 font-bold text-sm sm:text-base flex items-center gap-0.5">
                 <span>🌿</span>
                 <span>{(refs.lifetimeCommissionGreen || 0).toLocaleString()}</span>
-                <span className="text-[10px] text-cyan-300 ml-0.5">GREEN</span>
+                <span className="text-[10px] text-amber-300 ml-0.5">GREEN</span>
               </span>
             </div>
           </div>
@@ -186,7 +196,195 @@ export default function ReferralView() {
         )}
       </div>
 
-      {/* Top 2 Action Cards: Link Sharing & Royalty Cash Register */}
+      {/* RECRUIT SPONSORSHIP STATUS & DAILY STIPEND (+50 GREEN/DAY) */}
+      <div className={`rounded-2xl p-5 border shadow-sm transition-all ${
+        refs.referredBy
+          ? 'bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-indigo-950/40 border-emerald-500/40'
+          : 'bg-gradient-to-r from-amber-950/30 via-neutral-900 to-neutral-950 border-amber-500/30'
+      }`}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              refs.referredBy
+                ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+                : 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
+            }`}>
+              <Gift className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-white text-sm">
+                  {refs.referredBy ? 'Recruit Pioneer Sponsorship Benefit' : 'Were You Recruited By Another Operative?'}
+                </h3>
+                {refs.referredBy && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    +🌿 50 GREEN / Day Active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                {refs.referredBy ? (
+                  <span>
+                    Your operative profile is sponsored by <strong className="text-white font-mono">{refs.referredBy}</strong>. You are entitled to a daily recruit stipend of <strong>+🌿 50 GREEN/day</strong> every 24 hours!
+                  </span>
+                ) : (
+                  <span>
+                    Enter your recruiter’s code to receive your <strong>Welcome Starter Kit</strong> AND unlock your daily <strong>+🌿 50 GREEN / Day</strong> recruit stipend!
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {refs.referredBy ? (
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={handleClaimStipend}
+                disabled={!isStipendReady}
+                className={`px-4 py-2.5 rounded-xl font-bold font-mono text-xs flex items-center gap-1.5 transition-all shadow cursor-pointer ${
+                  isStipendReady
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 shadow-emerald-950/40 animate-pulse'
+                    : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                }`}
+              >
+                <Coins className="w-4 h-4" />
+                <span>{isStipendReady ? 'Claim Today’s 50 GREEN Allowance!' : `Next Allowance in ~${stipendRemainingHours}h`}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <input
+                type="text"
+                placeholder="e.g. NEON-10001"
+                value={inviteInput}
+                onChange={(e) => setInviteInput(e.target.value)}
+                className="bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 uppercase"
+              />
+              <button
+                onClick={handleRedeemInvite}
+                disabled={!inviteInput.trim()}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-600 text-white font-bold text-xs font-mono transition-all cursor-pointer shadow shrink-0"
+              >
+                Claim Starter & Activate 50/Day
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* MULTI-TIER JUMP ROYALTY TREE (5 GENERATIONAL TIERS) */}
+      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800/80 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                <Layers className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-white text-sm">Multi-Jump Cascading Royalty Tree</h3>
+            </div>
+            <p className="text-xs text-neutral-400 mt-1">
+              Divided <strong>once a day</strong> based exclusively on active gameplay (crimes committed, gym workouts, dream taps). No royalty-on-royalty cascades.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleClaimDailyDividend}
+              disabled={!isRoyaltyReady}
+              className={`px-4 py-2.5 rounded-xl font-bold font-mono text-xs flex items-center gap-1.5 transition-all shadow cursor-pointer ${
+                isRoyaltyReady && totalDailyDividend > 0
+                  ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-neutral-950 shadow-amber-950/40 animate-pulse'
+                  : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              <span>
+                {isRoyaltyReady
+                  ? `Claim Daily Dividends (+🌿 ${Math.max(totalDailyDividend, 0).toLocaleString()} GREEN)`
+                  : `Next Dividend Distribution in ~${royaltyRemainingHours}h`}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* 5-Tier Breakdown Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
+          {networkTiers.map((tier) => (
+            <div
+              key={tier.tier}
+              className={`p-3.5 rounded-xl border flex flex-col justify-between space-y-2.5 ${
+                tier.activeCitizensCount > 0
+                  ? 'bg-neutral-950 border-emerald-500/30'
+                  : 'bg-neutral-950/60 border-neutral-800/80'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between text-xs font-mono mb-1">
+                  <span className="font-bold text-white">Tier {tier.tier}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                    {tier.royaltyPercent}% Royalty
+                  </span>
+                </div>
+                <span className="text-[11px] text-neutral-400 block font-mono">
+                  {tier.jumpLabel}
+                </span>
+              </div>
+
+              <div className="space-y-1 font-mono text-[11px] pt-1 border-t border-neutral-800/80">
+                <div className="flex justify-between text-neutral-400">
+                  <span>Citizens:</span>
+                  <span className="text-white font-bold">{tier.activeCitizensCount}</span>
+                </div>
+                <div className="flex justify-between text-neutral-400">
+                  <span>Gameplay:</span>
+                  <span className="text-neutral-300 font-bold">🌿 {tier.dailyGameplayVolume.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-emerald-400 font-bold pt-1 border-t border-neutral-900">
+                  <span>Today's Dividend:</span>
+                  <span>+🌿 {tier.dailyDividendGreen.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Multi-Tier Simulation Toolbar (Test All 5 Tiers) */}
+        <div className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex items-center gap-2 text-neutral-400">
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span>Simulate Network Growth across Jumps:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => handleSimulate(1)}
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold cursor-pointer transition-all"
+            >
+              + Direct (Tier 1 • 10%)
+            </button>
+            <button
+              onClick={() => handleSimulate(2)}
+              className="px-2.5 py-1.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/40 text-indigo-300 text-[11px] font-bold cursor-pointer transition-all"
+            >
+              + 1 Jump (Tier 2 • 4%)
+            </button>
+            <button
+              onClick={() => handleSimulate(3)}
+              className="px-2.5 py-1.5 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold cursor-pointer transition-all"
+            >
+              + 2 Jumps (Tier 3 • 2%)
+            </button>
+            <button
+              onClick={() => handleSimulate(4)}
+              className="px-2.5 py-1.5 rounded-lg bg-amber-950/70 hover:bg-amber-900/80 border border-amber-500/40 text-amber-300 text-[11px] font-bold cursor-pointer transition-all"
+            >
+              + 3 Jumps (Tier 4 • 1%)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Personal Syndicate Link & Till */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Card 1: Unique Referral Link & Code */}
         <div className="lg:col-span-7 bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-sm space-y-4">
@@ -198,7 +396,7 @@ export default function ReferralView() {
               <h3 className="font-bold text-white text-sm">Your Personal Syndicate Link</h3>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30">
-              Lifetime 10% Kickback
+              5-Tier Cascading Royalties
             </span>
           </div>
 
@@ -236,7 +434,6 @@ export default function ReferralView() {
             </div>
           </div>
 
-          {/* Quick Code Badge & Test Button */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-neutral-800/80">
             <div className="flex items-center gap-2 text-xs font-mono">
               <span className="text-neutral-400">Invite Code:</span>
@@ -249,20 +446,10 @@ export default function ReferralView() {
                 {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-neutral-500" />}
               </button>
             </div>
-
-            {/* Interactive Demo Simulation Button */}
-            <button
-              onClick={handleSimulateRecruit}
-              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs font-mono shadow flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-              title="Simulates a friend joining via your referral link"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>Simulate New Recruit (Demo Viral Loop)</span>
-            </button>
           </div>
         </div>
 
-        {/* Card 2: Royalty Till Register */}
+        {/* Card 2: Instant Commission Till */}
         <div className="lg:col-span-5 bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -275,13 +462,13 @@ export default function ReferralView() {
               <span className="text-[10px] font-mono text-neutral-500">Auto-Accruing</span>
             </div>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              Unclaimed dividends generated by your syndicate network members from their crimes and dream tapping.
+              Instant recruitment kickbacks and unclaimed commissions generated by newly joined downline members.
             </p>
           </div>
 
           <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 flex items-center justify-between font-mono">
             <div>
-              <span className="text-[10px] text-neutral-500 block">Uncollected Royalty</span>
+              <span className="text-[10px] text-neutral-500 block">Uncollected Till Balance</span>
               <span className="text-emerald-400 font-bold text-lg flex items-center gap-1">
                 <span>🌿</span>
                 <span>{(refs.unclaimedCommissionGreen || 0).toLocaleString()}</span>
@@ -298,56 +485,9 @@ export default function ReferralView() {
                   : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
               }`}
             >
-              Collect Royalty Till
+              Collect Till
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Enter Invite Code (New Player Starter Kit) */}
-      <div className="bg-gradient-to-r from-emerald-950/30 via-neutral-900 to-indigo-950/30 border border-emerald-500/30 rounded-2xl p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
-              <Gift className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                Were You Recruited By a Citizen?
-                {refs.hasClaimedWelcomeBonus && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Starter Gift Claimed ✓
-                  </span>
-                )}
-              </h3>
-              <p className="text-xs text-neutral-400">
-                Enter your sponsor’s code to receive a free <strong>Welcome Starter Pack: +🌿 50 GREEN, +10 Energy, and Fresh Food Bread!</strong>
-              </p>
-            </div>
-          </div>
-
-          {refs.hasClaimedWelcomeBonus ? (
-            <div className="text-xs font-mono text-emerald-400 font-bold bg-neutral-950 px-3.5 py-2 rounded-xl border border-neutral-800">
-              Sponsored by: <span className="text-white">{refs.referredBy || 'Syndicate Member'}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <input
-                type="text"
-                placeholder="e.g. NEON-10001"
-                value={inviteInput}
-                onChange={(e) => setInviteInput(e.target.value)}
-                className="bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 uppercase"
-              />
-              <button
-                onClick={handleRedeemInvite}
-                disabled={!inviteInput.trim()}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-600 text-white font-bold text-xs font-mono transition-all cursor-pointer shadow shrink-0"
-              >
-                Claim Starter Kit
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -356,10 +496,10 @@ export default function ReferralView() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="w-4 h-4 text-amber-400" />
-            <h3 className="font-bold text-white text-sm">Recruit Milestone Rewards Ladder</h3>
+            <h3 className="font-bold text-white text-sm">Direct Recruit Milestone Rewards Ladder</h3>
           </div>
           <span className="text-xs font-mono text-neutral-400">
-            Progress: <strong className="text-emerald-400">{refs.totalRecruits}</strong> Recruits
+            Progress: <strong className="text-emerald-400">{refs.totalRecruits}</strong> Direct Recruits
           </span>
         </div>
 
@@ -414,26 +554,26 @@ export default function ReferralView() {
         </div>
       </div>
 
-      {/* Your Syndicate Recruits Live Roster */}
+      {/* Your Syndicate Network Live Roster */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-bold text-white text-sm">Your Syndicate Network ({refs.recruits.length})</h3>
+            <h3 className="font-bold text-white text-sm">Your Syndicate Network Roster ({totalNetworkCitizens})</h3>
           </div>
-          <span className="text-[11px] font-mono text-neutral-500">Live Citizen Activity</span>
+          <span className="text-[11px] font-mono text-neutral-500">Live Downline Activity</span>
         </div>
 
-        {refs.recruits.length === 0 ? (
+        {totalNetworkCitizens === 0 ? (
           <div className="p-8 bg-neutral-950 rounded-xl border border-neutral-800 text-center space-y-2">
             <span className="text-3xl block">🌐</span>
-            <h4 className="text-sm font-bold text-white">No recruits in your syndicate yet</h4>
+            <h4 className="text-sm font-bold text-white">No recruits in your syndicate network yet</h4>
             <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
-              Share your syndicate invite link with friends. You will earn milestone bonuses and ongoing 10% royalties whenever they play!
+              Share your link to recruit citizens. You earn milestone bounties and multi-jump royalties once a day based on active gameplay!
             </p>
             <div className="pt-2">
               <button
-                onClick={handleSimulateRecruit}
+                onClick={() => handleSimulate(1)}
                 className="px-3.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 text-xs font-mono font-bold cursor-pointer"
               >
                 + Test-Add a Recruit Now
@@ -442,29 +582,48 @@ export default function ReferralView() {
           </div>
         ) : (
           <div className="divide-y divide-neutral-800/80 overflow-x-auto">
-            {refs.recruits.map((rec) => (
-              <div
-                key={rec.id}
-                className="py-3 flex items-center justify-between gap-4 text-xs font-mono"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-neutral-950 border border-neutral-800 flex items-center justify-center text-sm">
-                    👤
-                  </div>
-                  <div>
-                    <span className="font-bold text-white block">{rec.name}</span>
-                    <span className="text-[10px] text-neutral-500">Level {rec.level} Citizen</span>
-                  </div>
-                </div>
+            {refs.recruits.map((rec) => {
+              const tierBadgeColors: Record<number, string> = {
+                1: 'bg-emerald-950 text-emerald-300 border-emerald-500/40',
+                2: 'bg-indigo-950 text-indigo-300 border-indigo-500/40',
+                3: 'bg-cyan-950 text-cyan-300 border-cyan-500/40',
+                4: 'bg-amber-950 text-amber-300 border-amber-500/40',
+                5: 'bg-rose-950 text-rose-300 border-rose-500/40',
+              };
+              const badgeClass = tierBadgeColors[rec.tier || 1] || tierBadgeColors[1];
+              const tierLabel = (rec.tier || 1) === 1 ? 'Direct (10%)' : `Tier ${rec.tier || 1} (${(rec.tier || 1) === 2 ? '4%' : (rec.tier || 1) === 3 ? '2%' : (rec.tier || 1) === 4 ? '1%' : '0.5%'})`;
 
-                <div className="text-right">
-                  <span className="text-emerald-400 font-bold block">
-                    +🌿 {rec.totalGeneratedGreen} GREEN Earned
-                  </span>
-                  <span className="text-[10px] text-neutral-400">{rec.lastActive}</span>
+              return (
+                <div
+                  key={rec.id}
+                  className="py-3 flex items-center justify-between gap-4 text-xs font-mono"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-neutral-950 border border-neutral-800 flex items-center justify-center text-sm">
+                      👤
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white">{rec.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded border font-bold ${badgeClass}`}>
+                          {tierLabel}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-neutral-500">
+                        Level {rec.level} Citizen • Today's Gameplay: 🌿 {rec.dailyGameplayEarned || 0} GREEN
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-emerald-400 font-bold block">
+                      +🌿 {rec.totalGeneratedGreen || 0} Royalty
+                    </span>
+                    <span className="text-[10px] text-neutral-400">{rec.lastActive}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

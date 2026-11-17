@@ -169,7 +169,7 @@ export function TornCityContent() {
       {/* Floating Smartphone */}
       <CityPhone />
 
-      {/* Pre-Release Alpha & Testnet Pioneer Airdrop Modal */}
+      {/* Pre-Release Pioneer Edition Airdrop Modal */}
       <PreReleaseNoticeModal />
 
       {/* Global Insufficient Funds / Resources Popup */}
