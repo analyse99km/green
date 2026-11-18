@@ -7,8 +7,8 @@
  *   e.g. 1.4323B, 3.78B, 1.28K, 50M.
  * 
  * Consistent Currency Icons:
- * - GREEN Coins: 🌿
- * - Sparks / Dream Points: ✨
+ * - GREEN Coins: 🪙
+ * - Sparks / Dream Points: ⚡
  */
 
 export function formatCompactNumber(num: number | undefined | null, maxDecimals: number = 4): string {
@@ -39,6 +39,6 @@ export function formatCompactNumber(num: number | undefined | null, maxDecimals:
 }
 
 export const CURRENCY_ICONS = {
-  GREEN: '🌿',
-  SPARKS: '✨',
+  GREEN: '🪙',
+  SPARKS: '⚡',
 } as const;

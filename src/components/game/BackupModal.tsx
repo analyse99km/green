@@ -48,7 +48,7 @@ export default function BackupModal({ isOpen, onClose }: { isOpen: boolean; onCl
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <HardDrive className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-bold text-white text-base">Serverless Cryptographic Backup</h3>
+            <h3 className="font-bold text-white text-base">Encrypted Cryptographic Backup</h3>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-white p-1 rounded-full cursor-pointer">
             <X className="w-5 h-5" />
@@ -56,7 +56,7 @@ export default function BackupModal({ isOpen, onClose }: { isOpen: boolean; onCl
         </div>
 
         <p className="text-xs text-neutral-400 mb-5 leading-relaxed">
-          Because there is no central game database, your game state is signed with your cryptographic identity. You can export your save file to move between your phone and PC, or store a hard-copy backup anytime!
+          Your game state is cryptographically signed and secured with multi-node validation. You can export your encrypted save file to move between your phone and PC, or store a secure local backup anytime!
         </p>
 
         {statusMsg && (

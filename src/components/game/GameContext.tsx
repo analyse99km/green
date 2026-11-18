@@ -42,6 +42,7 @@ import {
   SCAMMING_EMAILS,
   ARSON_LOCATIONS,
 } from './gameData';
+import { formatCompactNumber, CURRENCY_ICONS } from './formatters';
 import { SoundEngine } from './gameAudio';
 import {
   computeStateHash,
@@ -3114,6 +3115,101 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const buyBazaarListing = (listingId: string) => {
+    // 1. First check if it's an official Underworld / Municipal Catalog item
+    const catalog = loadCatalogData();
+    let catalogItem = catalog.customItems?.find(
+      (i) => i.id === listingId || `cat_item_${i.id}` === listingId
+    );
+
+    if (catalogItem) {
+      if (catalogItem.requiredCardId) {
+        const currentCardLvl = (player.dreamCards || {})[catalogItem.requiredCardId] || 0;
+        const reqLvl = catalogItem.requiredCardLevel || 1;
+        if (currentCardLvl < reqLvl) {
+          const reqCard = catalog.cards.find((c) => c.id === catalogItem!.requiredCardId);
+          return {
+            success: false,
+            message: `🔒 Locked! Requires Botanical Card "${reqCard?.title || catalogItem.requiredCardId}" at Level ${reqLvl} to purchase.`,
+          };
+        }
+      }
+
+      if (player.money < catalogItem.price) {
+        triggerInsufficientFunds({
+          currency: 'GREEN',
+          requiredAmount: catalogItem.price,
+          currentBalance: player.money,
+          itemName: `Item Market: ${catalogItem.name}`,
+        });
+        return {
+          success: false,
+          message: `Need 🪙 ${formatCompactNumber(catalogItem.price)} GREEN to purchase ${catalogItem.name}.`,
+        };
+      }
+
+      setPlayer((prev) => {
+        const existing = prev.inventory.find(
+          (i) => i.id === catalogItem!.id || i.name === catalogItem!.name
+        );
+        const invItem: InventoryItem = {
+          id: catalogItem!.id,
+          name: catalogItem!.name,
+          category: catalogItem!.category,
+          alignment: catalogItem!.alignment,
+          price: catalogItem!.price,
+          marketValue: catalogItem!.marketValue || catalogItem!.price,
+          description: catalogItem!.description,
+          synergy: catalogItem!.synergy,
+          icon: catalogItem!.icon,
+          damage: catalogItem!.damage,
+          accuracy: catalogItem!.accuracy,
+          defense: catalogItem!.defense,
+          foodRestore: catalogItem!.foodRestore,
+          energyRestore: catalogItem!.energyRestore,
+          happyRestore: catalogItem!.happyRestore,
+          lifeRestore: catalogItem!.lifeRestore,
+          ammo: catalogItem!.ammo,
+          concealment: catalogItem!.concealment,
+          durability: catalogItem!.durability,
+          shopliftDifficulty: catalogItem!.shopliftDifficulty || 50,
+          forgePrice: catalogItem!.forgePrice,
+          forgeSparksPrice: catalogItem!.forgeSparksPrice,
+          forgeDamageBonus: catalogItem!.forgeDamageBonus,
+          forgeAccuracyBonus: catalogItem!.forgeAccuracyBonus,
+          forgeDefenseBonus: catalogItem!.forgeDefenseBonus,
+          quantity: 1,
+          upgradeLevel: 0,
+          isCloudItem: true,
+        };
+
+        const newInv = existing
+          ? prev.inventory.map((i) =>
+              i.id === catalogItem!.id || i.name === catalogItem!.name
+                ? { ...i, quantity: i.quantity + 1 }
+                : i
+            )
+          : [...prev.inventory, invItem];
+
+        return {
+          ...prev,
+          money: prev.money - catalogItem!.price,
+          inventory: newInv,
+          hasUnsavedActions: true,
+        };
+      });
+
+      SoundEngine.playCash(player.soundEnabled);
+      addLog({
+        type: 'SHOP',
+        message: `Purchased ${catalogItem.name} for 🪙 ${formatCompactNumber(catalogItem.price)} GREEN.`,
+      });
+      return {
+        success: true,
+        message: `Successfully purchased ${catalogItem.name} for 🪙 ${catalogItem.price.toLocaleString()} GREEN!`,
+      };
+    }
+
+    // 2. Peer Bazaar Listing
     const listing = bazaarListings.find((l) => l.id === listingId);
     if (!listing || listing.quantity <= 0 || listing.status === 'FINALIZED') {
       return { success: false, message: 'Item listing sold out or closed.' };

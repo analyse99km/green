@@ -26,6 +26,11 @@ export interface DynamicItemDef {
   name: string;
   description: string;
   category: 'WEAPON' | 'ARMOR' | 'FOOD' | 'MEDICAL' | 'CONTRABAND' | 'TOOL' | 'LUXURY' | 'ENHANCER';
+  alignment?: 'CRIME' | 'GOOD' | 'NEUTRAL';
+  synergy?: string;
+  ammo?: string;
+  concealment?: string;
+  durability?: number;
   price: number;
   marketValue?: number;
   shopliftDifficulty?: number;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../GameContext';
 import {
   ShoppingBag,
@@ -17,8 +17,16 @@ import {
   RefreshCw,
   Lock,
   X,
+  Swords,
+  Heart,
+  Zap,
+  Utensils,
+  Crosshair,
 } from 'lucide-react';
 import DynamicIcon from '../DynamicIcon';
+import { loadCatalogData, syncCatalogFromServer, DynamicCatalogData, DynamicItemDef } from '../gameCatalog';
+import { formatCompactNumber, CURRENCY_ICONS } from '../formatters';
+import { BazaarListing, InventoryItem } from '../types';
 
 export default function BazaarView() {
   const {
@@ -34,8 +42,28 @@ export default function BazaarView() {
   const [activeTab, setActiveTab] = useState<'MARKET' | 'MY_BAZAAR'>('MARKET');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [selectedAlignment, setSelectedAlignment] = useState<string>('ALL');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Dynamic catalog state synced with admin console
+  const [catalog, setCatalog] = useState<DynamicCatalogData>({
+    categories: [],
+    cards: [],
+    customItems: [],
+  });
+
+  useEffect(() => {
+    const data = loadCatalogData();
+    setCatalog(data);
+    syncCatalogFromServer()
+      .then((remoteData) => {
+        if (remoteData?.customItems?.length) {
+          setCatalog(remoteData);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // New listing form state
   const [selectedItemId, setSelectedItemId] = useState<string>('');
@@ -43,14 +71,69 @@ export default function BazaarView() {
   const [listingQty, setListingQty] = useState<string>('1');
 
   const categories = ['ALL', 'WEAPON', 'ARMOR', 'FOOD', 'MEDICAL', 'CONTRABAND', 'TOOL', 'LUXURY'];
+  const alignments = ['ALL', 'CRIME', 'GOOD', 'NEUTRAL'];
 
-  const isMyListing = (l: (typeof bazaarListings)[0]) => l.sellerId === player.id;
+  // Convert catalog custom items into market listings
+  const catalogListings: BazaarListing[] = (catalog.customItems || []).map((item) => ({
+    id: `cat_item_${item.id}`,
+    sellerId: item.alignment === 'CRIME' ? 'black_market_broker' : item.alignment === 'GOOD' ? 'police_bureau' : 'syndicate_bazaar',
+    sellerName: item.alignment === 'CRIME' ? '🕶️ Underworld Black Market' : item.alignment === 'GOOD' ? '⚖️ Municipal Police Bureau' : '🛒 Syndicate Global Bazaar',
+    price: item.price,
+    quantity: 99,
+    status: 'ACTIVE',
+    quorumNodes: 8,
+    signature: `verified_catalog_${item.id}`,
+    item: {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      category: item.category,
+      alignment: item.alignment,
+      price: item.price,
+      marketValue: item.marketValue || item.price,
+      shopliftDifficulty: item.shopliftDifficulty || 50,
+      damage: item.damage,
+      accuracy: item.accuracy,
+      defense: item.defense,
+      energyRestore: item.energyRestore,
+      happyRestore: item.happyRestore,
+      lifeRestore: item.lifeRestore,
+      foodRestore: item.foodRestore,
+      synergy: item.synergy,
+      ammo: item.ammo,
+      concealment: item.concealment,
+      durability: item.durability,
+      forgePrice: item.forgePrice,
+      forgeSparksPrice: item.forgeSparksPrice,
+      forgeDamageBonus: item.forgeDamageBonus,
+      forgeAccuracyBonus: item.forgeAccuracyBonus,
+      forgeDefenseBonus: item.forgeDefenseBonus,
+      icon: item.icon,
+      quantity: 1,
+      isCloudItem: true,
+    },
+  }));
 
-  const filteredListings = bazaarListings.filter((l) => {
+  // Combine official catalog items with player peer listings (avoiding duplicates)
+  const allMarketListings: BazaarListing[] = [
+    ...catalogListings,
+    ...bazaarListings.filter(
+      (l) => !catalogListings.some((c) => c.item.name.toLowerCase() === l.item.name.toLowerCase())
+    ),
+  ];
+
+  const isMyListing = (l: BazaarListing) => l.sellerId === player.id;
+
+  const filteredListings = allMarketListings.filter((l) => {
     if (l.status === 'FINALIZED' || l.quantity <= 0) return false;
-    const matchesSearch = l.item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      l.item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (l.item.synergy && l.item.synergy.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCat = selectedCategory === 'ALL' || l.item.category === selectedCategory;
-    return matchesSearch && matchesCat;
+    const itemAlign = l.item.alignment || 'NEUTRAL';
+    const matchesAlign = selectedAlignment === 'ALL' || itemAlign === selectedAlignment;
+    return matchesSearch && matchesCat && matchesAlign;
   });
 
   const playerBazaarItems = bazaarListings.filter((l) => isMyListing(l));
@@ -63,10 +146,22 @@ export default function BazaarView() {
 
   const handleSync = () => {
     setIsSyncing(true);
+    syncCatalogFromServer()
+      .then((remoteData) => {
+        if (remoteData?.customItems) setCatalog(remoteData);
+      })
+      .catch(() => {});
+
     setTimeout(() => {
       const res = syncP2PMesh();
       setIsSyncing(false);
-      setFeedback(`P2P Sync Complete: Synced across ${res.syncedPeers} nodes. ${res.newlySettledTill > 0 ? `Claimed 🌿 ${res.newlySettledTill.toLocaleString()} GREEN newly settled proceeds!` : 'All listings up to date.'}`);
+      setFeedback(
+        `Mesh Sync Complete: Synced across ${res.syncedPeers} nodes. ${
+          res.newlySettledTill > 0
+            ? `Claimed ${CURRENCY_ICONS.GREEN} ${formatCompactNumber(res.newlySettledTill)} GREEN newly settled proceeds!`
+            : 'All items and peer listings up to date.'
+        }`
+      );
       setTimeout(() => setFeedback(null), 4000);
     }, 600);
   };
@@ -96,18 +191,10 @@ export default function BazaarView() {
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  const rarityColors: Record<string, string> = {
-    COMMON: 'text-neutral-400 border-neutral-700 bg-neutral-900',
-    UNCOMMON: 'text-emerald-400 border-emerald-500/40 bg-emerald-950/20',
-    RARE: 'text-blue-400 border-blue-500/40 bg-blue-950/20',
-    EPIC: 'text-purple-400 border-purple-500/50 bg-purple-950/30',
-    LEGENDARY: 'text-amber-400 border-amber-500/60 bg-amber-950/40 ring-1 ring-amber-500/40',
-  };
-
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="bg-gradient-to-r from-neutral-900 via-neutral-900 to-amber-950/40 border border-neutral-800 rounded-2xl p-6 shadow-sm">
+      <div className="bg-gradient-to-r from-neutral-900 via-neutral-900 to-amber-950/40 border border-neutral-800 rounded-2xl p-4 sm:p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -115,8 +202,8 @@ export default function BazaarView() {
               <h2 className="text-xl font-bold text-white">Item Market & Player Bazaars</h2>
             </div>
             <p className="text-xs text-neutral-400 mt-1 max-w-2xl leading-relaxed">
-              The free-market trading exchange of Neon Metropolis. Browse rare weapon drops, gourmet nutrition, and
-              contraband listed by other syndicate operatives. Open your own <strong>Personal Bazaar</strong> to sell crime loot!
+              The free-market trading exchange of Neon Metropolis. Browse rare weapons, tactical armor, gourmet nutrition,
+              and contraband managed directly from the Admin Controller. Open your own <strong>Personal Bazaar</strong> to sell crime loot!
             </p>
           </div>
 
@@ -127,7 +214,7 @@ export default function BazaarView() {
                 activeTab === 'MARKET' ? 'bg-emerald-600 text-white shadow' : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Global Market ({bazaarListings.length})
+              Global Market ({allMarketListings.length})
             </button>
             <button
               onClick={() => setActiveTab('MY_BAZAAR')}
@@ -151,14 +238,14 @@ export default function BazaarView() {
       {/* TAB 1: Global Item Market */}
       {activeTab === 'MARKET' && (
         <div className="space-y-4">
-          {/* P2P Mesh Quorum Status Ribbon */}
+          {/* Header Controls Ribbon */}
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono bg-neutral-900 border border-neutral-800 p-3 px-4 rounded-2xl">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-neutral-300 font-bold">
-                P2P Replicated Ledger: <span className="text-emerald-400">8/8 Mesh Quorum Active</span>
+                Live Exchange Mesh: <span className="text-emerald-400">{allMarketListings.length} Verified Goods</span>
               </span>
-              <span className="text-neutral-500 text-[11px] hidden sm:inline">• Offline-first decentralized state</span>
+              <span className="text-neutral-500 text-[11px] hidden sm:inline">• Real-time Admin Controller Sync</span>
             </div>
 
             <button
@@ -167,23 +254,60 @@ export default function BazaarView() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-950 border border-neutral-700 hover:border-cyan-500 text-cyan-300 font-bold text-xs transition-all cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-cyan-400' : ''}`} />
-              <span>{isSyncing ? 'Syncing Mesh...' : 'Sync Peer Mesh'}</span>
+              <span>{isSyncing ? 'Syncing Catalog...' : 'Refresh Market'}</span>
             </button>
           </div>
 
-          {/* Search & Filter Bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search market by item name..."
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-sans"
-              />
+          {/* Search & Alignment / Category Filter Bar */}
+          <div className="space-y-2.5">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search items by name, description, or synergy..."
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-sans"
+                />
+              </div>
+
+              {/* Alignment Filter Pills */}
+              <div className="flex items-center gap-1.5 bg-neutral-950 p-1 rounded-xl border border-neutral-800 text-xs font-mono font-bold shrink-0">
+                <button
+                  onClick={() => setSelectedAlignment('ALL')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    selectedAlignment === 'ALL'
+                      ? 'bg-neutral-800 text-white font-black'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  All Factions
+                </button>
+                <button
+                  onClick={() => setSelectedAlignment('CRIME')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    selectedAlignment === 'CRIME'
+                      ? 'bg-rose-950 text-rose-300 border border-rose-500/50 shadow font-black'
+                      : 'text-rose-400/70 hover:text-rose-300'
+                  }`}
+                >
+                  <span>🔴</span> Crime
+                </button>
+                <button
+                  onClick={() => setSelectedAlignment('GOOD')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    selectedAlignment === 'GOOD'
+                      ? 'bg-blue-950 text-blue-300 border border-blue-500/50 shadow font-black'
+                      : 'text-blue-400/70 hover:text-blue-300'
+                  }`}
+                >
+                  <span>🔵</span> Good/Legal
+                </button>
+              </div>
             </div>
 
+            {/* Category Filter Horizontal Pills */}
             <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none font-mono text-[11px]">
               {categories.map((cat) => (
                 <button
@@ -191,7 +315,7 @@ export default function BazaarView() {
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1.5 rounded-lg border transition-all cursor-pointer whitespace-nowrap ${
                     selectedCategory === cat
-                      ? 'bg-neutral-100 text-neutral-950 font-bold border-neutral-100 shadow'
+                      ? 'bg-emerald-600 text-white font-bold border-emerald-500 shadow'
                       : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
                   }`}
                 >
@@ -201,83 +325,143 @@ export default function BazaarView() {
             </div>
           </div>
 
-          {/* Listings Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Listings Grid (Compact, Space-Efficient 2-in-a-row on mobile, 3-in-a-row on desktop) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {filteredListings.length === 0 ? (
               <div className="col-span-full p-8 text-center bg-neutral-900 rounded-2xl border border-neutral-800 text-xs text-neutral-400 font-mono">
-                No items match your search filter. Check back as traders restock!
+                No items match your search filter. Adjust category or alignment!
               </div>
             ) : (
               filteredListings.map((listing) => {
                 const canAfford = player.money >= listing.price;
-                const rarity = listing.item.rarity || 'COMMON';
-                const rarityStyle = rarityColors[rarity] || rarityColors.COMMON;
+                const isCrime = listing.item.alignment === 'CRIME';
+                const isGood = listing.item.alignment === 'GOOD';
 
                 return (
                   <div
                     key={listing.id}
-                    className={`rounded-2xl border p-5 flex flex-col justify-between transition-all ${rarityStyle}`}
+                    className={`rounded-2xl border p-4 flex flex-col justify-between transition-all relative overflow-hidden bg-neutral-900/90 ${
+                      isCrime
+                        ? 'border-rose-900/40 hover:border-rose-600/70'
+                        : isGood
+                        ? 'border-blue-900/40 hover:border-blue-600/70'
+                        : 'border-neutral-800 hover:border-neutral-700'
+                    }`}
                   >
                     <div>
-                      <div className="flex items-start justify-between">
+                      {/* Top Header: Icon + Name + Alignment Badge */}
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
-                          <span className="w-12 h-12 p-1 rounded-xl bg-neutral-950/80 border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
-                            <DynamicIcon icon={listing.item.icon} alt={listing.item.name} imgClassName="w-8 h-8 object-contain rounded" className="text-3xl" fallback="📦" />
+                          <span className="w-12 h-12 p-1 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                            <DynamicIcon
+                              icon={listing.item.icon}
+                              alt={listing.item.name}
+                              imgClassName="w-8 h-8 object-contain rounded"
+                              className="text-2xl"
+                              fallback="📦"
+                            />
                           </span>
                           <div>
-                            <h4 className="font-bold text-white text-sm">{listing.item.name}</h4>
-                            <span className="text-[10px] uppercase font-mono text-neutral-400">
-                              {listing.item.category} • {rarity}
-                            </span>
+                            <h4 className="font-bold text-white text-sm leading-tight">{listing.item.name}</h4>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-950 text-neutral-400 border border-neutral-800 uppercase">
+                                {listing.item.category}
+                              </span>
+                              {isCrime && (
+                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-400 border border-rose-600/50">
+                                  🔴 CRIME
+                                </span>
+                              )}
+                              {isGood && (
+                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-500/50">
+                                  🔵 GOOD / LEGAL
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <span className="font-mono font-bold text-amber-400 text-sm bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800">
+
+                        <span className="font-mono font-bold text-emerald-400 text-xs bg-neutral-950 px-2 py-0.5 rounded border border-neutral-800 shrink-0">
                           x{listing.quantity}
                         </span>
                       </div>
 
-                      <p className="text-xs text-neutral-400 my-3 leading-relaxed font-sans">
+                      {/* Flavor Description */}
+                      <p className="text-xs text-neutral-300 my-2.5 leading-relaxed font-sans line-clamp-2">
                         {listing.item.description}
                       </p>
 
-                      <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono text-neutral-400 pt-2 border-t border-neutral-800/80">
-                        <div className="flex items-center gap-1.5">
-                          {listing.sellerId === player.id ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-blue-950/80 text-blue-400 border border-blue-500/30 font-mono font-bold">
-                              🔵 Your Listing
-                            </span>
-                          ) : !listing.sellerId.startsWith('trader_') ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 font-mono font-bold flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                              Peer: {listing.sellerName}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800 font-mono">
-                              Merchant: {listing.sellerName}
-                            </span>
-                          )}
-                        </div>
-                        <span className="font-bold text-emerald-400 text-sm">
-                          🌿 {listing.price.toLocaleString()} GREEN
-                        </span>
+                      {/* Combat / Defensive / Nutritional Spec Badges */}
+                      <div className="flex flex-wrap gap-1.5 my-2 text-[10px] font-mono">
+                        {listing.item.damage !== undefined && (
+                          <span className="px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800/40 text-rose-300 font-bold flex items-center gap-1">
+                            <Swords className="w-3 h-3" /> DMG: {listing.item.damage}
+                          </span>
+                        )}
+                        {listing.item.accuracy !== undefined && (
+                          <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/40 text-cyan-300 font-bold flex items-center gap-1">
+                            <Crosshair className="w-3 h-3" /> ACC: {listing.item.accuracy}%
+                          </span>
+                        )}
+                        {listing.item.defense !== undefined && (
+                          <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/40 text-blue-300 font-bold flex items-center gap-1">
+                            <Shield className="w-3 h-3" /> DEF: +{listing.item.defense}
+                          </span>
+                        )}
+                        {listing.item.foodRestore !== undefined && listing.item.foodRestore > 0 && (
+                          <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/40 text-emerald-300 font-bold flex items-center gap-1">
+                            <Utensils className="w-3 h-3" /> Food: +{listing.item.foodRestore}
+                          </span>
+                        )}
+                        {listing.item.energyRestore !== undefined && listing.item.energyRestore > 0 && (
+                          <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800/40 text-amber-300 font-bold flex items-center gap-1">
+                            <Zap className="w-3 h-3" /> Energy: +{listing.item.energyRestore}
+                          </span>
+                        )}
+                        {listing.item.lifeRestore !== undefined && listing.item.lifeRestore > 0 && (
+                          <span className="px-2 py-0.5 rounded bg-pink-950/60 border border-pink-800/40 text-pink-300 font-bold flex items-center gap-1">
+                            <Heart className="w-3 h-3" /> Heal: +{listing.item.lifeRestore} HP
+                          </span>
+                        )}
+                        {listing.item.ammo && (
+                          <span className="px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-neutral-300">
+                            Ammo: {listing.item.ammo}
+                          </span>
+                        )}
+                        {listing.item.concealment && (
+                          <span className="px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-neutral-300">
+                            Conceal: {listing.item.concealment}
+                          </span>
+                        )}
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400/90 pt-1.5">
-                        <span className="flex items-center gap-1">
-                          <Shield className="w-3 h-3 text-cyan-400" />
-                          <span>8/8 Quorum Confirmed</span>
+                      {/* Synergy Highlight Box */}
+                      {listing.item.synergy && (
+                        <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-500/30 text-[11px] text-amber-200/95 leading-snug my-2">
+                          <span className="font-bold text-amber-400 block mb-0.5">⚡ Synergy Perk</span>
+                          {listing.item.synergy}
+                        </div>
+                      )}
+
+                      {/* Seller Tag & Price */}
+                      <div className="flex items-center justify-between gap-1 text-[11px] font-mono text-neutral-400 pt-2 border-t border-neutral-800">
+                        <span className="text-[10px] text-neutral-400 truncate max-w-[160px]">
+                          {listing.sellerName}
                         </span>
-                        <span className="text-neutral-500 truncate max-w-[110px]">
-                          {listing.signature ? listing.signature.substring(0, 14) + '...' : 'Signed'}
-                        </span>
+                        <div className="flex items-center gap-1 font-bold text-emerald-400 text-sm">
+                          <span>{CURRENCY_ICONS.GREEN}</span>
+                          <span>{formatCompactNumber(listing.price)}</span>
+                          <span className="text-[10px] font-normal text-emerald-500">GREEN</span>
+                        </div>
                       </div>
                     </div>
 
+                    {/* Action Button */}
                     {listing.sellerId === player.id ? (
                       <button
                         type="button"
                         onClick={() => setActiveTab('MY_BAZAAR')}
-                        className="w-full mt-4 py-2 rounded-xl text-xs font-bold font-mono bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 border border-blue-500/30 cursor-pointer shadow transition-all"
+                        className="w-full mt-3 py-2 rounded-xl text-xs font-bold font-mono bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 border border-blue-500/30 cursor-pointer shadow transition-all"
                       >
                         Your Listing (Manage in My Stall)
                       </button>
@@ -285,15 +469,16 @@ export default function BazaarView() {
                       <button
                         type="button"
                         onClick={() => handleBuy(listing.id)}
-                        className={`w-full mt-4 py-2 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer shadow ${
+                        className={`w-full mt-3 py-2.5 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer shadow flex items-center justify-center gap-1.5 ${
                           canAfford
-                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-98'
                             : 'bg-neutral-800 hover:bg-neutral-700 text-amber-300 border border-amber-500/30'
                         }`}
                       >
-                        {canAfford
-                          ? `Buy for 🌿 ${listing.price.toLocaleString()} GREEN`
-                          : `Need 🌿 ${listing.price.toLocaleString()} GREEN (Inspect)`}
+                        <span>{canAfford ? 'Buy Now' : 'Need Funds'}</span>
+                        <span className="font-normal opacity-90">
+                          ({CURRENCY_ICONS.GREEN} {formatCompactNumber(listing.price)})
+                        </span>
                       </button>
                     )}
                   </div>
@@ -322,14 +507,15 @@ export default function BazaarView() {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="font-mono text-lg font-bold text-emerald-400">
-                🌿 {player.bazaarTillCash.toLocaleString()} GREEN
+              <span className="font-mono text-lg font-bold text-emerald-400 flex items-center gap-1">
+                <span>{CURRENCY_ICONS.GREEN}</span>
+                <span>{formatCompactNumber(player.bazaarTillCash || 0)} GREEN</span>
               </span>
               <button
                 onClick={handleCollectTill}
-                disabled={player.bazaarTillCash <= 0}
+                disabled={(player.bazaarTillCash || 0) <= 0}
                 className={`px-4 py-2 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer ${
-                  player.bazaarTillCash > 0
+                  (player.bazaarTillCash || 0) > 0
                     ? 'bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow'
                     : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
                 }`}
@@ -339,32 +525,23 @@ export default function BazaarView() {
             </div>
           </div>
 
-          {/* P2P Replay Protection Info Ribbon */}
-          <div className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl flex items-center justify-between text-[11px] font-mono text-neutral-400">
-            <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
-              <Shield className="w-3.5 h-3.5" /> Replay Defense Active:
-            </span>
-            <span>
-              {(player.settledReceiptIds?.length || 0)} Settled Receipts Verified (No duplicate money or popups)
-            </span>
-          </div>
-
-          {/* List an Item for Sale Form */}
+          {/* List an Item Form */}
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <PlusCircle className="w-4 h-4 text-emerald-400" /> Put Item Up For Sale
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <PlusCircle className="w-4 h-4 text-emerald-400" />
+              <span>List Item in Your Personal Bazaar</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-[10px] font-mono text-neutral-400 block mb-1">SELECT INVENTORY ITEM:</label>
+                <label className="block text-[11px] font-mono text-neutral-400 mb-1">Select Inventory Item</label>
                 <select
                   value={selectedItemId}
                   onChange={(e) => setSelectedItemId(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-sans"
                 >
-                  <option value="">-- Choose Item from Backpack --</option>
-                  {player.inventory
+                  <option value="">-- Choose item to sell --</option>
+                  {(player.inventory || [])
                     .filter((i) => i.quantity > 0)
                     .map((item) => (
                       <option key={item.id} value={item.id}>
@@ -375,68 +552,64 @@ export default function BazaarView() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono text-neutral-400 block mb-1">ASKING PRICE (🌿 GREEN EACH):</label>
+                <label className="block text-[11px] font-mono text-neutral-400 mb-1">Asking Price (GREEN)</label>
                 <input
                   type="number"
+                  min="1"
                   value={listingPrice}
                   onChange={(e) => setListingPrice(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  placeholder="500"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-mono text-neutral-400 block mb-1">QUANTITY TO SELL:</label>
+                <label className="block text-[11px] font-mono text-neutral-400 mb-1">Quantity</label>
                 <input
                   type="number"
+                  min="1"
                   value={listingQty}
                   onChange={(e) => setListingQty(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  placeholder="1"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
                 />
               </div>
             </div>
 
             <button
               onClick={handleCreateListing}
-              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs font-mono shadow transition-all cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono transition-all cursor-pointer shadow"
             >
-              List Item in Your Bazaar Stall
+              Post Listing to Global Exchange
             </button>
           </div>
 
-          {/* Current Active Player Listings */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider font-mono">
-              Your Active Bazaar Listings ({playerBazaarItems.length})
-            </h3>
+          {/* Active Listings Table */}
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3">
+            <h3 className="text-sm font-bold text-white">Your Active Stall Listings ({playerBazaarItems.length})</h3>
 
             {playerBazaarItems.length === 0 ? (
-              <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-2xl text-center text-xs text-neutral-500 font-mono">
-                You have no items listed in your bazaar. Select an item above to start earning revenue!
-              </div>
+              <p className="text-xs text-neutral-500 font-mono py-4 text-center">
+                You do not have any active items listed in your bazaar.
+              </p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
                 {playerBazaarItems.map((listing) => (
                   <div
                     key={listing.id}
-                    className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between"
+                    className="p-3 bg-neutral-950 border border-neutral-800 rounded-xl flex items-center justify-between gap-3 text-xs"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="w-9 h-9 p-0.5 rounded-lg bg-neutral-950 border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
-                        <DynamicIcon icon={listing.item.icon} alt={listing.item.name} imgClassName="w-7 h-7 object-contain rounded" className="text-2xl" fallback="📦" />
-                      </span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">{listing.item.icon || '📦'}</span>
                       <div>
-                        <h4 className="font-bold text-white text-xs">{listing.item.name}</h4>
-                        <span className="text-[10px] text-emerald-400 font-mono">
-                          {listing.quantity}x @ 🌿 {listing.price.toLocaleString()} GREEN each
-                        </span>
+                        <div className="font-bold text-white">{listing.item.name}</div>
+                        <div className="text-[10px] text-neutral-400 font-mono">
+                          Asking: {CURRENCY_ICONS.GREEN} {formatCompactNumber(listing.price)} GREEN • Qty: {listing.quantity}
+                        </div>
                       </div>
                     </div>
 
                     <button
                       onClick={() => handleRemove(listing.id)}
-                      className="px-3 py-1.5 rounded-lg bg-neutral-950 hover:bg-rose-950 border border-neutral-800 hover:border-rose-500/50 text-rose-400 font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-300 font-bold text-xs border border-rose-800/50 transition cursor-pointer flex items-center gap-1"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Cancel</span>
@@ -446,22 +619,6 @@ export default function BazaarView() {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Global Floating Action Notification Toast */}
-      {feedback && (
-        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92vw] sm:w-auto px-4 py-3 rounded-2xl bg-neutral-900/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-slideUp">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
-            <span className="font-medium text-white">{feedback}</span>
-          </div>
-          <button
-            onClick={() => setFeedback(null)}
-            className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
         </div>
       )}
     </div>

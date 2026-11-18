@@ -8,7 +8,7 @@
     "userReferralCode": "NEON-44861F74",
     "referredBy": null,
     "createdAt": 1794996362058,
-    "lastLoginAt": 1795000289901,
+    "lastLoginAt": 1795014381489,
     "playerState": {
       "id": "usr_44861f741ad920d4",
       "name": "Dhruv",
@@ -34,7 +34,7 @@
       "maxNerve": 10,
       "happy": 100,
       "maxHappy": 100,
-      "food": 14,
+      "food": 45,
       "maxFood": 100,
       "chain": 0,
       "maxChain": 10,
@@ -597,7 +597,18 @@
         "card_photosynthesis": 15,
         "card_mycelium": 11,
         "card_spore_chamber": 6,
-        "card_bioluminescent_algae": 9
+        "card_bioluminescent_algae": 9,
+        "card_greenhouse": 2,
+        "card_hydroponic_array": 3,
+        "card_ginseng": 4,
+        "card_ayahuasca": 4,
+        "card_mango": 2,
+        "card_coconut": 3,
+        "card_sacred_grove": 3,
+        "card_baobab": 6,
+        "card_genetic_synthesizer": 5,
+        "card_redwood": 2,
+        "card_quantum_chloroplast": 7
       },
       "activeTapperSkinId": "tree_oak",
       "unlockedTapperSkins": [
@@ -669,7 +680,7 @@
       "isSleeping": false,
       "sleepRemainingSeconds": 0,
       "stateHash": "c9b5c4a4a848ce1e02dad8800dd1c57e7b1aac08b2bba4b54e0dff788c1c9b1d",
-      "lastSaveTimestamp": 1795012043950,
+      "lastSaveTimestamp": 1795013163263,
       "hasUnsavedActions": false,
       "isAwakened": false
     },
@@ -677,7 +688,7 @@
     "money": 9.999999999e+259,
     "sparks": 1e+171,
     "rank": "#1 Neon Operative",
-    "lastSaveAt": 1794998422572
+    "lastSaveAt": 1795014381117
   },
   "dhruv2424@outlook.com": {
     "email": "dhruv2424@outlook.com",
@@ -1345,7 +1356,7 @@
     "userReferralCode": "NEON-71F63E20",
     "referredBy": "NEON-E7CC880D",
     "createdAt": 1794998780043,
-    "lastLoginAt": 1795005309480,
+    "lastLoginAt": 1795014381269,
     "playerState": {
       "id": "usr_71f63e2038a30959",
       "name": "Dhruv11",
@@ -1371,7 +1382,7 @@
       "maxNerve": 10,
       "happy": 100,
       "maxHappy": 100,
-      "food": 70,
+      "food": 51,
       "maxFood": 100,
       "chain": 0,
       "maxChain": 10,
@@ -1925,12 +1936,16 @@
       "dailyWheelSpinsAvailable": 1,
       "lastWheelSpinTimestamp": 0,
       "soundEnabled": true,
-      "dreamPoints": 175,
+      "dreamPoints": 41,
       "dreamMultiplier": 1,
       "totalTaps": 49,
       "tapStamina": 100,
       "maxTapStamina": 100,
-      "dreamCards": {},
+      "dreamCards": {
+        "card_photosynthesis": 1,
+        "card_mycelium": 1,
+        "card_mycelial_network": 1
+      },
       "activeTapperSkinId": "tree_sprout",
       "unlockedTapperSkins": [
         "tree_sprout"
@@ -1985,15 +2000,15 @@
       "totalFinesPaid": 0,
       "isSleeping": false,
       "sleepRemainingSeconds": 0,
-      "stateHash": "bc384044d2cb3b590f917e94d1ccdf02a47197c69e0276cbb8847bafa5d4b5c6",
-      "lastSaveTimestamp": 1795005308796,
+      "stateHash": "e60bbc5b3a2278fc67913ae8779d90efc79b8a792b71ab4ed5e613930f5089eb",
+      "lastSaveTimestamp": 1795013103821,
       "hasUnsavedActions": false,
       "isAwakened": false
     },
     "money": 495,
-    "sparks": 175,
+    "sparks": 41,
     "level": 1,
     "rank": "#1 Neon Operative",
-    "lastSaveAt": 1795005309458
+    "lastSaveAt": 1795014381168
   }
 }

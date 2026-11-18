@@ -599,7 +599,7 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             </div>
 
             <p className="text-center text-[10px] text-neutral-500 font-mono">
-              Zero central servers • Client-side cryptographically signed player credentials
+              Cryptographically signed player credentials • Multi-node encrypted security
             </p>
           </div>
         )}
