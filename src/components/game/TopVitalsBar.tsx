@@ -53,7 +53,7 @@ export default function TopVitalsBar({
   const isStarving = (player.food ?? 70) <= 20;
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden bg-neutral-900/95 border-b border-neutral-800 text-xs font-mono shadow-sm">
+    <div className="relative z-20 w-full max-w-full overflow-x-hidden bg-neutral-900/95 border-b border-neutral-800 text-xs font-mono shadow-sm">
       <div className="max-w-7xl mx-auto px-2.5 sm:px-4 py-2 space-y-2">
         {/* Row 1: Player Tag, Level progress, GREEN Coins, Dream Sparks & Daily Clipper */}
         <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-neutral-800/60">
