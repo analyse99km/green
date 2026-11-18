@@ -176,8 +176,12 @@ export function TornCityContent() {
         </main>
       </div>
 
-      {/* City Smartphone Centered Modal (Controlled cleanly via isOpen/onClose with ZERO screen overlap) */}
-      <CityPhone isOpen={isPhoneOpen} onClose={() => setIsPhoneOpen(false)} />
+      {/* City Smartphone (Permanent floating launcher + centered modal with zero overlap) */}
+      <CityPhone
+        isOpen={isPhoneOpen}
+        onClose={() => setIsPhoneOpen(false)}
+        onOpen={() => setIsPhoneOpen(true)}
+      />
 
       {/* Pre-Release Pioneer Edition Airdrop Modal */}
       <PreReleaseNoticeModal />

@@ -37,12 +37,13 @@ const MAX_MESSAGES = 50;
 interface CityPhoneProps {
   isOpen?: boolean;
   onClose?: () => void;
+  onOpen?: () => void;
 }
 
-export default function CityPhone({ isOpen: propIsOpen, onClose: propOnClose }: CityPhoneProps = {}) {
+export default function CityPhone({ isOpen: propIsOpen, onClose: propOnClose, onOpen: propOnOpen }: CityPhoneProps = {}) {
   const { player, addLog } = useGame();
   const [internalOpen, setInternalOpen] = useState(false);
-  const isOpen = propIsOpen !== undefined ? propIsOpen : internalOpen;
+  const isOpen = propIsOpen !== undefined ? (propIsOpen || internalOpen) : internalOpen;
 
   const [activeTab, setActiveTab] = useState<'CHAT' | 'NOTIFS' | '911' | 'MISSIONS'>('CHAT');
   const [inputMsg, setInputMsg] = useState('');
@@ -201,6 +202,7 @@ export default function CityPhone({ isOpen: propIsOpen, onClose: propOnClose }: 
 
   const handleOpen = () => {
     setInternalOpen(true);
+    if (propOnOpen) propOnOpen();
     SoundEngine.playTick(player.soundEnabled);
     if (hasUnreadNotif) {
       setHasUnreadNotif(false);
