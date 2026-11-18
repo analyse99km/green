@@ -154,6 +154,11 @@ export async function POST(req: NextRequest) {
 
     // Update with latest player state
     user.playerState = playerState;
+    if (playerState.money !== undefined) user.money = Number(playerState.money);
+    if (playerState.dreamPoints !== undefined) user.sparks = Number(playerState.dreamPoints);
+    if (playerState.level !== undefined) user.level = Number(playerState.level);
+    if (playerState.rank !== undefined) user.rank = playerState.rank;
+    if (playerState.name) user.name = playerState.name;
     user.lastSaveAt = Date.now();
     user.lastLoginAt = Date.now();
     users[cleanEmail] = user;

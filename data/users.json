@@ -1,35 +1,23 @@
 {
-  "pioneer01@metropolis.city": {
-    "userId": "usr_f395581534f98c4f",
-    "email": "pioneer01@metropolis.city",
-    "name": "Pioneer01",
-    "salt": "79160554f944acdc1c9f07dbb4bb1ae8",
-    "passwordHash": "7fe21f80b445f4542704fcd66c5183873e90d58e9de941281059a6b974723341a9b4dd544fdb7c987ff378c77e8029c96305c0502430fc896ec1163c874bc2a7",
-    "userReferralCode": "NEON-F3955815",
-    "referredBy": null,
-    "createdAt": 1794931485548,
-    "lastLoginAt": 1794931485548
-  },
   "d8r21v@gmail.com": {
     "userId": "usr_44861f741ad920d4",
     "email": "d8r21v@gmail.com",
     "name": "Dhruv",
-    "salt": "c4ac510b30c46c016e8df108276045fe",
-    "passwordHash": "46800b094caad5387696b935a04d4ae7813c3ed2f559efe387a3230252bcbd059e38ed86f0973e50b2a1216bb3162aaf37ade86978728396e8a8b7ec4b7ceca4",
+    "salt": "6fd3df854b32bb63c897b86ca91834ab",
+    "passwordHash": "70bfea89af2d2554e089a4c01409e5035d3111c766c37b162e97780180d1fa8396ddbf48c1f189abee48cf1b81c0f6067f918eb20915cf7508b2b6b6d0d97c28",
     "userReferralCode": "NEON-44861F74",
     "referredBy": null,
-    "createdAt": 1794931736869,
-    "lastLoginAt": 1794990241536
-  },
-  "testoperative@metropolis.city": {
-    "userId": "usr_09bd27d1fefa60a7",
-    "email": "testoperative@metropolis.city",
-    "name": "testoperative",
-    "salt": "47745618e3be6534a5a35f50dfaa206e",
-    "passwordHash": "5b333f7cbb92d54a1ec070c8c3550c9ea7feb6bf86fc7a61b0f8a452b3b56234b98a203c5d5afc5450c6af936b12ea9744fc87b82cbf9f98772c95b057980fb4",
-    "userReferralCode": "NEON-09BD27D1",
-    "referredBy": null,
-    "createdAt": 1794941189188,
-    "lastLoginAt": 1794941189188
+    "createdAt": 1794992017534,
+    "lastLoginAt": 1794992212956,
+    "playerState": {
+      "name": "Dhruv",
+      "money": 0,
+      "dreamPoints": 0,
+      "level": 1,
+      "lastSaveTimestamp": 1794992380318
+    },
+    "money": 0,
+    "sparks": 0,
+    "level": 1
   }
 }

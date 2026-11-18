@@ -69,18 +69,24 @@ export async function GET() {
     const playerList = Object.entries(users).map(([email, u]) => {
       const code = u.userReferralCode || '';
       const recruits = code ? referralMap[code] || [] : [];
+      const state = u.playerState || {};
       return {
         email,
-        name: u.name || 'Operative',
-        userId: u.userId,
-        userReferralCode: u.userReferralCode,
-        referredBy: u.referredBy || 'None (Direct)',
+        name: u.name || state.name || 'Operative',
+        userId: u.userId || state.id,
+        userReferralCode: u.userReferralCode || state.referrals?.referralCode,
+        referredBy: u.referredBy || state.referrals?.referredBy || 'None (Direct)',
         recruitsCount: recruits.length,
         recruits,
         createdAt: u.createdAt || new Date().toISOString(),
         lastLoginAt: u.lastLoginAt || u.createdAt,
         passwordHash: u.passwordHash ? `${u.passwordHash.substring(0, 16)}...` : 'N/A',
         salt: u.salt ? `${u.salt.substring(0, 10)}...` : 'N/A',
+        playerState: u.playerState || null,
+        money: state.money !== undefined ? state.money : (u.money !== undefined ? u.money : 0),
+        sparks: state.dreamPoints !== undefined ? state.dreamPoints : (u.sparks !== undefined ? u.sparks : 0),
+        level: state.level || u.level || 1,
+        rank: state.rank || u.rank || 'Operative',
       };
     });
 
@@ -119,12 +125,36 @@ export async function POST(req: NextRequest) {
       if (!users[cleanEmail]) {
         return NextResponse.json({ success: false, message: 'Player not found.' }, { status: 404 });
       }
-      users[cleanEmail] = {
-        ...users[cleanEmail],
-        ...updates,
+
+      const existing = users[cleanEmail];
+      const mergedPlayerState = {
+        ...(existing.playerState || {}),
+        ...(updates.playerState || {}),
       };
+
+      if (updates.name) {
+        existing.name = updates.name;
+        mergedPlayerState.name = updates.name;
+      }
+      if (updates.money !== undefined) {
+        existing.money = Number(updates.money);
+        mergedPlayerState.money = Number(updates.money);
+      }
+      if (updates.sparks !== undefined) {
+        existing.sparks = Number(updates.sparks);
+        mergedPlayerState.dreamPoints = Number(updates.sparks);
+      }
+      if (updates.level !== undefined) {
+        existing.level = Number(updates.level);
+        mergedPlayerState.level = Number(updates.level);
+      }
+
+      existing.playerState = mergedPlayerState;
+      existing.lastLoginAt = Date.now();
+      users[cleanEmail] = existing;
+
       saveUsers(users);
-      return NextResponse.json({ success: true, message: 'Player updated successfully.' });
+      return NextResponse.json({ success: true, message: 'Player updated successfully.', player: existing });
     }
 
     if (action === 'delete_player') {
@@ -137,6 +167,19 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, message: 'Player deleted.' });
       }
       return NextResponse.json({ success: false, message: 'Player not found.' }, { status: 404 });
+    }
+
+    if (action === 'delete_notification') {
+      const { id } = body;
+      const notifsPath = path.join(process.cwd(), 'data', 'notifications.json');
+      if (fs.existsSync(notifsPath)) {
+        try {
+          const list = JSON.parse(fs.readFileSync(notifsPath, 'utf-8'));
+          const filtered = list.filter((n: any) => n.id !== id);
+          fs.writeFileSync(notifsPath, JSON.stringify(filtered, null, 2), 'utf-8');
+        } catch {}
+      }
+      return NextResponse.json({ success: true, message: 'Notification deleted.' });
     }
 
     return NextResponse.json({ success: false, message: 'Unknown admin action.' }, { status: 400 });

@@ -94,14 +94,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { title, message } = body;
+    const { title, message, id } = body;
     if (!title || !message) {
       return NextResponse.json({ success: false, message: 'Title and message are required.' }, { status: 400 });
     }
 
     const notifs = loadNotifications();
     const newNotif: AdminNotification = {
-      id: `notif_${Date.now()}`,
+      id: id || `notif_${Date.now()}`,
       title: title.trim(),
       message: message.trim(),
       timestamp: Date.now(),
@@ -119,5 +119,22 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     return NextResponse.json({ success: false, message: 'Broadcast failed.' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { id } = body;
+    if (!id) {
+      return NextResponse.json({ success: false, message: 'Notification ID required.' }, { status: 400 });
+    }
+    const notifs = loadNotifications();
+    const filtered = notifs.filter(n => n.id !== id);
+    saveNotifications(filtered);
+    pushNotifsToMaster(filtered).catch(() => {});
+    return NextResponse.json({ success: true, message: 'Notification deleted.', notifications: filtered });
+  } catch (err) {
+    return NextResponse.json({ success: false, message: 'Delete failed.' }, { status: 500 });
   }
 }

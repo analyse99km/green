@@ -161,6 +161,9 @@ export default function TornHeader({ onOpenWheel, onOpenMobileDrawer, onOpenPhon
             onClick={async () => {
               if (window.confirm(`Log out of Operative ${player.name}?`)) {
                 try {
+                  await saveGame();
+                } catch {}
+                try {
                   await fetch('/api/auth/email', { method: 'DELETE' });
                 } catch {}
                 localStorage.removeItem('metropolis_auth_user');

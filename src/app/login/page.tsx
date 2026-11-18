@@ -110,7 +110,7 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
     }
 
     try {
-      // Determine unique operative name
+      // Determine operative name: on register use chosen name; on login strictly use registered handle from server!
       const cleanEmail = email.trim().toLowerCase();
       const rawPrefix = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
       const defaultName = rawPrefix.charAt(0).toUpperCase() + rawPrefix.slice(1);
@@ -134,6 +134,11 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
         return;
       }
 
+      // The authoritative operative handle: on login, ALWAYS use the official handle registered on the server!
+      const authoritativeName = isRegister
+        ? chosenName
+        : (data.username || data.name || (data.playerState && data.playerState.name) || chosenName);
+
       // 2. Derive deterministic P2P signing key for Gossip anti-tamper protocol
       const signingKey = await deriveUserSigningKey(cleanEmail, password);
       localStorage.setItem('metropolis_p2p_signing_key', signingKey);
@@ -154,37 +159,51 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
         }
       }
 
+      // If logging in on a new device or cleared cache, pull latest state from cluster
+      if (!isRegister && !playerState) {
+        try {
+          const syncRes = await fetch(`/api/player/sync?email=${encodeURIComponent(cleanEmail)}`);
+          if (syncRes.ok) {
+            const syncData = await syncRes.json();
+            if (syncData.playerState) {
+              playerState = syncData.playerState;
+            }
+          }
+        } catch {}
+      }
+
       const uniqueRef = data.userReferralCode || `NEON-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      if (!playerState || isRegister) {
+      if (isRegister) {
         const uniqueXid = String(Math.floor(1000000 + Math.random() * 9000000));
         playerState = {
           id: data.userId || `usr_${Date.now()}`,
-          name: chosenName,
+          name: authoritativeName,
           xid: uniqueXid,
           role: 'CITIZEN',
           rank: '#1 Neon Operative',
           level: 1,
           xp: 0,
           xpNeeded: 100,
-          // All initial vitals strictly 0 as required!
           money: 0,
           bankMoney: 0,
           points: 0,
-          energy: 0,
+          energy: 100,
           maxEnergy: 100,
-          nerve: 0,
+          nerve: 10,
           maxNerve: 10,
-          happy: 0,
+          happy: 100,
           maxHappy: 100,
-          life: 0,
+          life: 100,
           maxLife: 100,
-          food: 0,
+          food: 100,
           maxFood: 100,
           dreamPoints: 0, // 0 Sparks - tap in Dream to earn!
           tapStamina: 100,
           maxTapStamina: 100,
           isAwakened: false,
+          inventory: [],
+          dreamCards: {},
           referrals: {
             referralCode: uniqueRef,
             totalRecruits: 0,
@@ -192,7 +211,7 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             lifetimeCommissionGreen: 0,
             recruits: [],
             claimedMilestones: [],
-            referredBy: isRegister && referralInput.trim() ? referralInput.trim().toUpperCase() : undefined,
+            referredBy: referralInput.trim() ? referralInput.trim().toUpperCase() : undefined,
             hasClaimedWelcomeBonus: false,
           },
         };
@@ -203,7 +222,49 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: cleanEmail, playerState }),
         }).catch(() => {});
+      } else if (!playerState) {
+        // Fallback for older accounts that did not have a cloud playerState saved
+        const uniqueXid = String(Math.floor(1000000 + Math.random() * 9000000));
+        playerState = {
+          id: data.userId || `usr_${Date.now()}`,
+          name: authoritativeName,
+          xid: uniqueXid,
+          role: 'CITIZEN',
+          rank: '#1 Neon Operative',
+          level: 1,
+          xp: 0,
+          xpNeeded: 100,
+          money: 0,
+          bankMoney: 0,
+          points: 0,
+          energy: 100,
+          maxEnergy: 100,
+          nerve: 10,
+          maxNerve: 10,
+          happy: 100,
+          maxHappy: 100,
+          life: 100,
+          maxLife: 100,
+          food: 100,
+          maxFood: 100,
+          dreamPoints: 0,
+          tapStamina: 100,
+          maxTapStamina: 100,
+          isAwakened: false,
+          inventory: [],
+          dreamCards: {},
+          referrals: {
+            referralCode: uniqueRef,
+            totalRecruits: 0,
+            unclaimedCommissionGreen: 0,
+            lifetimeCommissionGreen: 0,
+            recruits: [],
+            claimedMilestones: [],
+          },
+        };
       } else {
+        // ALWAYS maintain the player's official chosen handle!
+        playerState.name = authoritativeName;
         if (!playerState.referrals) {
           playerState.referrals = {
             referralCode: uniqueRef,
@@ -224,7 +285,7 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
       localStorage.setItem('METROPOLIS_SAVE_SLOT_01', JSON.stringify(playerState));
       localStorage.setItem(
         'metropolis_auth_user',
-        JSON.stringify({ email: cleanEmail, name: playerState.name, userId: data.userId, loginTime: Date.now() })
+        JSON.stringify({ email: cleanEmail, name: authoritativeName, userId: data.userId, loginTime: Date.now() })
       );
 
       setAuthMsg({

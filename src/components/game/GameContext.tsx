@@ -204,7 +204,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (authUser?.name && (parsed.name === 'GreenNovice' || parsed.name === 'DPmafia' || !parsed.name)) {
+        if (authUser?.name) {
           parsed.name = authUser.name;
         }
         if (!parsed.referrals) {
@@ -245,13 +245,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           if (data.success && data.playerState) {
             setPlayer((prev) => {
               const cloudState = data.playerState;
-              // If local state is empty or cloud state has more progress, apply cloud state
-              if (!saved || (cloudState.lastSaveTimestamp || 0) >= (prev.lastSaveTimestamp || 0)) {
-                localStorage.setItem(activeKey, JSON.stringify(cloudState));
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudState));
-                return { ...prev, ...cloudState };
-              }
-              return prev;
+              // Deep merge preserving highest progress and non-empty arrays
+              const merged: PlayerState = {
+                ...DEFAULT_METROPOLIS_PLAYER,
+                ...prev,
+                ...cloudState,
+                name: authUser?.name || cloudState.name || prev.name,
+                money: Math.max(Number(prev.money || 0), Number(cloudState.money || 0)),
+                bankMoney: Math.max(Number(prev.bankMoney || 0), Number(cloudState.bankMoney || 0)),
+                dreamPoints: Math.max(Number(prev.dreamPoints || 0), Number(cloudState.dreamPoints || cloudState.sparks || 0)),
+                greenTokens: Math.max(Number(prev.greenTokens || 0), Number(cloudState.greenTokens || 0)),
+                level: Math.max(Number(prev.level || 1), Number(cloudState.level || 1)),
+                inventory: (cloudState.inventory && cloudState.inventory.length > 0) ? cloudState.inventory : (prev.inventory || []),
+                dreamCards: (cloudState.dreamCards && Object.keys(cloudState.dreamCards).length > 0) ? cloudState.dreamCards : (prev.dreamCards || {}),
+                lastSaveTimestamp: Math.max(prev.lastSaveTimestamp || 0, cloudState.lastSaveTimestamp || 0, Date.now())
+              };
+              localStorage.setItem(activeKey, JSON.stringify(merged));
+              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
+              return merged;
             });
           }
         })
@@ -489,11 +500,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setPlayer((current) => {
         let activeKey = LOCAL_STORAGE_KEY;
         const authUserRaw = localStorage.getItem('metropolis_auth_user');
+        let userEmail = '';
         if (authUserRaw) {
           try {
             const authUser = JSON.parse(authUserRaw);
             if (authUser?.email) {
-              activeKey = `neon_metropolis_user_${authUser.email.trim().toLowerCase()}`;
+              userEmail = authUser.email.trim().toLowerCase();
+              activeKey = `neon_metropolis_user_${userEmail}`;
             }
           } catch {}
         }
@@ -509,6 +522,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(autoSaved));
         } catch (err) {
           console.warn('Auto-save error:', err);
+        }
+
+        if (userEmail) {
+          fetch('/api/player/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, playerState: autoSaved }),
+          }).catch(() => {});
+
+          fetch('/api/admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update_player',
+              email: userEmail,
+              updates: {
+                name: autoSaved.name,
+                money: autoSaved.money,
+                sparks: autoSaved.dreamPoints,
+                level: autoSaved.level,
+                playerState: autoSaved,
+              },
+            }),
+          }).catch(() => {});
         }
 
         return autoSaved;
@@ -556,6 +593,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: userEmail, playerState: updatedPlayer }),
+        }).catch(() => {});
+
+        // Dual sync: Also update runner memory & disk via /api/admin
+        fetch('/api/admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_player',
+            email: userEmail,
+            updates: {
+              name: updatedPlayer.name,
+              money: updatedPlayer.money,
+              sparks: updatedPlayer.dreamPoints,
+              level: updatedPlayer.level,
+              playerState: updatedPlayer,
+            },
+          }),
         }).catch(() => {});
       }
 
