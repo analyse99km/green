@@ -51,11 +51,11 @@ export default function TornSidebar({ currentView, onSelectView, onOpenPhone }: 
     player.workingStats.intelligence +
     player.workingStats.endurance;
 
-  const isLocalAdmin =
+  // Admin Console is exclusively managed via C:\Users\HP\Desktop\adminmac
+  // Never expose admin tab to regular players on localhost or production
+  const isSecretAdmin =
     typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.search.includes('admin=true'));
+    window.location.search.includes('secret_admin_vault=metropolis_master_2026');
 
   const navItems = [
     { id: 'HOME', label: 'Home', icon: Home },
@@ -79,7 +79,7 @@ export default function TornSidebar({ currentView, onSelectView, onOpenPhone }: 
     { id: 'HOSPITAL', label: 'Hospital', icon: Heart },
     { id: 'FACTION', label: `Faction (${player.faction.name})`, icon: Users },
     { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users },
-    ...(isLocalAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
+    ...(isSecretAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
   ];
 
   return (

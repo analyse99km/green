@@ -56,11 +56,10 @@ export default function MobileSidebarDrawer({
     onClose();
   };
 
-  const isLocalAdmin =
+  // Admin Console is exclusively managed via C:\Users\HP\Desktop\adminmac
+  const isSecretAdmin =
     typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.search.includes('admin=true'));
+    window.location.search.includes('secret_admin_vault=metropolis_master_2026');
 
   const navSections = [
     {
@@ -102,7 +101,7 @@ export default function MobileSidebarDrawer({
         { id: 'HOSPITAL', label: 'Apex Trauma Hospital', icon: Heart },
         { id: 'JAIL', label: 'Correctional Facility', icon: ShieldAlert },
         { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users, highlight: true },
-        ...(isLocalAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
+        ...(isSecretAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
       ],
     },
   ];

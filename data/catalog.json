@@ -1,0 +1,78 @@
+{
+  "categories": [
+    {
+      "id": "SPORES",
+      "name": "Mini Spores & Fungi",
+      "icon": "🍄",
+      "badge": "Tier 1"
+    },
+    {
+      "id": "FLORA",
+      "name": "Luminescent Flora",
+      "icon": "🌸",
+      "badge": "Tier 2"
+    },
+    {
+      "id": "BIG_TREES",
+      "name": "World Ancient Trees",
+      "icon": "🌳",
+      "badge": "Tier 3"
+    },
+    {
+      "id": "COSMIC",
+      "name": "Cosmic Bio-Engines",
+      "icon": "✨",
+      "badge": "Tier 4"
+    }
+  ],
+  "cards": [
+    {
+      "id": "card_photosynthesis",
+      "title": "Micro Chlorophyll Sprout",
+      "flavor": "Absorbs residual dreamlight to convert into organic spark energy.",
+      "baseCost": 25,
+      "sparksPerSec": 1,
+      "icon": "🌱",
+      "category": "SPORES",
+      "badge": "Mini Spore"
+    },
+    {
+      "id": "card_mycelium",
+      "title": "Sub-Terranean Mycelium",
+      "flavor": "Underground fungal threads transmitting subterranean bio-nutrients.",
+      "baseCost": 110,
+      "sparksPerSec": 3,
+      "icon": "🍄",
+      "category": "SPORES",
+      "badge": "Fungi Web",
+      "requiredCardId": "card_photosynthesis",
+      "requiredCardLevel": 1
+    },
+    {
+      "id": "card_spore_chamber",
+      "title": "Bio-Pressure Spore Pod",
+      "flavor": "Pressurized pod releasing millions of luminous bio-spores.",
+      "baseCost": 450,
+      "sparksPerSec": 10,
+      "icon": "🌰",
+      "category": "SPORES",
+      "badge": "Spore Ejector",
+      "requiredCardId": "card_mycelium",
+      "requiredCardLevel": 2
+    },
+    {
+      "id": "card_bioluminescent_algae",
+      "title": "Bioluminescent Neon Algae",
+      "flavor": "Cultivated in cyber-aqueducts, glowing with high-yield bio-luminescence.",
+      "baseCost": 1600,
+      "sparksPerSec": 32,
+      "icon": "🧪",
+      "category": "FLORA",
+      "badge": "Glow Culture",
+      "requiredCardId": "card_spore_chamber",
+      "requiredCardLevel": 3
+    }
+  ],
+  "customItems": [],
+  "dailyComboOverride": null
+}

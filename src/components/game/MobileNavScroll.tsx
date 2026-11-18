@@ -32,11 +32,10 @@ interface MobileNavScrollProps {
 export default function MobileNavScroll({ currentView, onSelectView }: MobileNavScrollProps) {
   const { player } = useGame();
 
-  const isLocalAdmin =
+  // Admin Console is exclusively managed via C:\Users\HP\Desktop\adminmac
+  const isSecretAdmin =
     typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.search.includes('admin=true'));
+    window.location.search.includes('secret_admin_vault=metropolis_master_2026');
 
   const navItems = [
     { id: 'DREAM_TAP', label: '⚡ Dream Tap', icon: Zap, special: true },
@@ -60,7 +59,7 @@ export default function MobileNavScroll({ currentView, onSelectView }: MobileNav
     { id: 'FACTION', label: `Faction (${player.faction.tag})`, icon: Users },
     { id: 'JAIL', label: 'Jail', icon: ShieldAlert },
     { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users },
-    ...(isLocalAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
+    ...(isSecretAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
   ];
 
   return (

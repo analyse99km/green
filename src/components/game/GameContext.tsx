@@ -58,7 +58,7 @@ import {
 } from './gameCrypto';
 import { InsufficientFundsData } from './InsufficientFundsModal';
 import { P2PPurchaseReceipt } from './types';
-import { loadCatalogData, saveCatalogData, DynamicCatalogData, BotanicalCardDef } from './gameCatalog';
+import { loadCatalogData, saveCatalogData, syncCatalogFromServer, DynamicCatalogData, BotanicalCardDef } from './gameCatalog';
 
 const LOCAL_STORAGE_KEY = 'neon_metropolis_v6_botanical_green';
 
@@ -187,6 +187,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
+    syncCatalogFromServer();
     let activeKey = LOCAL_STORAGE_KEY;
     const authUserRaw = localStorage.getItem('metropolis_auth_user');
     let authUser: any = null;

@@ -377,3 +377,27 @@ export function saveCatalogData(data: DynamicCatalogData): void {
     console.error('Failed to save dynamic catalog:', err);
   }
 }
+
+export async function syncCatalogFromServer(onUpdated?: (catalog: DynamicCatalogData) => void): Promise<DynamicCatalogData | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const res = await fetch('/api/catalog');
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.success && json.catalog) {
+      const merged: DynamicCatalogData = {
+        categories: json.catalog.categories && json.catalog.categories.length > 0 ? json.catalog.categories : INITIAL_BOTANICAL_CATEGORIES,
+        cards: json.catalog.cards && json.catalog.cards.length > 0 ? json.catalog.cards : INITIAL_BOTANICAL_CARDS,
+        customItems: json.catalog.customItems || [],
+        dailyComboOverride: json.catalog.dailyComboOverride,
+        customDailyStreakRewards: json.catalog.customDailyStreakRewards,
+      };
+      localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(merged));
+      if (onUpdated) onUpdated(merged);
+      return merged;
+    }
+  } catch {
+    // Offline or fallback silently
+  }
+  return null;
+}

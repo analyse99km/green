@@ -23,7 +23,7 @@ concurrency:
 env:
   PORT: "3000"
   NODE_VERSION: "20"
-  SHARED_STORAGE_REPO: "pocomon9/neon-status"
+  SHARED_STORAGE_REPO: "pocomon9/green-status"
 
 jobs:
   run:
@@ -58,44 +58,40 @@ jobs:
       - name: Checkout Neon
         uses: actions/checkout@v4
 
-      # ── 3. Synchronize Unified Master Database (Zero Data Loss) ───────────
-      - name: Sync Master Database from Shared Cluster Storage
+      # ── 3. Synchronize Unified Master Data (Zero Data Loss) ───────────
+      - name: Sync Master Data from Shared Cluster Storage
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           mkdir -p data
-          echo "📥 Fetching global master database from ${{ env.SHARED_STORAGE_REPO }}..."
-          
-          HTTP_CODE=$(curl -s -w "%{http_code}" -o data/database.json \
-            -H "Authorization: Bearer $GH_PAT" \
-            -H "Accept: application/vnd.github.v3.raw" \
-            "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" || true)
-
-          # Fallback to green-status if neon-status not yet migrated
-          if [ "$HTTP_CODE" != "200" ]; then
-            HTTP_CODE=$(curl -s -w "%{http_code}" -o data/database.json \
+          echo "📥 Fetching global master state from ${{ env.SHARED_STORAGE_REPO }}..."
+          for f in users.json catalog.json notifications.json database.json; do
+            HTTP_CODE=$(curl -s -w "%{http_code}" -o "data/$f" \
               -H "Authorization: Bearer $GH_PAT" \
               -H "Accept: application/vnd.github.v3.raw" \
-              "https://api.github.com/repos/pocomon9/green-status/contents/database.json" || true)
-          fi
-
-          if [ "$HTTP_CODE" = "200" ] && [ -s data/database.json ]; then
-            echo "✅ Master database successfully loaded from shared storage ($(wc -c < data/database.json) bytes)!"
-          else
-            echo "ℹ️ Master database not found or empty (HTTP $HTTP_CODE). Checking local fallback..."
-            if [ ! -s data/database.json ]; then
-              echo '{"stores":[],"products":[],"orders":[],"reservations":[]}' > data/database.json
-              echo "✅ Clean initial database created"
+              "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/$f" || echo "000")
+            if [ "$HTTP_CODE" = "200" ] && [ -s "data/$f" ]; then
+              echo "✅ Loaded $f ($(wc -c < data/$f) bytes)"
+            else
+              echo "ℹ️ Remote $f not found (HTTP $HTTP_CODE), using fallback."
+              if [ ! -s "data/$f" ]; then
+                case "$f" in
+                  "users.json") echo "{}" > data/users.json ;;
+                  "catalog.json") echo '{"categories":[],"cards":[],"customItems":[]}' > data/catalog.json ;;
+                  "notifications.json") echo "[]" > data/notifications.json ;;
+                  "database.json") echo '{"stores":[],"products":[]}' > data/database.json ;;
+                esac
+              fi
             fi
-          fi
+          done
 
-      # ── 4. Cache database locally as backup ────────────────────────────────
-      - name: Restore database local fallback cache
+      # ── 4. Cache data locally as backup ────────────────────────────────────
+      - name: Restore data local fallback cache
         uses: actions/cache@v4
         with:
-          path: data/database.json
-          key: neon-db-slot${{ env.SLOT }}-v2
-          restore-keys: neon-db-slot${{ env.SLOT }}-
+          path: data
+          key: neon-data-slot${{ env.SLOT }}-v2
+          restore-keys: neon-data-slot${{ env.SLOT }}-
 
       # ── 5. Node.js + Install + Build ──────────────────────────────────────
       - name: Setup Node ${{ env.NODE_VERSION }}
@@ -211,23 +207,25 @@ jobs:
                 "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
                 -d "{\"message\":\"heartbeat [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
               
-              # 2. Sync database.json to central shared repository
-              if [ -s data/database.json ]; then
-                DB_B64=$(base64 -w0 data/database.json)
-                M_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
-                  "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
-                  | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
-                if [ -n "$M_SHA" ]; then
-                  curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
-                    "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
-                    -d "{\"message\":\"sync master db [skip ci]\",\"content\":\"$DB_B64\",\"sha\":\"$M_SHA\"}" > /dev/null || true
-                else
-                  curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
-                    "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
-                    -d "{\"message\":\"init master db [skip ci]\",\"content\":\"$DB_B64\"}" > /dev/null || true
+              # 2. Sync master state files to central shared repository
+              for f in users.json catalog.json notifications.json database.json; do
+                if [ -s "data/$f" ]; then
+                  F_B64=$(base64 -w0 "data/$f")
+                  F_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+                    "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/$f" \
+                    | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+                  if [ -n "$F_SHA" ]; then
+                    curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+                      "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/$f" \
+                      -d "{\"message\":\"sync master $f [skip ci]\",\"content\":\"$F_B64\",\"sha\":\"$F_SHA\"}" > /dev/null || true
+                  else
+                    curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+                      "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/$f" \
+                      -d "{\"message\":\"init master $f [skip ci]\",\"content\":\"$F_B64\"}" > /dev/null || true
+                  fi
                 fi
-                echo "💾 Master DB synced to ${{ env.SHARED_STORAGE_REPO }}"
-              fi
+              done
+              echo "💾 Master data synced to ${{ env.SHARED_STORAGE_REPO }}"
             fi
           done
 
@@ -237,17 +235,21 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          if [ -s data/database.json ] && [ "$SESSION_STARTED" = "true" ]; then
-            DB_B64=$(base64 -w0 data/database.json)
-            M_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
-              "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
-              | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
-            if [ -n "$M_SHA" ]; then
-              curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
-                "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/database.json" \
-                -d "{\"message\":\"final db sync before recycle [skip ci]\",\"content\":\"$DB_B64\",\"sha\":\"$M_SHA\"}" > /dev/null || true
-            fi
-            echo "✅ Final DB backup written to master storage"
+          if [ "$SESSION_STARTED" = "true" ]; then
+            for f in users.json catalog.json notifications.json database.json; do
+              if [ -s "data/$f" ]; then
+                F_B64=$(base64 -w0 "data/$f")
+                F_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
+                  "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/$f" \
+                  | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))" 2>/dev/null || echo "")
+                if [ -n "$F_SHA" ]; then
+                  curl -sf -X PUT -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" \
+                    "https://api.github.com/repos/${{ env.SHARED_STORAGE_REPO }}/contents/$f" \
+                    -d "{\"message\":\"final $f backup before recycle [skip ci]\",\"content\":\"$F_B64\",\"sha\":\"$F_SHA\"}" > /dev/null || true
+                fi
+              fi
+            done
+            echo "✅ Final state backup written to master storage"
           fi
 
           if [ "$SESSION_STARTED" = "true" ]; then
@@ -262,19 +264,19 @@ jobs:
           fi
 
       # ── 10. Save cache & artifact ─────────────────────────────────────────
-      - name: Save database cache
+      - name: Save data cache
         if: always()
         uses: actions/cache@v4
         with:
-          path: data/database.json
-          key: neon-db-slot${{ env.SLOT }}-v2
+          path: data
+          key: neon-data-slot${{ env.SLOT }}-v2
 
-      - name: Backup database artifact
+      - name: Backup data artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neon-db-slot${{ env.SLOT }}-run${{ github.run_number }}
-          path: data/database.json
+          name: neon-data-slot${{ env.SLOT }}-run${{ github.run_number }}
+          path: data
           retention-days: 90
 
       # ── 11. Self-trigger next run ─────────────────────────────────────────
