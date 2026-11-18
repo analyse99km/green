@@ -419,26 +419,31 @@ export default function DreamTapView() {
             ))}
           </div>
 
-          {/* BOTTOM ARENA CONTROLS: Stamina Left | Boost Right */}
+          {/* BOTTOM ARENA CONTROLS: Stamina & Boost on the left, right side kept completely clear */}
           <div className="flex items-center justify-between pt-2 border-t border-neutral-800/80 px-2 sm:px-4">
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span className="font-bold text-white">
-                {player.tapStamina ?? 500} / {player.maxTapStamina || 500}
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs font-mono">
+                <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span className="font-bold text-white">
+                  {player.tapStamina ?? 500} / {player.maxTapStamina || 500}
+                </span>
+              </div>
+
+              <button
+                onClick={() => {
+                  SoundEngine.playVictory(player.soundEnabled);
+                  setFeedback('🚀 Boost Surge activated! +100 Max Stamina temporary boost.');
+                  setTimeout(() => setFeedback(null), 3000);
+                }}
+                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-lg transition active:scale-95 cursor-pointer"
+              >
+                <span>🚀</span>
+                <span>Boost</span>
+              </button>
             </div>
 
-            <button
-              onClick={() => {
-                SoundEngine.playVictory(player.soundEnabled);
-                setFeedback('🚀 Boost Surge activated! +100 Max Stamina temporary boost.');
-                setTimeout(() => setFeedback(null), 3000);
-              }}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-lg transition"
-            >
-              <span>🚀</span>
-              <span>Boost</span>
-            </button>
+            {/* Empty reserved space so floating City Smartphone never overlaps any element */}
+            <div className="w-16 h-8 pointer-events-none" />
           </div>
         </div>
       )}

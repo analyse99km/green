@@ -35,14 +35,18 @@ export const NOTIF_STORAGE_KEY = 'METROPOLIS_LAST_READ_NOTIF_TS';
 const MAX_MESSAGES = 50;
 
 interface CityPhoneProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function CityPhone({ isOpen, onClose }: CityPhoneProps) {
+export default function CityPhone({ isOpen: propIsOpen, onClose: propOnClose }: CityPhoneProps = {}) {
   const { player, addLog } = useGame();
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = propIsOpen !== undefined ? propIsOpen : internalOpen;
+
   const [activeTab, setActiveTab] = useState<'CHAT' | 'NOTIFS' | '911' | 'MISSIONS'>('CHAT');
   const [inputMsg, setInputMsg] = useState('');
+  const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotif[]>([]);
   const [messages, setMessages] = useState<ChatMsg[]>([
     { id: '1', sender: 'Slick_Tony', role: 'GOON', text: 'Anyone selling lockpicks at the subway? Need 2 ASAP.', time: '5m ago', timestamp: Date.now() - 300000 },
@@ -62,6 +66,10 @@ export default function CityPhone({ isOpen, onClose }: CityPhoneProps) {
           const data = await res.json();
           const notifs: AdminNotif[] = data.notifications || [];
           setNotifications(notifs);
+
+          const lastRead = Number(localStorage.getItem(NOTIF_STORAGE_KEY) || 0);
+          const latest = data.latestTimestamp || 0;
+          setHasUnreadNotif(latest > lastRead);
         }
       } catch (err) {
         // Fallback silently
@@ -185,31 +193,69 @@ export default function CityPhone({ isOpen, onClose }: CityPhoneProps) {
     });
   };
 
-  // If closed, return null so it NEVER floats or overlaps any screen element!
-  if (!isOpen) return null;
+  const handleClose = () => {
+    SoundEngine.playTick(player.soundEnabled);
+    setInternalOpen(false);
+    if (propOnClose) propOnClose();
+  };
+
+  const handleOpen = () => {
+    setInternalOpen(true);
+    SoundEngine.playTick(player.soundEnabled);
+    if (hasUnreadNotif) {
+      setHasUnreadNotif(false);
+      const latestTs = notifications.length > 0 ? notifications[notifications.length - 1].timestamp : Date.now();
+      localStorage.setItem(NOTIF_STORAGE_KEY, latestTs.toString());
+      window.dispatchEvent(new Event('notif-read-updated'));
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 select-none animate-fadeIn">
-      {/* Centered Realistic Smartphone Frame */}
-      <div className="w-[330px] sm:w-[400px] bg-neutral-950 border-2 border-neutral-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[520px] max-h-[90vh]">
-        {/* Phone Top Notch Bar */}
-        <div className="bg-neutral-900 px-4 py-2.5 flex items-center justify-between border-b border-neutral-800 text-neutral-300 text-xs">
-          <div className="flex items-center gap-1.5 font-mono text-[11px]">
-            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>5G • CityNet</span>
-          </div>
-          {/* Notch */}
-          <div className="w-16 h-3 bg-neutral-950 rounded-full" />
+    <>
+      {/* Permanent Floating Smartphone Button (where it was at first, clean and compact on mobile) */}
+      {!isOpen && (
+        <div className="fixed bottom-20 right-3 sm:bottom-6 sm:right-6 z-40 select-none">
           <button
-            onClick={() => {
-              SoundEngine.playTick(player.soundEnabled);
-              onClose();
-            }}
-            className="text-neutral-400 hover:text-white p-1 rounded-full cursor-pointer text-sm font-bold"
+            onClick={handleOpen}
+            className="relative flex items-center justify-center gap-2 p-3 sm:px-4 sm:py-2.5 rounded-full bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer border border-emerald-400/40"
+            title="Open City Smartphone"
           >
-            ✕
+            <Smartphone className="w-5 h-5 sm:w-4 sm:h-4 text-emerald-100" />
+            <span className="hidden sm:inline font-bold">City Smartphone</span>
+
+            {/* Live Blinking Red Notification Ping Dot if unread admin announcement */}
+            {hasUnreadNotif ? (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-600 border-2 border-neutral-950" />
+              </span>
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            )}
           </button>
         </div>
+      )}
+
+      {/* When open: Centered Realistic Smartphone Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 select-none animate-fadeIn">
+          {/* Centered Realistic Smartphone Frame */}
+          <div className="w-[330px] sm:w-[400px] bg-neutral-950 border-2 border-neutral-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[520px] max-h-[90vh]">
+            {/* Phone Top Notch Bar */}
+            <div className="bg-neutral-900 px-4 py-2.5 flex items-center justify-between border-b border-neutral-800 text-neutral-300 text-xs">
+              <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+                <span>5G • CityNet</span>
+              </div>
+              {/* Notch */}
+              <div className="w-16 h-3 bg-neutral-950 rounded-full" />
+              <button
+                onClick={handleClose}
+                className="text-neutral-400 hover:text-white p-1 rounded-full cursor-pointer text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
 
         {/* Phone Navigation Tabs */}
         <div className="flex bg-neutral-900/90 border-b border-neutral-800 p-1.5 text-xs font-semibold">
@@ -335,5 +381,7 @@ export default function CityPhone({ isOpen, onClose }: CityPhoneProps) {
         )}
       </div>
     </div>
+      )}
+    </>
   );
 }
