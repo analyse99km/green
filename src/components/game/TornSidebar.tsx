@@ -28,14 +28,16 @@ import {
   Swords,
   Store,
   RotateCw,
+  Smartphone,
 } from 'lucide-react';
 
 interface TornSidebarProps {
   currentView: string;
   onSelectView: (view: string) => void;
+  onOpenPhone?: () => void;
 }
 
-export default function TornSidebar({ currentView, onSelectView }: TornSidebarProps) {
+export default function TornSidebar({ currentView, onSelectView, onOpenPhone }: TornSidebarProps) {
   const { player, wakeUp } = useGame();
 
   const totalBattleStats =
@@ -221,6 +223,18 @@ export default function TornSidebar({ currentView, onSelectView }: TornSidebarPr
 
       {/* Navigation Links */}
       <nav className="p-2 space-y-0.5 flex-1 overflow-y-auto">
+        {onOpenPhone && (
+          <button
+            onClick={onOpenPhone}
+            className="w-full mb-1.5 flex items-center justify-between px-3 py-2 rounded-lg bg-gradient-to-r from-emerald-950/70 to-teal-950/70 border border-emerald-500/30 text-emerald-300 font-semibold text-xs hover:border-emerald-400/60 transition-all cursor-pointer shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+              <span>📱 City Smartphone</span>
+            </div>
+            <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 py-0.5 rounded font-mono">Chat & Alerts</span>
+          </button>
+        )}
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;

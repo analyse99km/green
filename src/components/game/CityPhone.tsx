@@ -31,15 +31,18 @@ export interface AdminNotif {
   timestamp: number;
 }
 
-const NOTIF_STORAGE_KEY = 'METROPOLIS_LAST_READ_NOTIF_TS';
+export const NOTIF_STORAGE_KEY = 'METROPOLIS_LAST_READ_NOTIF_TS';
 const MAX_MESSAGES = 50;
 
-export default function CityPhone() {
+interface CityPhoneProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function CityPhone({ isOpen, onClose }: CityPhoneProps) {
   const { player, addLog } = useGame();
-  const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'CHAT' | 'NOTIFS' | '911' | 'MISSIONS'>('CHAT');
   const [inputMsg, setInputMsg] = useState('');
-  const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotif[]>([]);
   const [messages, setMessages] = useState<ChatMsg[]>([
     { id: '1', sender: 'Slick_Tony', role: 'GOON', text: 'Anyone selling lockpicks at the subway? Need 2 ASAP.', time: '5m ago', timestamp: Date.now() - 300000 },
@@ -59,17 +62,9 @@ export default function CityPhone() {
           const data = await res.json();
           const notifs: AdminNotif[] = data.notifications || [];
           setNotifications(notifs);
-
-          const lastRead = Number(localStorage.getItem(NOTIF_STORAGE_KEY) || 0);
-          const latest = data.latestTimestamp || 0;
-          if (latest > lastRead) {
-            setHasUnreadNotif(true);
-          } else {
-            setHasUnreadNotif(false);
-          }
         }
       } catch (err) {
-        // Fallback silently if offline
+        // Fallback silently
       }
     };
 
@@ -123,16 +118,14 @@ export default function CityPhone() {
     };
   }, []);
 
-  // When user opens the phone, mark notifications as read and dismiss the red blinking dot
-  const handleOpenPhone = () => {
-    setIsOpen(true);
-    SoundEngine.playTick(player.soundEnabled);
-    if (hasUnreadNotif) {
-      setHasUnreadNotif(false);
-      const latestTs = notifications.length > 0 ? notifications[notifications.length - 1].timestamp : Date.now();
+  // When phone opens, clear unread notification state
+  useEffect(() => {
+    if (isOpen && notifications.length > 0) {
+      const latestTs = notifications[notifications.length - 1].timestamp;
       localStorage.setItem(NOTIF_STORAGE_KEY, latestTs.toString());
+      window.dispatchEvent(new Event('notif-read-updated'));
     }
-  };
+  }, [isOpen, notifications]);
 
   const handleSendMessage = async () => {
     if (!inputMsg.trim()) return;
@@ -192,171 +185,155 @@ export default function CityPhone() {
     });
   };
 
+  // If closed, return null so it NEVER floats or overlaps any screen element!
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed bottom-20 right-3 sm:bottom-4 sm:right-4 z-40 select-none">
-      {/* Floating Collapsed Phone Button */}
-      {!isOpen ? (
-        <button
-          onClick={handleOpenPhone}
-          className="relative flex items-center gap-2 p-3 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer border border-emerald-400/40"
-          title="Open City Smartphone"
-        >
-          <Smartphone className="w-5 h-5 sm:w-4 sm:h-4 text-emerald-100" />
-          <span className="hidden sm:inline font-bold">City Smartphone</span>
-
-          {/* RED BLINKING NOTIFICATION DOT (Alerts player of unread admin messages until opened!) */}
-          {hasUnreadNotif ? (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-600 border-2 border-neutral-950" />
-            </span>
-          ) : (
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          )}
-        </button>
-      ) : (
-        /* Expanded Realistic Smartphone Frame */
-        <div className="w-[320px] sm:w-96 bg-neutral-950 border-2 border-neutral-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[500px] animate-fadeIn">
-          {/* Phone Top Notch Bar */}
-          <div className="bg-neutral-900 px-4 py-2 flex items-center justify-between border-b border-neutral-800 text-neutral-300 text-xs">
-            <div className="flex items-center gap-1.5 font-mono text-[11px]">
-              <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-              <span>5G • CityNet</span>
-            </div>
-            {/* Notch */}
-            <div className="w-16 h-3 bg-neutral-950 rounded-full" />
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-neutral-400 hover:text-white p-1 rounded-full cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 select-none animate-fadeIn">
+      {/* Centered Realistic Smartphone Frame */}
+      <div className="w-[330px] sm:w-[400px] bg-neutral-950 border-2 border-neutral-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[520px] max-h-[90vh]">
+        {/* Phone Top Notch Bar */}
+        <div className="bg-neutral-900 px-4 py-2.5 flex items-center justify-between border-b border-neutral-800 text-neutral-300 text-xs">
+          <div className="flex items-center gap-1.5 font-mono text-[11px]">
+            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+            <span>5G • CityNet</span>
           </div>
+          {/* Notch */}
+          <div className="w-16 h-3 bg-neutral-950 rounded-full" />
+          <button
+            onClick={() => {
+              SoundEngine.playTick(player.soundEnabled);
+              onClose();
+            }}
+            className="text-neutral-400 hover:text-white p-1 rounded-full cursor-pointer text-sm font-bold"
+          >
+            ✕
+          </button>
+        </div>
 
-          {/* Phone Navigation Tabs */}
-          <div className="flex bg-neutral-900/90 border-b border-neutral-800 p-1.5 text-xs font-semibold">
-            <button
-              onClick={() => setActiveTab('CHAT')}
-              className={`flex-1 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                activeTab === 'CHAT' ? 'bg-neutral-800 text-emerald-400' : 'text-neutral-400'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Live Chat</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('NOTIFS')}
-              className={`flex-1 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 relative ${
-                activeTab === 'NOTIFS' ? 'bg-neutral-800 text-amber-400' : 'text-neutral-400'
-              }`}
-            >
-              <Bell className="w-3.5 h-3.5" />
-              <span>Broadcasts</span>
-              {notifications.length > 0 && (
-                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1 rounded-full font-mono font-bold">
-                  {notifications.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('911')}
-              className={`py-1.5 px-2 rounded-lg text-center transition-all cursor-pointer ${
-                activeTab === '911' ? 'bg-rose-950 text-rose-300 border border-rose-500/30' : 'text-neutral-400'
-              }`}
-            >
-              🚨 911
-            </button>
-          </div>
-
-          {/* Phone Body Content */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-            {/* 1. LIVE PLAYERS CHAT */}
-            {activeTab === 'CHAT' && (
-              <div className="space-y-2">
-                <div className="text-[10px] text-zinc-500 text-center font-mono py-1 border-b border-neutral-900">
-                  ⚡ Live Network • Online Players Chat ({messages.length}/{MAX_MESSAGES})
-                </div>
-                {messages.map((m) => (
-                  <div key={m.id} className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800/80 text-xs">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold text-neutral-200 flex items-center gap-1">
-                        {m.role === 'POLICE' ? '👮' : m.role === 'GOON' ? '🥷' : '👔'} {m.sender}
-                      </span>
-                      <span className="text-[10px] text-neutral-500 font-mono">{m.time}</span>
-                    </div>
-                    <p className="text-neutral-300 leading-snug">{m.text}</p>
-                  </div>
-                ))}
-              </div>
+        {/* Phone Navigation Tabs */}
+        <div className="flex bg-neutral-900/90 border-b border-neutral-800 p-1.5 text-xs font-semibold">
+          <button
+            onClick={() => setActiveTab('CHAT')}
+            className={`flex-1 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
+              activeTab === 'CHAT' ? 'bg-neutral-800 text-emerald-400' : 'text-neutral-400'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Live Chat</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('NOTIFS')}
+            className={`flex-1 py-1.5 rounded-lg text-center transition-all cursor-pointer flex items-center justify-center gap-1 relative ${
+              activeTab === 'NOTIFS' ? 'bg-neutral-800 text-amber-400' : 'text-neutral-400'
+            }`}
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span>Broadcasts</span>
+            {notifications.length > 0 && (
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1 rounded-full font-mono font-bold">
+                {notifications.length}
+              </span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab('911')}
+            className={`py-1.5 px-2.5 rounded-lg text-center transition-all cursor-pointer ${
+              activeTab === '911' ? 'bg-rose-950 text-rose-300 border border-rose-500/30' : 'text-neutral-400'
+            }`}
+          >
+            🚨 911
+          </button>
+        </div>
 
-            {/* 2. ADMIN NOTIFICATIONS / BROADCASTS */}
-            {activeTab === 'NOTIFS' && (
-              <div className="space-y-2.5">
-                <div className="text-[10px] text-amber-400/90 text-center font-mono py-1 border-b border-neutral-900">
-                  📢 Official Metropolis City Broadcasts
-                </div>
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-zinc-500 text-xs">No active broadcasts.</div>
-                ) : (
-                  notifications.map((n) => (
-                    <div key={n.id} className="p-3 rounded-xl bg-neutral-900 border border-amber-500/30 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-amber-400 text-xs">{n.title}</span>
-                        <span className="text-[10px] text-zinc-500 font-mono">
-                          {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-neutral-300 leading-relaxed">{n.message}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* 3. EMERGENCY 911 */}
-            {activeTab === '911' && (
-              <div className="text-center p-4 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-rose-950 border border-rose-500/50 flex items-center justify-center text-rose-400 mx-auto animate-pulse">
-                  <PhoneCall className="w-8 h-8" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-white text-base">Emergency Police Dispatch</h4>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Broadcast a distress beacon to all active police officers and allies.
-                  </p>
-                </div>
-                <button
-                  onClick={handleEmergencyCall}
-                  className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm shadow-lg transition-all cursor-pointer"
-                >
-                  Broadcast 911 Distress Call
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom Chat Input (Only on Chat tab) */}
+        {/* Phone Body Content */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+          {/* 1. LIVE PLAYERS CHAT */}
           {activeTab === 'CHAT' && (
-            <div className="p-2.5 bg-neutral-900 border-t border-neutral-800 flex gap-2">
-              <input
-                type="text"
-                placeholder="Message online players..."
-                value={inputMsg}
-                onChange={(e) => setInputMsg(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
+            <div className="space-y-2">
+              <div className="text-[10px] text-zinc-500 text-center font-mono py-1 border-b border-neutral-900">
+                ⚡ Live Network • Online Players Chat ({messages.length}/{MAX_MESSAGES})
+              </div>
+              {messages.map((m) => (
+                <div key={m.id} className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800/80 text-xs">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-neutral-200 flex items-center gap-1">
+                      {m.role === 'POLICE' ? '👮' : m.role === 'GOON' ? '🥷' : '👔'} {m.sender}
+                    </span>
+                    <span className="text-[10px] text-neutral-500 font-mono">{m.time}</span>
+                  </div>
+                  <p className="text-neutral-300 leading-snug">{m.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 2. ADMIN NOTIFICATIONS / BROADCASTS */}
+          {activeTab === 'NOTIFS' && (
+            <div className="space-y-2.5">
+              <div className="text-[10px] text-amber-400/90 text-center font-mono py-1 border-b border-neutral-900">
+                📢 Official Metropolis City Broadcasts
+              </div>
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-zinc-500 text-xs">No active broadcasts.</div>
+              ) : (
+                notifications.map((n) => (
+                  <div key={n.id} className="p-3 rounded-xl bg-neutral-900 border border-amber-500/30 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-amber-400 text-xs">{n.title}</span>
+                      <span className="text-[10px] text-zinc-500 font-mono">
+                        {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-300 leading-relaxed">{n.message}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* 3. EMERGENCY 911 */}
+          {activeTab === '911' && (
+            <div className="text-center p-4 space-y-4">
+              <div className="w-16 h-16 rounded-full bg-rose-950 border border-rose-500/50 flex items-center justify-center text-rose-400 mx-auto animate-pulse">
+                <PhoneCall className="w-8 h-8" />
+              </div>
+              <div>
+                <h4 className="font-bold text-white text-base">Emergency Police Dispatch</h4>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Broadcast a distress beacon to all active police officers and allies.
+                </p>
+              </div>
               <button
-                onClick={handleSendMessage}
-                className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl cursor-pointer"
+                onClick={handleEmergencyCall}
+                className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm shadow-lg transition-all cursor-pointer"
               >
-                <Send className="w-3.5 h-3.5" />
+                Broadcast 911 Distress Call
               </button>
             </div>
           )}
         </div>
-      )}
+
+        {/* Bottom Chat Input (Only on Chat tab) */}
+        {activeTab === 'CHAT' && (
+          <div className="p-2.5 bg-neutral-900 border-t border-neutral-800 flex gap-2">
+            <input
+              type="text"
+              placeholder="Message online players..."
+              value={inputMsg}
+              onChange={(e) => setInputMsg(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+              className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <button
+              onClick={handleSendMessage}
+              className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl cursor-pointer"
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

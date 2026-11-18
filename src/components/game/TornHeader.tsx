@@ -1,18 +1,46 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from './GameContext';
-import { Save, CheckCircle, HardDrive, Volume2, VolumeX, Menu, LogOut } from 'lucide-react';
+import { Save, CheckCircle, HardDrive, Volume2, VolumeX, Menu, LogOut, Smartphone } from 'lucide-react';
 import BackupModal from './BackupModal';
+import { NOTIF_STORAGE_KEY } from './CityPhone';
 
 interface TornHeaderProps {
   onOpenWheel?: () => void;
   onOpenMobileDrawer?: () => void;
+  onOpenPhone?: () => void;
 }
 
-export default function TornHeader({ onOpenWheel, onOpenMobileDrawer }: TornHeaderProps) {
+export default function TornHeader({ onOpenWheel, onOpenMobileDrawer, onOpenPhone }: TornHeaderProps) {
   const { player, isSaving, saveSuccess, saveGame, toggleSound } = useGame();
   const [showBackupModal, setShowBackupModal] = useState(false);
+  const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
+
+  useEffect(() => {
+    const checkNotifs = async () => {
+      try {
+        const res = await fetch('/api/notifications');
+        if (res.ok) {
+          const data = await res.json();
+          const lastRead = Number(localStorage.getItem(NOTIF_STORAGE_KEY) || 0);
+          const latest = data.latestTimestamp || 0;
+          setHasUnreadNotif(latest > lastRead);
+        }
+      } catch {}
+    };
+
+    checkNotifs();
+    const interval = setInterval(checkNotifs, 10000);
+
+    const onReadUpdated = () => setHasUnreadNotif(false);
+    window.addEventListener('notif-read-updated', onReadUpdated);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notif-read-updated', onReadUpdated);
+    };
+  }, []);
 
   return (
     <header className="w-full max-w-full overflow-x-hidden bg-neutral-950 border-b border-neutral-800 text-neutral-100 shadow-md">
@@ -101,6 +129,22 @@ export default function TornHeader({ onOpenWheel, onOpenMobileDrawer }: TornHead
             title={player.soundEnabled ? 'Sound FX: ON' : 'Sound FX: OFF'}
           >
             {player.soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* City Smartphone Trigger (With Blinking Red Dot on Unread Broadcasts) */}
+          <button
+            onClick={onOpenPhone}
+            className="relative p-1.5 rounded-xl border bg-neutral-900 border-neutral-700 hover:border-emerald-500/50 text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer flex items-center gap-1"
+            title="Open City Smartphone (Live Chat & Broadcasts)"
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-bold font-mono hidden sm:inline">Phone</span>
+            {hasUnreadNotif && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600 border border-neutral-950" />
+              </span>
+            )}
           </button>
 
           {/* Cryptographic Backup Trigger */}

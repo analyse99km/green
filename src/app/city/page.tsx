@@ -40,6 +40,7 @@ export function TornCityContent() {
   // Default first page is Lucid Dream tapping page as required!
   const [currentView, setCurrentView] = useState('DREAM_TAP');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isPhoneOpen, setIsPhoneOpen] = useState(false);
 
   // Awakening check: all 6 vitals must be above 0
   const isAwakened = Boolean(
@@ -54,7 +55,10 @@ export function TornCityContent() {
   return (
     <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-neutral-950 text-neutral-100 flex flex-col font-sans select-none">
       {/* Top Status & Save Bar with Hamburger Menu button */}
-      <TornHeader onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} />
+      <TornHeader
+        onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
+        onOpenPhone={() => setIsPhoneOpen(true)}
+      />
 
       {/* Top Vitals Status Ribbon (Energy, Nerve, Happy, Life, Food, Level, GREEN Coins & Daily Clipper) */}
       <TopVitalsBar
@@ -68,7 +72,11 @@ export function TornCityContent() {
       {/* Main Grid: Left Desktop Sidebar + Main Stage */}
       <div className="flex-1 flex flex-col lg:flex-row w-full max-w-7xl mx-auto border-x border-neutral-900 min-h-[calc(100vh-50px)]">
         {/* Left Desktop Side Panel (Hidden on mobile so it doesn't push main content 1500px down!) */}
-        <TornSidebar currentView={currentView} onSelectView={setCurrentView} />
+        <TornSidebar
+          currentView={currentView}
+          onSelectView={setCurrentView}
+          onOpenPhone={() => setIsPhoneOpen(true)}
+        />
 
         {/* Center Main Stage */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 bg-neutral-950 overflow-y-auto">
@@ -168,8 +176,8 @@ export function TornCityContent() {
         </main>
       </div>
 
-      {/* Floating City Smartphone with Admin Broadcast Red Dot & Live Chat */}
-      <CityPhone />
+      {/* City Smartphone Centered Modal (Controlled cleanly via isOpen/onClose with ZERO screen overlap) */}
+      <CityPhone isOpen={isPhoneOpen} onClose={() => setIsPhoneOpen(false)} />
 
       {/* Pre-Release Pioneer Edition Airdrop Modal */}
       <PreReleaseNoticeModal />
@@ -190,6 +198,7 @@ export function TornCityContent() {
         onClose={() => setIsMobileDrawerOpen(false)}
         currentView={currentView}
         onSelectView={setCurrentView}
+        onOpenPhone={() => setIsPhoneOpen(true)}
       />
 
       {/* Mobile Sticky Bottom Dock (Home, Crimes, Tap Refill, Bazaar, All Tabs Menu) */}

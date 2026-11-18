@@ -29,6 +29,7 @@ import {
   Smile,
   Shield,
   Package,
+  Smartphone,
 } from 'lucide-react';
 
 interface MobileSidebarDrawerProps {
@@ -36,6 +37,7 @@ interface MobileSidebarDrawerProps {
   onClose: () => void;
   currentView: string;
   onSelectView: (view: string) => void;
+  onOpenPhone?: () => void;
 }
 
 export default function MobileSidebarDrawer({
@@ -43,6 +45,7 @@ export default function MobileSidebarDrawer({
   onClose,
   currentView,
   onSelectView,
+  onOpenPhone,
 }: MobileSidebarDrawerProps) {
   const { player, wakeUp } = useGame();
 
@@ -133,6 +136,21 @@ export default function MobileSidebarDrawer({
 
         {/* Compact Vitals Summary */}
         <div className="p-3 bg-neutral-900/30 border-b border-neutral-850 font-mono text-[11px] space-y-1.5">
+          {onOpenPhone && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenPhone();
+              }}
+              className="w-full mb-2 flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-950 to-teal-950 border border-emerald-500/40 text-emerald-300 font-bold text-xs hover:border-emerald-400 transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-emerald-400" />
+                <span>📱 Open City Smartphone</span>
+              </div>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">Chat & Alerts</span>
+            </button>
+          )}
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             <div className="flex justify-between bg-neutral-900 px-2 py-1 rounded">
               <span className="text-emerald-400 flex items-center gap-1">
