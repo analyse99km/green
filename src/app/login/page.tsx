@@ -143,7 +143,10 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
       const savedUserStr = localStorage.getItem(userStateKey);
       let playerState: any = null;
 
-      if (savedUserStr) {
+      // Prioritize cloud cluster saved playerState if logging in across machines
+      if (!isRegister && data.playerState) {
+        playerState = data.playerState;
+      } else if (savedUserStr) {
         try {
           playerState = JSON.parse(savedUserStr);
         } catch {
@@ -193,6 +196,13 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             hasClaimedWelcomeBonus: false,
           },
         };
+
+        // Sync new operative state to cluster cloud
+        fetch('/api/player/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, playerState }),
+        }).catch(() => {});
       } else {
         if (!playerState.referrals) {
           playerState.referrals = {
@@ -211,6 +221,7 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
       // Save to both the per-user key and current active session key
       localStorage.setItem(userStateKey, JSON.stringify(playerState));
       localStorage.setItem('neon_metropolis_v6_botanical_green', JSON.stringify(playerState));
+      localStorage.setItem('METROPOLIS_SAVE_SLOT_01', JSON.stringify(playerState));
       localStorage.setItem(
         'metropolis_auth_user',
         JSON.stringify({ email: cleanEmail, name: playerState.name, userId: data.userId, loginTime: Date.now() })

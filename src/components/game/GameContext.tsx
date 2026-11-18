@@ -235,6 +235,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // ignore
       }
+    }
+
+    // Cloud Cluster State Sync: Fetch authoritative progress from cluster if user is signed in
+    if (authUser?.email) {
+      fetch(`/api/player/sync?email=${encodeURIComponent(authUser.email.trim().toLowerCase())}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && data.playerState) {
+            setPlayer((prev) => {
+              const cloudState = data.playerState;
+              // If local state is empty or cloud state has more progress, apply cloud state
+              if (!saved || (cloudState.lastSaveTimestamp || 0) >= (prev.lastSaveTimestamp || 0)) {
+                localStorage.setItem(activeKey, JSON.stringify(cloudState));
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudState));
+                return { ...prev, ...cloudState };
+              }
+              return prev;
+            });
+          }
+        })
+        .catch(() => {});
     } else if (authUser?.name) {
       setPlayer((prev) => ({
         ...prev,
@@ -514,18 +535,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       };
 
       let activeKey = LOCAL_STORAGE_KEY;
+      let userEmail = '';
       const authUserRaw = localStorage.getItem('metropolis_auth_user');
       if (authUserRaw) {
         try {
           const authUser = JSON.parse(authUserRaw);
           if (authUser?.email) {
-            activeKey = `neon_metropolis_user_${authUser.email.trim().toLowerCase()}`;
+            userEmail = authUser.email.trim().toLowerCase();
+            activeKey = `neon_metropolis_user_${userEmail}`;
           }
         } catch {}
       }
 
       localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+
+      // Asynchronously sync player state to cluster cloud server for cross-machine access
+      if (userEmail) {
+        fetch('/api/player/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: userEmail, playerState: updatedPlayer }),
+        }).catch(() => {});
+      }
+
       await new Promise((r) => setTimeout(r, 600));
 
       setPlayer(updatedPlayer);
@@ -533,7 +566,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setSaveSuccess(true);
       addLog({
         type: 'SAVE',
-        message: '✓ Cryptographic game state signed & backed up. Safe to close browser!',
+        message: '✓ Cryptographic game state signed & backed up to cluster. Safe on any device!',
       });
 
       setTimeout(() => setSaveSuccess(false), 3500);

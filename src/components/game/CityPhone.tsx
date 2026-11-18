@@ -45,7 +45,7 @@ export default function CityPhone({ isOpen: propIsOpen, onClose: propOnClose, on
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = propIsOpen !== undefined ? (propIsOpen || internalOpen) : internalOpen;
 
-  const [activeTab, setActiveTab] = useState<'CHAT' | 'NOTIFS' | '911' | 'MISSIONS'>('CHAT');
+  const [activeTab, setActiveTab] = useState<'CHAT' | 'NOTIFS'>('CHAT');
   const [inputMsg, setInputMsg] = useState('');
   const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotif[]>([]);
@@ -277,20 +277,12 @@ export default function CityPhone({ isOpen: propIsOpen, onClose: propOnClose, on
             }`}
           >
             <Bell className="w-3.5 h-3.5" />
-            <span>Broadcasts</span>
+            <span>Announcements</span>
             {notifications.length > 0 && (
               <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1 rounded-full font-mono font-bold">
                 {notifications.length}
               </span>
             )}
-          </button>
-          <button
-            onClick={() => setActiveTab('911')}
-            className={`py-1.5 px-2.5 rounded-lg text-center transition-all cursor-pointer ${
-              activeTab === '911' ? 'bg-rose-950 text-rose-300 border border-rose-500/30' : 'text-neutral-400'
-            }`}
-          >
-            🚨 911
           </button>
         </div>
 
@@ -337,27 +329,6 @@ export default function CityPhone({ isOpen: propIsOpen, onClose: propOnClose, on
                   </div>
                 ))
               )}
-            </div>
-          )}
-
-          {/* 3. EMERGENCY 911 */}
-          {activeTab === '911' && (
-            <div className="text-center p-4 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-rose-950 border border-rose-500/50 flex items-center justify-center text-rose-400 mx-auto animate-pulse">
-                <PhoneCall className="w-8 h-8" />
-              </div>
-              <div>
-                <h4 className="font-bold text-white text-base">Emergency Police Dispatch</h4>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Broadcast a distress beacon to all active police officers and allies.
-                </p>
-              </div>
-              <button
-                onClick={handleEmergencyCall}
-                className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm shadow-lg transition-all cursor-pointer"
-              >
-                Broadcast 911 Distress Call
-              </button>
             </div>
           )}
         </div>

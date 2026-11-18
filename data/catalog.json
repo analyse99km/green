@@ -74,5 +74,14 @@
     }
   ],
   "customItems": [],
-  "dailyComboOverride": null
+  "dailyComboOverride": {
+    "date": "2026-11-18",
+    "cardIds": [
+      "card_photosynthesis",
+      "card_spore_chamber",
+      "card_bioluminescent_algae"
+    ],
+    "rewardSparks": 5000000,
+    "isCustomOverride": true
+  }
 }

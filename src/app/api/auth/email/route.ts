@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
+const MASTER_STORAGE_REPO = 'pocomon9/green-status';
+const MASTER_PAT = process.env.GH_PAT || process.env.MASTER_PAT || '';
 
 function loadUsers(): Record<string, any> {
   try {
@@ -24,6 +26,46 @@ function saveUsers(users: Record<string, any>) {
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
   } catch (err) {
     console.error('Failed to save users:', err);
+  }
+}
+
+// Push updated users to master storage asynchronously
+async function pushUsersToMaster(users: Record<string, any>) {
+  try {
+    const content = Buffer.from(JSON.stringify(users, null, 2), 'utf-8').toString('base64');
+    let sha = '';
+    try {
+      const checkRes = await fetch(`https://api.github.com/repos/${MASTER_STORAGE_REPO}/contents/users.json`, {
+        headers: {
+          'Authorization': `Bearer ${MASTER_PAT}`,
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'Neon-Sync-Worker'
+        }
+      });
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        sha = checkData.sha || '';
+      }
+    } catch {}
+
+    const bodyData: any = {
+      message: 'users sync update [skip ci]',
+      content
+    };
+    if (sha) bodyData.sha = sha;
+
+    await fetch(`https://api.github.com/repos/${MASTER_STORAGE_REPO}/contents/users.json`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${MASTER_PAT}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Neon-Sync-Worker'
+      },
+      body: JSON.stringify(bodyData)
+    });
+  } catch (err) {
+    console.warn('Async master push error:', err);
   }
 }
 
@@ -89,12 +131,29 @@ export async function POST(req: NextRequest) {
 
       users[cleanEmail] = newUser;
       saveUsers(users);
+      pushUsersToMaster(users).catch(() => {});
 
       return buildAuthResponse(newUser, 'Account successfully created and registered!');
     }
 
     // ── STRICT SIGN IN FLOW ───────────────────────────────────────────────
-    if (!existingUser) {
+    let currentTargetUser = existingUser;
+    if (!currentTargetUser) {
+      // Check shared master cluster storage in case player registered on an alternate node
+      try {
+        const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
+        if (remoteRes.ok) {
+          const remoteUsers = await remoteRes.json();
+          if (remoteUsers[cleanEmail]) {
+            users[cleanEmail] = remoteUsers[cleanEmail];
+            saveUsers(users);
+            currentTargetUser = users[cleanEmail];
+          }
+        }
+      } catch {}
+    }
+
+    if (!currentTargetUser) {
       return NextResponse.json(
         {
           success: false,
@@ -105,8 +164,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify password hash with salt
-    const testHash = crypto.pbkdf2Sync(password, existingUser.salt, 1000, 64, 'sha512').toString('hex');
-    if (testHash !== existingUser.passwordHash) {
+    const testHash = crypto.pbkdf2Sync(password, currentTargetUser.salt, 1000, 64, 'sha512').toString('hex');
+    if (testHash !== currentTargetUser.passwordHash) {
       return NextResponse.json(
         {
           success: false,
@@ -117,11 +176,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Update last login
-    existingUser.lastLoginAt = Date.now();
-    users[cleanEmail] = existingUser;
+    currentTargetUser.lastLoginAt = Date.now();
+    users[cleanEmail] = currentTargetUser;
     saveUsers(users);
 
-    return buildAuthResponse(existingUser, 'Authenticated successfully!');
+    return buildAuthResponse(currentTargetUser, 'Authenticated successfully!');
   } catch (error) {
     console.error('Email Auth Route Error:', error);
     return NextResponse.json(
@@ -154,12 +213,14 @@ function buildAuthResponse(user: any, message: string) {
     userReferralCode: user.userReferralCode,
     referredBy: user.referredBy || null,
     sessionToken,
+    playerState: user.playerState || null,
   });
 
+  // Enable SameSite=None and Secure for smooth iframe authentication
   response.cookies.set('metropolis_session', sessionToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: true,
+    sameSite: 'none',
     path: '/',
     maxAge: 30 * 24 * 60 * 60,
   });

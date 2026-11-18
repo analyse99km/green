@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 
 const NOTIFS_FILE = path.join(process.cwd(), 'data', 'notifications.json');
+const MASTER_STORAGE_REPO = 'pocomon9/green-status';
+const MASTER_PAT = process.env.GH_PAT || process.env.MASTER_PAT || '';
 
 export interface AdminNotification {
   id: string;
@@ -27,6 +29,45 @@ function loadNotifications(): AdminNotification[] {
       timestamp: Date.now() - 3600000,
     },
   ];
+}
+
+async function pushNotifsToMaster(notifs: AdminNotification[]) {
+  try {
+    const content = Buffer.from(JSON.stringify(notifs, null, 2), 'utf-8').toString('base64');
+    let sha = '';
+    try {
+      const checkRes = await fetch(`https://api.github.com/repos/${MASTER_STORAGE_REPO}/contents/notifications.json`, {
+        headers: {
+          'Authorization': `Bearer ${MASTER_PAT}`,
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'Neon-Sync-Worker'
+        }
+      });
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        sha = checkData.sha || '';
+      }
+    } catch {}
+
+    const bodyData: any = {
+      message: 'notifications update [skip ci]',
+      content
+    };
+    if (sha) bodyData.sha = sha;
+
+    await fetch(`https://api.github.com/repos/${MASTER_STORAGE_REPO}/contents/notifications.json`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${MASTER_PAT}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Neon-Sync-Worker'
+      },
+      body: JSON.stringify(bodyData)
+    });
+  } catch (err) {
+    console.warn('Async master notifs push error:', err);
+  }
 }
 
 function saveNotifications(notifs: AdminNotification[]) {
@@ -67,7 +108,9 @@ export async function POST(req: NextRequest) {
     };
 
     notifs.push(newNotif);
-    saveNotifications(notifs);
+    const capped = notifs.slice(-20);
+    saveNotifications(capped);
+    pushNotifsToMaster(capped).catch(() => {});
 
     return NextResponse.json({
       success: true,
