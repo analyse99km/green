@@ -46,21 +46,9 @@ export default function DreamTapView() {
   } = useGame();
 
   const [activeSubTab, setActiveSubTab] = useState<
-    'ALL' | 'TAP_CORE' | 'MARKET' | 'IDLE_CARDS' | 'PLANTS' | 'REFERRALS'
-  >('ALL');
+    'TAP_CORE' | 'MARKET' | 'IDLE_CARDS' | 'PLANTS' | 'REFERRALS'
+  >('TAP_CORE');
 
-  const handleTabClick = (tab: 'ALL' | 'TAP_CORE' | 'MARKET' | 'IDLE_CARDS' | 'PLANTS' | 'REFERRALS') => {
-    setActiveSubTab(tab);
-    if (tab !== 'ALL') {
-      setTimeout(() => {
-        const targetId = `section-${tab.toLowerCase().replace('_', '-')}`;
-        const el = document.getElementById(targetId);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 60);
-    }
-  };
   const [selectedCategory, setSelectedCategory] = useState<BotanicalCategory>('ALL');
   const [combo, setCombo] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -481,358 +469,301 @@ export default function DreamTapView() {
 
   const currentPlant = plantEvolutionStages.find((p) => p.id === activePlant) || plantEvolutionStages[0];
 
+  const awakenedVitals = [
+    { label: 'Energy', ok: (player.energy || 0) > 0, val: `${player.energy || 0}/${player.maxEnergy || 100}` },
+    { label: 'GREEN', ok: (player.money || 0) > 0, val: `${(player.money || 0).toLocaleString()}` },
+    { label: 'Life', ok: (player.life || 0) > 0, val: `${player.life || 0}/${player.maxLife || 100}` },
+    { label: 'Nerve', ok: (player.nerve || 0) > 0, val: `${player.nerve || 0}/${player.maxNerve || 15}` },
+    { label: 'Happy', ok: (player.happy || 0) > 0, val: `${player.happy || 0}/${player.maxHappy || 100}` },
+    { label: 'Food', ok: (player.food || 0) > 0, val: `${player.food || 0}/${player.maxFood || 100}` },
+  ];
+  const awakenedCount = awakenedVitals.filter((v) => v.ok).length;
+
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-neutral-900 via-emerald-950/40 to-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🌱</span>
-              <h2 className="text-xl font-bold text-white">Lucid Dream Botanical Sanctuary</h2>
-            </div>
-            <p className="text-xs text-neutral-400 mt-1 max-w-2xl leading-relaxed">
-              Cultivate your inner plant species, evolve legendary trees, and level up <strong>Botanical Idle Cards</strong> for round-the-clock spark production. Exchange sparks for real Energy, Satiety Food, and permanent Bio-Augmentations!
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Sparks Bank */}
-            <div className="bg-neutral-950 px-3.5 py-2 rounded-xl border border-neutral-800 font-mono text-xs flex items-center gap-2.5">
-              <div>
-                <span className="text-[10px] text-neutral-500 block">Dream Sparks Bank</span>
-                <span className="text-emerald-400 font-bold text-sm sm:text-base flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                  <span>{(player.dreamPoints || 0).toLocaleString()}</span>
-                  <span className="text-[10px] text-emerald-500 font-normal">Sparks</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Passive Rate Pill */}
-            <div className="bg-neutral-950 px-3.5 py-2 rounded-xl border border-neutral-800 font-mono text-xs">
-              <span className="text-[10px] text-neutral-500 block">Passive Income</span>
-              <span className="text-cyan-400 font-bold text-xs sm:text-sm flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>+{autoSparksPerSec} Sparks/s</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {feedback && (
-          <div className="mt-4 p-2.5 rounded-xl bg-neutral-950 border border-emerald-500/50 text-emerald-300 font-mono text-xs text-center font-bold">
-            {feedback}
-          </div>
-        )}
-      </div>
-
-      {/* Operative Awakening Banner & Vital Checklist (Shown when any vital is 0) */}
-      {!isAwakened && (
-        <div className="bg-gradient-to-r from-emerald-950/80 via-neutral-900 to-indigo-950/80 border border-emerald-500/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3 animate-fadeIn">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/30 pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🌱</span>
-              <h3 className="font-bold text-white text-sm sm:text-base">
-                Pioneer Awakening: Restore All 6 Vitals to Unlock Metropolis
-              </h3>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
-              AWAKENING PHASE
-            </span>
-          </div>
-          <p className="text-xs text-neutral-300 leading-relaxed">
-            All new operatives begin at zero. Tap the <strong>Plant Core</strong> below to harvest Dream Sparks, then visit the <strong>Dream Market</strong> tab to make all 6 vitals above zero!
-          </p>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1 font-mono text-xs">
-            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.money > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-              <div>
-                <span className="text-[10px] text-neutral-500 block">1. Currency</span>
-                <span className="font-bold text-white">🌿 GREEN</span>
-              </div>
-              {player.money > 0 ? (
-                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.money} Coins</span>
-              ) : (
-                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('GREEN_STARTER'); }} className="py-1 px-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition-all cursor-pointer">
-                  Mint (15✨)
-                </button>
-              )}
-            </div>
-
-            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.energy > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-              <div>
-                <span className="text-[10px] text-neutral-500 block">2. Energy</span>
-                <span className="font-bold text-white">⚡ Stamina</span>
-              </div>
-              {player.energy > 0 ? (
-                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.energy} Energy</span>
-              ) : (
-                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('ENERGY_STEM'); }} className="py-1 px-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold transition-all cursor-pointer">
-                  Stem (25✨)
-                </button>
-              )}
-            </div>
-
-            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.nerve > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-              <div>
-                <span className="text-[10px] text-neutral-500 block">3. Nerve</span>
-                <span className="font-bold text-white">🛡️ Courage</span>
-              </div>
-              {player.nerve > 0 ? (
-                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.nerve} Nerve</span>
-              ) : (
-                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('NERVE_NECTAR'); }} className="py-1 px-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold transition-all cursor-pointer">
-                  Nectar (30✨)
-                </button>
-              )}
-            </div>
-
-            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.happy > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-              <div>
-                <span className="text-[10px] text-neutral-500 block">4. Happy</span>
-                <span className="font-bold text-white">😊 Morale</span>
-              </div>
-              {player.happy > 0 ? (
-                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.happy} Happy</span>
-              ) : (
-                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('HAPPY_FLORA'); }} className="py-1 px-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold transition-all cursor-pointer">
-                  Flora (20✨)
-                </button>
-              )}
-            </div>
-
-            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.life > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-              <div>
-                <span className="text-[10px] text-neutral-500 block">5. Life</span>
-                <span className="font-bold text-white">💖 Health</span>
-              </div>
-              {player.life > 0 ? (
-                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.life} Life</span>
-              ) : (
-                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('LIFE_SAP'); }} className="py-1 px-1.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold transition-all cursor-pointer">
-                  Sap (35✨)
-                </button>
-              )}
-            </div>
-
-            <div className={`p-2 rounded-xl border flex flex-col justify-between space-y-1.5 ${player.food > 0 ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300' : 'bg-neutral-950 border-neutral-800 text-neutral-400'}`}>
-              <div>
-                <span className="text-[10px] text-neutral-500 block">6. Food</span>
-                <span className="font-bold text-white">🍞 Satiety</span>
-              </div>
-              {player.food > 0 ? (
-                <span className="text-emerald-400 font-bold text-[11px]">✓ {player.food} Food</span>
-              ) : (
-                <button onClick={() => { setActiveSubTab('MARKET'); handleExchange('FOOD_SOURDOUGH'); }} className="py-1 px-1.5 rounded bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-bold transition-all cursor-pointer">
-                  Sourdough (40✨)
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Beginner Awakening Steps Guide */}
-      <div className="bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-cyan-950/40 border border-emerald-500/30 rounded-2xl p-4 font-mono text-xs space-y-2">
-        <div className="flex items-center gap-2 text-emerald-300 font-bold">
-          <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
-          <span>Beginner Quick Roadmap: 3 Steps to Awaken Metropolis</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
-          <div className="p-2 rounded-xl bg-neutral-950/80 border border-neutral-800 flex items-start gap-2">
-            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
-            <div>
-              <strong className="text-white block">Tap the Node Below</strong>
-              <span className="text-neutral-400">Harvest Dream Sparks with each tap!</span>
-            </div>
-          </div>
-          <div className="p-2 rounded-xl bg-neutral-950/80 border border-neutral-800 flex items-start gap-2">
-            <span className="w-5 h-5 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">2</span>
-            <div>
-              <strong className="text-white block">Refill 6 Vitals in Market</strong>
-              <span className="text-neutral-400">Scroll down & exchange Sparks for Energy, Life, & GREEN!</span>
-            </div>
-          </div>
-          <div className="p-2 rounded-xl bg-neutral-950/80 border border-neutral-800 flex items-start gap-2">
-            <span className="w-5 h-5 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">3</span>
-            <div>
-              <strong className="text-white block">Metropolis Unlocks!</strong>
-              <span className="text-neutral-400">Once all 6 stats &gt; 0, all city features awaken!</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sticky Quick-Jump Navigation Bar for Smooth Scrolling */}
-      <div className="sticky top-0 z-30 bg-neutral-950/95 backdrop-blur-md py-2 px-1 border-b border-neutral-800 -mx-1">
+    <div className="space-y-4 w-full max-w-full overflow-x-hidden">
+      {/* Sleek Top Navigation Pills (Immediate Access) */}
+      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-2 flex flex-wrap items-center justify-between gap-2 shadow-sm">
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar text-xs font-mono select-none">
           <button
-            onClick={() => handleTabClick('ALL')}
-            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              activeSubTab === 'ALL'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400'
-                : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
-            }`}
-          >
-            <span>🌟 All-In-One Scroll</span>
-          </button>
-
-          <button
-            onClick={() => handleTabClick('TAP_CORE')}
-            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            onClick={() => setActiveSubTab('TAP_CORE')}
+            className={`py-2 px-3.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeSubTab === 'TAP_CORE'
-                ? 'bg-emerald-600 text-white shadow'
-                : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400'
+                : 'bg-neutral-950 text-neutral-400 hover:text-white border border-neutral-800'
             }`}
           >
-            <span>⚡ Tap Core</span>
+            <span>⚡ Plant Core (Direct Play)</span>
           </button>
 
           <button
-            onClick={() => handleTabClick('MARKET')}
-            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            onClick={() => setActiveSubTab('MARKET')}
+            className={`py-2 px-3.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeSubTab === 'MARKET'
                 ? 'bg-emerald-600 text-white shadow'
-                : 'bg-neutral-900 text-emerald-300 hover:text-white border border-emerald-500/30'
+                : 'bg-neutral-950 text-neutral-300 hover:text-white border border-neutral-800'
             }`}
           >
-            <span>🛒 Instant Refills</span>
+            <span>🛒 Dream Market</span>
           </button>
 
           <button
-            onClick={() => handleTabClick('IDLE_CARDS')}
-            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            onClick={() => setActiveSubTab('IDLE_CARDS')}
+            className={`py-2 px-3.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeSubTab === 'IDLE_CARDS'
                 ? 'bg-emerald-600 text-white shadow'
-                : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+                : 'bg-neutral-950 text-neutral-300 hover:text-white border border-neutral-800'
             }`}
           >
             <span>🌱 Idle Cards ({botanicalCards.length})</span>
           </button>
 
           <button
-            onClick={() => handleTabClick('PLANTS')}
-            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            onClick={() => setActiveSubTab('PLANTS')}
+            className={`py-2 px-3.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeSubTab === 'PLANTS'
                 ? 'bg-emerald-600 text-white shadow'
-                : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+                : 'bg-neutral-950 text-neutral-300 hover:text-white border border-neutral-800'
             }`}
           >
             <span>🌳 Tree Evolution ({plantEvolutionStages.length})</span>
           </button>
 
           <button
-            onClick={() => handleTabClick('REFERRALS')}
-            className={`py-1.5 px-3 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            onClick={() => setActiveSubTab('REFERRALS')}
+            className={`py-2 px-3.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeSubTab === 'REFERRALS'
                 ? 'bg-emerald-600 text-white shadow'
-                : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800'
+                : 'bg-neutral-950 text-neutral-300 hover:text-white border border-neutral-800'
             }`}
           >
-            <span>👥 Referrals</span>
+            <span>👥 Syndicate Referrals</span>
           </button>
+        </div>
+
+        {/* Top Sparks Balance Ticker */}
+        <div className="flex items-center gap-3 font-mono text-xs px-2">
+          <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+            <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <span className="text-sm">{(player.dreamPoints || 0).toLocaleString()}</span>
+            <span className="text-[10px] text-emerald-500 font-normal">Sparks</span>
+          </div>
+          <span className="text-[11px] text-cyan-400 font-bold hidden sm:inline">
+            +{autoSparksPerSec} /s
+          </span>
         </div>
       </div>
 
-      {/* SECTION 1: PLANT TAP CORE */}
-      {(activeSubTab === 'ALL' || activeSubTab === 'TAP_CORE') && (
-        <div id="section-tap-core" className="scroll-mt-16 space-y-6">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl">
-            {/* Background Radial Glow */}
-            <div className="absolute inset-0 bg-radial from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
+      {feedback && (
+        <div className="p-2.5 rounded-xl bg-neutral-950 border border-emerald-500/50 text-emerald-300 font-mono text-xs text-center font-bold">
+          {feedback}
+        </div>
+      )}
 
-            {/* Tap Stamina Bar */}
-            <div className="w-full max-w-xs mb-6 font-mono text-xs">
-              <div className="flex justify-between items-center text-neutral-400 mb-1">
-                <span className="flex items-center gap-1 text-emerald-400 font-bold">
-                  <BatteryCharging className="w-3.5 h-3.5" /> Tap Stamina
-                </span>
-                <span>
-                  {player.tapStamina ?? 500}/{player.maxTapStamina ?? 500}
-                </span>
-              </div>
-              <div className="w-full bg-neutral-950 rounded-full h-2 overflow-hidden border border-neutral-800">
-                <div
-                  className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all"
-                  style={{
-                    width: `${Math.min(100, ((player.tapStamina ?? 500) / (player.maxTapStamina ?? 500)) * 100)}%`,
-                  }}
-                />
-              </div>
-              <span className="text-[10px] text-neutral-500 text-center block mt-1">
-                Refills +10 stamina every 15s • Tap power acts as tapping fuel
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* 1. DIRECT PLAY TAP CORE (ZERO SCROLLING NEEDED AFTER LOGIN)         */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeSubTab === 'TAP_CORE' && (
+        <div className="bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 border border-neutral-800 rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
+          {/* Background Ambient Glow */}
+          <div className="absolute inset-0 bg-radial from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
+
+          {/* Awakening Alert Banner (Only if not awakened) */}
+          {!isAwakened && (
+            <div className="mb-4 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+              <span className="text-emerald-300 font-bold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
+                <span>Metropolis Locked: Awakening in Progress ({awakenedCount}/6 vitals &gt; 0)</span>
+              </span>
+              <span className="text-neutral-400 text-[11px]">
+                Tap node to mint sparks, then 1-click refill vitals on right!
               </span>
             </div>
+          )}
 
-            {/* Current Plant Active Header */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">{currentPlant.icon}</span>
-              <span className="font-bold text-white text-sm">{currentPlant.name}</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30">
-                {currentPlant.bonus}
-              </span>
-            </div>
+          {/* Main 2-Column Zero-Scroll Grid: Left Tapper Node | Right Instant Refills */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            {/* LEFT / CENTER: THE BIG PLANT TAPPER NODE */}
+            <div className="lg:col-span-6 flex flex-col items-center justify-center p-3 relative">
+              {/* Plant Evolution Archetype Badge */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">{currentPlant.icon}</span>
+                <span className="font-bold text-white text-sm sm:text-base">{currentPlant.name}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30">
+                  {currentPlant.bonus}
+                </span>
+              </div>
 
-            {/* THE BIG PLANT TAPPER COIN BUTTON */}
-            <div className="relative my-4">
-              <button
-                onClick={handleTap}
-                onTouchStart={() => setIsPressing(true)}
-                onTouchEnd={() => setIsPressing(false)}
-                onMouseDown={() => setIsPressing(true)}
-                onMouseUp={() => setIsPressing(false)}
-                className={`relative w-44 h-44 sm:w-52 sm:h-52 rounded-full bg-gradient-to-tr ${currentPlant.style} p-1.5 shadow-2xl ring-4 transition-transform duration-75 select-none cursor-pointer flex items-center justify-center ${
-                  isPressing ? 'scale-90 shadow-inner' : 'scale-100 hover:scale-105 active:scale-95'
-                }`}
-              >
-                <div className="w-full h-full rounded-full bg-neutral-950/85 backdrop-blur-sm flex flex-col items-center justify-center border border-white/20 shadow-inner">
-                  <span className="text-6xl sm:text-7xl filter drop-shadow-lg animate-bounce select-none">
-                    {currentPlant.icon}
+              {/* Interactive Big Tapper Coin */}
+              <div className="relative my-2">
+                <button
+                  onClick={handleTap}
+                  onTouchStart={() => setIsPressing(true)}
+                  onTouchEnd={() => setIsPressing(false)}
+                  onMouseDown={() => setIsPressing(true)}
+                  onMouseUp={() => setIsPressing(false)}
+                  className={`relative w-44 h-44 sm:w-52 sm:h-52 rounded-full bg-gradient-to-tr ${currentPlant.style} p-1.5 shadow-2xl ring-4 transition-transform duration-75 select-none cursor-pointer flex items-center justify-center ${
+                    isPressing ? 'scale-90 shadow-inner' : 'scale-100 hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  <div className="w-full h-full rounded-full bg-neutral-950/85 backdrop-blur-sm flex flex-col items-center justify-center border border-white/20 shadow-inner">
+                    <span className="text-6xl sm:text-7xl filter drop-shadow-lg animate-bounce select-none">
+                      {currentPlant.icon}
+                    </span>
+                    <span className="font-black text-xs sm:text-sm tracking-wider text-emerald-300 uppercase mt-1">
+                      TAP PLANT NODE
+                    </span>
+                    <span className="text-[9px] font-mono text-emerald-400/80">
+                      {currentPlant.bonus}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Floating Sparks Animation Numbers */}
+                {floaters.map((f) => (
+                  <div
+                    key={f.id}
+                    className={`absolute pointer-events-none font-black text-sm sm:text-base font-mono animate-floatUp ${f.color}`}
+                    style={{ top: `${f.y}%`, left: `${f.x}%` }}
+                  >
+                    {f.text}
+                  </div>
+                ))}
+              </div>
+
+              {/* Tap Stamina Meter & Streak */}
+              <div className="w-full max-w-xs mt-3 space-y-1.5 font-mono text-xs">
+                <div className="flex justify-between items-center text-neutral-400 text-[11px]">
+                  <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                    <BatteryCharging className="w-3.5 h-3.5" /> Stamina
                   </span>
-                  <span className="font-black text-xs sm:text-sm tracking-wider text-emerald-300 uppercase mt-1">
-                    TAP PLANT
-                  </span>
-                  <span className="text-[9px] font-mono text-emerald-400/80">
-                    {currentPlant.bonus}
+                  <span className="text-white font-bold">
+                    {player.tapStamina ?? 500} / {player.maxTapStamina ?? 500}
                   </span>
                 </div>
+                <div className="w-full bg-neutral-950 rounded-full h-2 overflow-hidden border border-neutral-800">
+                  <div
+                    className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-150"
+                    style={{
+                      width: `${Math.min(100, ((player.tapStamina ?? 500) / (player.maxTapStamina ?? 500)) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[10px] text-neutral-400 pt-0.5">
+                  <span>Streak: <strong className="text-amber-400">{combo}x</strong></span>
+                  <span>Total Taps: <strong className="text-white">{(player.totalTaps || 0).toLocaleString()}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN: 1-CLICK INSTANT AWAKENING REFILLS (NO SCROLLING) */}
+            <div className="lg:col-span-6 space-y-3 font-mono">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-emerald-400" /> 1-Click Awakening Vital Refills
+                </span>
+                <span className="text-[10px] text-neutral-400">Directly from Sparks</span>
+              </div>
+
+              {/* 2x3 Grid of Instant Refills */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <button
+                  onClick={() => handleExchange('ENERGY_STEM')}
+                  className="p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 hover:border-emerald-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-400 text-[11px]">⚡ +10 Energy</span>
+                    <span className="text-[10px] text-neutral-400">25✨</span>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 mt-1">
+                    {(player.energy || 0) > 0 ? `✓ ${player.energy}/${player.maxEnergy}` : '0/100 (Dead)'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleExchange('GREEN_STARTER')}
+                  className="p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 hover:border-emerald-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-400 text-[11px]">🌿 +50 GREEN</span>
+                    <span className="text-[10px] text-neutral-400">15✨</span>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 mt-1">
+                    {(player.money || 0) > 0 ? `✓ ${(player.money || 0).toLocaleString()}` : '🌿 0 Coins'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleExchange('LIFE_SAP')}
+                  className="p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 hover:border-rose-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-rose-400 text-[11px]">❤️ +50 Life</span>
+                    <span className="text-[10px] text-neutral-400">35✨</span>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 mt-1">
+                    {(player.life || 0) > 0 ? `✓ ${player.life}/${player.maxLife}` : '0/100 (Dead)'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleExchange('FOOD_SOURDOUGH')}
+                  className="p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 hover:border-orange-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-orange-400 text-[11px]">🍞 +35 Food</span>
+                    <span className="text-[10px] text-neutral-400">40✨</span>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 mt-1">
+                    {(player.food || 0) > 0 ? `✓ ${player.food}/${player.maxFood || 100}` : '0 Satiety'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleExchange('NERVE_NECTAR')}
+                  className="p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 hover:border-amber-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-400 text-[11px]">🛡️ +5 Nerve</span>
+                    <span className="text-[10px] text-neutral-400">30✨</span>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 mt-1">
+                    {(player.nerve || 0) > 0 ? `✓ ${player.nerve}/${player.maxNerve}` : '0 Nerve'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleExchange('HAPPY_FLORA')}
+                  className="p-2.5 rounded-xl bg-neutral-950/80 border border-neutral-800 hover:border-blue-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-blue-400 text-[11px]">😊 +25 Happy</span>
+                    <span className="text-[10px] text-neutral-400">20✨</span>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 mt-1">
+                    {(player.happy || 0) > 0 ? `✓ ${player.happy}/${player.maxHappy}` : '0 Morale'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Full Awakening Bundle Button */}
+              <button
+                onClick={() => handleExchange('FULL_REVIVE')}
+                className="w-full py-3 px-3 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-black text-xs uppercase tracking-wider shadow-lg cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <span>✨ Full Awakening Bundle (80 Sparks)</span>
+                <span className="text-[10px] opacity-80 font-normal hidden sm:inline">• Revives All 6 Vitals in 1 Click!</span>
               </button>
 
-              {/* Floating Sparks Animation Numbers */}
-              {floaters.map((f) => (
-                <div
-                  key={f.id}
-                  className={`absolute pointer-events-none font-black text-sm sm:text-base font-mono animate-floatUp ${f.color}`}
-                  style={{ top: `${f.y}%`, left: `${f.x}%` }}
-                >
-                  {f.text}
-                </div>
-              ))}
-            </div>
-
-            {/* Combo Streak Ribbon */}
-            <div className="mt-4 flex items-center gap-3 font-mono text-xs">
-              <div className="bg-neutral-950 px-3 py-1.5 rounded-xl border border-neutral-800 text-neutral-300 flex items-center gap-2">
-                <span>Streak:</span>
-                <span className="text-amber-400 font-bold text-sm">{combo}x</span>
-                {combo >= 10 && <span className="text-[10px] text-emerald-400 font-bold">⚡ ENERGY SYNC!</span>}
-              </div>
-
-              <div className="bg-neutral-950 px-3 py-1.5 rounded-xl border border-neutral-800 text-neutral-400 text-[11px]">
-                Total Taps: <strong className="text-white">{(player.totalTaps || 0).toLocaleString()}</strong>
+              <div className="text-[11px] text-neutral-400 bg-neutral-950/60 p-2.5 rounded-xl border border-neutral-800/80 text-center">
+                💡 Every 10 consecutive taps gives <strong>+1 Real Energy</strong> directly to your operative!
               </div>
             </div>
-
-            <p className="text-[11px] text-neutral-500 font-mono mt-4 text-center max-w-sm">
-              💡 Every 10 consecutive taps grants <strong>+1 Real Energy</strong> directly to your character!
-            </p>
           </div>
         </div>
       )}
 
       {/* SUB-TAB 2: DREAM MARKET & INSTANT REFILLS */}
-      {(activeSubTab === 'ALL' || activeSubTab === 'MARKET') && (
+      {activeSubTab === 'MARKET' && (
         <div id="section-market" className="scroll-mt-16 space-y-6">
           {/* Section 1: Vitals & Energy Stems */}
           <div>
@@ -1123,7 +1054,7 @@ export default function DreamTapView() {
       )}
 
       {/* SUB-TAB 3: BOTANICAL IDLE CARDS (16 CARDS ORGANIZED IN 4 CATEGORIES) */}
-      {(activeSubTab === 'ALL' || activeSubTab === 'IDLE_CARDS') && (
+      {activeSubTab === 'IDLE_CARDS' && (
         <div id="section-idle-cards" className="scroll-mt-16 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono">
             <span className="text-neutral-300">
@@ -1255,7 +1186,7 @@ export default function DreamTapView() {
       )}
 
       {/* SUB-TAB 3: PLANT & TREE EVOLUTION STAGES (8 STAGES) */}
-      {(activeSubTab === 'ALL' || activeSubTab === 'PLANTS') && (
+      {activeSubTab === 'PLANTS' && (
         <div id="section-plants" className="scroll-mt-16 space-y-4">
           <div className="p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono text-neutral-300">
             Evolve your inner plant species to permanently multiply your sparks per tap! Each stage embodies a distinct tree archetype.
@@ -1338,7 +1269,7 @@ export default function DreamTapView() {
 
 
       {/* SUB-TAB 5: SYNDICATE REFERRALS & TILL (ACCESSIBLE IN DREAM TAP) */}
-      {(activeSubTab === 'ALL' || activeSubTab === 'REFERRALS') && (
+      {activeSubTab === 'REFERRALS' && (
         <div id="section-referrals" className="scroll-mt-16 space-y-4">
           <div className="p-3.5 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-between text-xs font-mono">
             <span className="text-neutral-300">
