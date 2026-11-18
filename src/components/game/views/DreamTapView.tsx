@@ -27,6 +27,7 @@ import {
 import ReferralView from './ReferralView';
 import { SoundEngine } from '../gameAudio';
 import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef } from '../gameCatalog';
+import DynamicIcon from '../DynamicIcon';
 
 interface FloatingText {
   id: number;
@@ -150,15 +151,15 @@ export default function DreamTapView() {
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  // 7-Day Rewards for Daily Login Streak
+  // 7-Day Rewards for Daily Login Streak (balanced gradual progression)
   const dailyStreakRewards = [
-    { day: 1, label: 'Day 1', reward: '100K Cash', icon: '🪙', type: 'cash' },
-    { day: 2, label: 'Day 2', reward: '1 Key', icon: '🔑', type: 'key' },
-    { day: 3, label: 'Day 3', reward: '500K Cash', icon: '🪙', type: 'cash' },
-    { day: 4, label: 'Day 4', reward: '2 Keys', icon: '🔑', type: 'key' },
-    { day: 5, label: 'Day 5', reward: '1M Cash', icon: '🪙', type: 'cash' },
-    { day: 6, label: 'Day 6', reward: '3 Keys', icon: '🔑', type: 'key' },
-    { day: 7, label: 'Day 7', reward: 'Exclusive Skin', icon: '🌿', type: 'skin' },
+    { day: 1, label: 'Day 1', reward: '+5 GREEN, +15⚡', icon: '🌱', type: 'green' },
+    { day: 2, label: 'Day 2', reward: '+10 GREEN, +30⚡', icon: '🌿', type: 'green' },
+    { day: 3, label: 'Day 3', reward: '+15 GREEN, +50⚡', icon: '🪴', type: 'green' },
+    { day: 4, label: 'Day 4', reward: '+20 GREEN, +75⚡', icon: '🎋', type: 'green' },
+    { day: 5, label: 'Day 5', reward: '+30 GREEN, +100⚡', icon: '🌳', type: 'green' },
+    { day: 6, label: 'Day 6', reward: '+45 GREEN, +150⚡', icon: '⚡', type: 'green' },
+    { day: 7, label: 'Day 7', reward: '👑 +60 GREEN, +250⚡', icon: '👑', type: 'green' },
   ];
 
   const currentStreakDay = player.dailyStreak || 1;
@@ -491,7 +492,9 @@ export default function DreamTapView() {
                   >
                     {isGuessed ? (
                       <>
-                        <span className="text-2xl">{foundCard?.icon || '🌱'}</span>
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <DynamicIcon icon={foundCard?.icon} alt={foundCard?.title} imgClassName="w-7 h-7 object-contain rounded" className="text-2xl" fallback="🌱" />
+                        </div>
                         <div className="text-[10px] font-bold text-emerald-300 mt-1 text-center line-clamp-1">
                           {foundCard?.title || cid}
                         </div>
@@ -537,7 +540,7 @@ export default function DreamTapView() {
                     : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
                 }`}
               >
-                <span>{cat.icon}</span>
+                <DynamicIcon icon={cat.icon} alt={cat.name} imgClassName="w-4 h-4 object-contain rounded" />
                 <span>{cat.name}</span>
               </button>
             ))}
@@ -577,8 +580,8 @@ export default function DreamTapView() {
                     <div>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-2xl p-2 bg-neutral-950 rounded-xl border border-neutral-800">
-                            {card.icon}
+                          <span className="w-11 h-11 p-1 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
+                            <DynamicIcon icon={card.icon} alt={card.title} imgClassName="w-8 h-8 object-contain rounded" className="text-2xl" fallback="🌱" />
                           </span>
                           <div>
                             <div className="font-bold text-white text-xs sm:text-sm">{card.title}</div>

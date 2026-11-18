@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react';
 import { InventoryItem } from '../types';
+import DynamicIcon from '../DynamicIcon';
 
 export default function TornItemsView() {
   const { player, buyItem, shopliftItem, consumeItem, upgradeItemInForge, syncCloudItems } = useGame();
@@ -154,8 +155,8 @@ export default function TornItemsView() {
                   <div>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
-                        <span className="text-3xl p-2 rounded-xl bg-neutral-950 border border-neutral-800">
-                          {item.icon}
+                        <span className="w-12 h-12 p-1 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
+                          <DynamicIcon icon={item.icon} alt={item.name} imgClassName="w-8 h-8 object-contain rounded" className="text-3xl" fallback="📦" />
                         </span>
                         <div>
                           <h4 className="font-bold text-white text-sm">{item.name}</h4>
@@ -245,8 +246,8 @@ export default function TornItemsView() {
                 <div>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-3xl p-2 rounded-xl bg-neutral-950 border border-neutral-800">
-                        {item.icon}
+                      <span className="w-12 h-12 p-1 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
+                        <DynamicIcon icon={item.icon} alt={item.name} imgClassName="w-8 h-8 object-contain rounded" className="text-3xl" fallback="📦" />
                       </span>
                       <div>
                         <h4 className="font-bold text-white text-sm">{item.name}</h4>
@@ -351,8 +352,8 @@ export default function TornItemsView() {
                 <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-3xl p-1 bg-neutral-900 rounded-lg border border-neutral-800">
-                        {selectedForgeItem.icon}
+                      <span className="w-10 h-10 p-1 bg-neutral-900 rounded-lg border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
+                        <DynamicIcon icon={selectedForgeItem.icon} alt={selectedForgeItem.name} imgClassName="w-8 h-8 object-contain rounded" className="text-3xl" fallback="📦" />
                       </span>
                       <div>
                         <h5 className="font-bold text-white text-sm">{selectedForgeItem.name}</h5>
@@ -480,7 +481,9 @@ export default function TornItemsView() {
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="text-2xl">{item.icon}</span>
+                        <span className="w-8 h-8 p-0.5 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
+                          <DynamicIcon icon={item.icon} alt={item.name} imgClassName="w-6 h-6 object-contain rounded" className="text-2xl" fallback="📦" />
+                        </span>
                         <div>
                           <h5 className="font-bold text-xs">{item.name}</h5>
                           <span className="text-[10px] text-neutral-400">

@@ -18,6 +18,7 @@ import {
   Lock,
   X,
 } from 'lucide-react';
+import DynamicIcon from '../DynamicIcon';
 
 export default function BazaarView() {
   const {
@@ -220,8 +221,8 @@ export default function BazaarView() {
                     <div>
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-3xl p-2 rounded-xl bg-neutral-950/80 border border-neutral-800">
-                            {listing.item.icon}
+                          <span className="w-12 h-12 p-1 rounded-xl bg-neutral-950/80 border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
+                            <DynamicIcon icon={listing.item.icon} alt={listing.item.name} imgClassName="w-8 h-8 object-contain rounded" className="text-3xl" fallback="📦" />
                           </span>
                           <div>
                             <h4 className="font-bold text-white text-sm">{listing.item.name}</h4>
@@ -422,7 +423,9 @@ export default function BazaarView() {
                     className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{listing.item.icon}</span>
+                      <span className="w-9 h-9 p-0.5 rounded-lg bg-neutral-950 border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
+                        <DynamicIcon icon={listing.item.icon} alt={listing.item.name} imgClassName="w-7 h-7 object-contain rounded" className="text-2xl" fallback="📦" />
+                      </span>
                       <div>
                         <h4 className="font-bold text-white text-xs">{listing.item.name}</h4>
                         <span className="text-[10px] text-emerald-400 font-mono">

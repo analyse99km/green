@@ -145,31 +145,51 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
 
       // 3. Update isolated per-user local player state so each user has their own distinct data & name!
       const userStateKey = `neon_metropolis_user_${cleanEmail}`;
-      const savedUserStr = localStorage.getItem(userStateKey);
+      const savedUserStr = localStorage.getItem(userStateKey) || localStorage.getItem('neon_metropolis_v6_botanical_green');
       let playerState: any = null;
-
-      // Prioritize cloud cluster saved playerState if logging in across machines
-      if (!isRegister && data.playerState) {
-        playerState = data.playerState;
-      } else if (savedUserStr) {
+      let localState: any = null;
+      if (savedUserStr) {
         try {
-          playerState = JSON.parse(savedUserStr);
-        } catch {
-          playerState = null;
-        }
+          localState = JSON.parse(savedUserStr);
+        } catch {}
       }
 
+      let cloudState: any = (!isRegister && data.playerState) ? data.playerState : null;
+
       // If logging in on a new device or cleared cache, pull latest state from cluster
-      if (!isRegister && !playerState) {
+      if (!isRegister && !cloudState) {
         try {
           const syncRes = await fetch(`/api/player/sync?email=${encodeURIComponent(cleanEmail)}`);
           if (syncRes.ok) {
             const syncData = await syncRes.json();
             if (syncData.playerState) {
-              playerState = syncData.playerState;
+              cloudState = syncData.playerState;
             }
           }
         } catch {}
+      }
+
+      // Merge local and cloud state so progress is NEVER wiped by an older cloud or empty local state
+      if (!isRegister) {
+        if (cloudState && localState) {
+          playerState = {
+            ...localState,
+            ...cloudState,
+            name: authoritativeName,
+            money: Math.max(Number(localState.money || 0), Number(cloudState.money || 0)),
+            bankMoney: Math.max(Number(localState.bankMoney || 0), Number(cloudState.bankMoney || 0)),
+            dreamPoints: Math.max(Number(localState.dreamPoints || 0), Number(cloudState.dreamPoints || cloudState.sparks || 0)),
+            greenTokens: Math.max(Number(localState.greenTokens || 0), Number(cloudState.greenTokens || 0)),
+            level: Math.max(Number(localState.level || 1), Number(cloudState.level || 1)),
+            inventory: (localState.inventory && localState.inventory.length > 0) ? localState.inventory : (cloudState.inventory || []),
+            dreamCards: { ...(cloudState.dreamCards || {}), ...(localState.dreamCards || {}) },
+            lastSaveTimestamp: Math.max(localState.lastSaveTimestamp || 0, cloudState.lastSaveTimestamp || 0, Date.now())
+          };
+        } else if (cloudState) {
+          playerState = cloudState;
+        } else if (localState) {
+          playerState = localState;
+        }
       }
 
       const uniqueRef = data.userReferralCode || `NEON-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -287,6 +307,14 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
         'metropolis_auth_user',
         JSON.stringify({ email: cleanEmail, name: authoritativeName, userId: data.userId, loginTime: Date.now() })
       );
+
+      if (!isRegister && playerState) {
+        fetch('/api/player/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, playerState }),
+        }).catch(() => {});
+      }
 
       setAuthMsg({
         text: isRegister

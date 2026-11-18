@@ -11,6 +11,7 @@ import {
 } from '../gameCatalog';
 import { SoundEngine } from '../gameAudio';
 import { useGame } from '../GameContext';
+import DynamicIcon from '../DynamicIcon';
 
 interface AdminPlayer {
   email: string;
@@ -522,7 +523,9 @@ export const AdminDashboardView: React.FC = () => {
                   key={cat.id}
                   className="bg-zinc-900 border border-zinc-700 px-3 py-1.5 rounded-lg flex items-center gap-2"
                 >
-                  <span className="text-base">{cat.icon}</span>
+                  <span className="w-6 h-6 inline-flex items-center justify-center">
+                    <DynamicIcon icon={cat.icon} alt={cat.name} imgClassName="w-5 h-5 object-contain rounded" className="text-base" />
+                  </span>
                   <div>
                     <div className="text-xs font-bold text-zinc-200">{cat.name}</div>
                     <div className="text-[10px] text-zinc-400 font-mono">
@@ -558,7 +561,9 @@ export const AdminDashboardView: React.FC = () => {
                       <tr key={c.id} className="hover:bg-zinc-900/40 transition">
                         <td className="p-2.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-xl bg-zinc-800 p-1.5 rounded border border-zinc-700">{c.icon}</span>
+                            <span className="w-9 h-9 p-0.5 bg-zinc-800 rounded border border-zinc-700 flex items-center justify-center shrink-0 overflow-hidden">
+                              <DynamicIcon icon={c.icon} alt={c.title} imgClassName="w-7 h-7 object-contain rounded" className="text-xl" fallback="🌱" />
+                            </span>
                             <div>
                               <div className="font-bold text-zinc-200">{c.title}</div>
                               <div className="text-[10px] text-zinc-500 line-clamp-1">{c.flavor}</div>
@@ -657,8 +662,8 @@ export const AdminDashboardView: React.FC = () => {
                         <tr key={item.id} className="hover:bg-zinc-900/40 transition">
                           <td className="p-2.5">
                             <div className="flex items-center gap-2">
-                              <span className="text-xl bg-zinc-800 p-1.5 rounded border border-zinc-700">
-                                {item.icon}
+                              <span className="w-9 h-9 p-0.5 bg-zinc-800 rounded border border-zinc-700 flex items-center justify-center shrink-0 overflow-hidden">
+                                <DynamicIcon icon={item.icon} alt={item.name} imgClassName="w-7 h-7 object-contain rounded" className="text-xl" fallback="📦" />
                               </span>
                               <div>
                                 <div className="font-bold text-zinc-200">{item.name}</div>

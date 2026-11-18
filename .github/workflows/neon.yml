@@ -18,7 +18,7 @@ on:
 
 concurrency:
   group: neon-${{ github.repository }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   PORT: "3000"

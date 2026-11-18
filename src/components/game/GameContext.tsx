@@ -2244,14 +2244,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const claimDailyStreak = () => {
     const day = (player.dailyStreak || 1);
-    const rewards = [
-      { day: 1, title: '$10,000 Cash + 25 Energy', cash: 10000, energy: 25, nerve: 0, green: 0 },
-      { day: 2, title: '50 Sparks + 10 Nerve', cash: 0, energy: 0, nerve: 10, sparks: 50, green: 0 },
-      { day: 3, title: 'Titanium Tension Lockpick + $25,000 Cash', cash: 25000, energy: 0, nerve: 0, green: 0, item: 'Titanium Tension Lockpick' },
-      { day: 4, title: '🌿 50 GREEN Coins + 50 Energy Surge', cash: 0, energy: 50, nerve: 0, green: 50 },
-      { day: 5, title: 'Tactical Wagyu Ribeye + 15 Nerve', cash: 0, energy: 0, nerve: 15, green: 0, item: 'Tactical Wagyu Ribeye' },
-      { day: 6, title: '18k Gold Signet Ring + 100 Sparks', cash: 0, energy: 0, nerve: 0, sparks: 100, green: 0, item: '18k Gold Signet Ring' },
-      { day: 7, title: '👑 Syndicate Grand Crate: 🌿 150 GREEN Coins + $100,000 Cash!', cash: 100000, energy: 100, nerve: 20, green: 150 },
+    const rewards: { day: number; title: string; cash: number; energy: number; nerve: number; green: number; sparks: number; item?: string }[] = [
+      { day: 1, title: '🌿 5 GREEN Coins + 15 Sparks + 10 Energy', cash: 500, energy: 10, nerve: 2, green: 5, sparks: 15 },
+      { day: 2, title: '🌿 10 GREEN Coins + 30 Sparks + 15 Energy', cash: 1000, energy: 15, nerve: 4, green: 10, sparks: 30 },
+      { day: 3, title: '🌿 15 GREEN Coins + 50 Sparks + 20 Energy', cash: 1500, energy: 20, nerve: 6, green: 15, sparks: 50 },
+      { day: 4, title: '🌿 20 GREEN Coins + 75 Sparks + 25 Energy', cash: 2000, energy: 25, nerve: 8, green: 20, sparks: 75 },
+      { day: 5, title: '🌿 30 GREEN Coins + 100 Sparks + 30 Energy', cash: 3000, energy: 30, nerve: 10, green: 30, sparks: 100 },
+      { day: 6, title: '🌿 45 GREEN Coins + 150 Sparks + 40 Energy', cash: 4500, energy: 40, nerve: 12, green: 45, sparks: 150 },
+      { day: 7, title: '👑 Grand Streak: 🌿 60 GREEN Coins + 250 Sparks + 50 Energy!', cash: 6000, energy: 50, nerve: 15, green: 60, sparks: 250 },
     ];
 
     const currentReward = rewards[(day - 1) % 7];
@@ -2278,12 +2278,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Check if user is sponsored by another operative -> grants +50 GREEN/day recruit stipend!
+      // Check if user is sponsored by another operative -> grants +5 GREEN/day recruit stipend!
       let recruitStipendBonus = 0;
       let newLastStipend = prev.referrals?.lastDailyStipendClaimTimestamp || 0;
       const now = Date.now();
       if (prev.referrals?.referredBy && (newLastStipend === 0 || now - newLastStipend >= 86400000)) {
-        recruitStipendBonus = 50;
+        recruitStipendBonus = 5;
         newLastStipend = now;
       }
 
