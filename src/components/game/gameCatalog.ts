@@ -54,6 +54,90 @@ export interface DynamicItemDef {
   forgeDefenseBonus?: number;
 }
 
+export interface DreamMarketItemDef {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  sparkCost: number;
+  givesEnergy?: number;
+  givesFood?: number;
+  givesNerve?: number;
+  givesHappy?: number;
+  givesLife?: number;
+  givesGreen?: number;
+  requiredCardId?: string;
+  requiredCardLevel?: number;
+}
+
+export const INITIAL_DREAM_MARKET_ITEMS: DreamMarketItemDef[] = [
+  {
+    id: 'dream_surge_battery',
+    title: 'Surge Energy Battery',
+    description: 'Overcharged electrolytic cell providing an immediate injection of operational energy.',
+    icon: '⚡',
+    sparkCost: 300,
+    givesEnergy: 50,
+  },
+  {
+    id: 'dream_hydro_sourdough',
+    title: 'Hydro-Nutrient Sourdough',
+    description: 'Dense bio-fermented loaf restoring food satiety and baseline happiness.',
+    icon: '🍞',
+    sparkCost: 250,
+    givesFood: 45,
+    givesHappy: 15,
+  },
+  {
+    id: 'dream_lucid_nectar',
+    title: 'Lucid Nerve Nectar',
+    description: 'Concentrated neuro-botanical extract restoring nerve capacity and mental focus.',
+    icon: '🧪',
+    sparkCost: 350,
+    givesNerve: 20,
+    givesHappy: 10,
+  },
+  {
+    id: 'dream_euphoria_spores',
+    title: 'Euphoria Spore Vial',
+    description: 'Therapeutic bio-spores soothing stress and restoring player morale & happiness.',
+    icon: '🌸',
+    sparkCost: 200,
+    givesHappy: 45,
+    givesNerve: 5,
+  },
+  {
+    id: 'dream_cellular_salve',
+    title: 'Cellular Regeneration Salve',
+    description: 'Advanced organic stem-gel sealing lacerations and restoring health/life points.',
+    icon: '💊',
+    sparkCost: 350,
+    givesLife: 60,
+    givesHappy: 5,
+  },
+  {
+    id: 'dream_mint_green_tokens',
+    title: 'Mint 25 GREEN Coins',
+    description: 'Crystallize pure dream sparks into minted liquid GREEN economic currency.',
+    icon: '🪙',
+    sparkCost: 500,
+    givesGreen: 25,
+  },
+  {
+    id: 'dream_grand_restoration',
+    title: 'Grand All-Vitals Tonic',
+    description: 'Master bio-brew revitalizing Energy, Satiety, Nerve, Happy, and Life simultaneously.',
+    icon: '✨',
+    sparkCost: 950,
+    givesEnergy: 40,
+    givesFood: 40,
+    givesNerve: 15,
+    givesHappy: 35,
+    givesLife: 50,
+    givesGreen: 10,
+  },
+];
+
 export const INITIAL_BOTANICAL_CATEGORIES: BotanicalCategoryDef[] = [
   { id: 'SPORES', name: 'Mini Spores & Fungi', icon: '🍄', badge: 'Tier 1' },
   { id: 'FLORA', name: 'Luminescent Flora', icon: '🌸', badge: 'Tier 2' },
@@ -303,6 +387,7 @@ export interface DynamicCatalogData {
   categories: BotanicalCategoryDef[];
   cards: BotanicalCardDef[];
   customItems: DynamicItemDef[];
+  dreamMarketItems?: DreamMarketItemDef[];
   dailyComboOverride?: DailyComboDef;
   customDailyStreakRewards?: DailyStreakRewardItem[];
 }
@@ -353,6 +438,7 @@ export function loadCatalogData(): DynamicCatalogData {
       categories: INITIAL_BOTANICAL_CATEGORIES,
       cards: INITIAL_BOTANICAL_CARDS,
       customItems: [],
+      dreamMarketItems: INITIAL_DREAM_MARKET_ITEMS,
     };
   }
 
@@ -364,6 +450,7 @@ export function loadCatalogData(): DynamicCatalogData {
         categories: parsed.categories && parsed.categories.length > 0 ? parsed.categories : INITIAL_BOTANICAL_CATEGORIES,
         cards: parsed.cards && parsed.cards.length > 0 ? parsed.cards : INITIAL_BOTANICAL_CARDS,
         customItems: parsed.customItems || [],
+        dreamMarketItems: parsed.dreamMarketItems && parsed.dreamMarketItems.length > 0 ? parsed.dreamMarketItems : INITIAL_DREAM_MARKET_ITEMS,
         dailyComboOverride: parsed.dailyComboOverride,
         customDailyStreakRewards: parsed.customDailyStreakRewards,
       };
@@ -376,6 +463,7 @@ export function loadCatalogData(): DynamicCatalogData {
     categories: INITIAL_BOTANICAL_CATEGORIES,
     cards: INITIAL_BOTANICAL_CARDS,
     customItems: [],
+    dreamMarketItems: INITIAL_DREAM_MARKET_ITEMS,
   };
 }
 
@@ -405,6 +493,7 @@ export async function syncCatalogFromServer(onUpdated?: (catalog: DynamicCatalog
         categories: json.catalog.categories && json.catalog.categories.length > 0 ? json.catalog.categories : INITIAL_BOTANICAL_CATEGORIES,
         cards: json.catalog.cards && json.catalog.cards.length > 0 ? json.catalog.cards : INITIAL_BOTANICAL_CARDS,
         customItems: json.catalog.customItems || [],
+        dreamMarketItems: json.catalog.dreamMarketItems && json.catalog.dreamMarketItems.length > 0 ? json.catalog.dreamMarketItems : INITIAL_DREAM_MARKET_ITEMS,
         dailyComboOverride: json.catalog.dailyComboOverride,
         customDailyStreakRewards: json.catalog.customDailyStreakRewards,
       };

@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import ReferralView from './ReferralView';
 import { SoundEngine } from '../gameAudio';
-import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef } from '../gameCatalog';
+import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef, INITIAL_DREAM_MARKET_ITEMS, DreamMarketItemDef } from '../gameCatalog';
 import DynamicIcon from '../DynamicIcon';
 import { formatCompactNumber, CURRENCY_ICONS } from '../formatters';
 
@@ -690,56 +690,149 @@ export default function DreamTapView() {
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 3. DREAM MARKET / BAZAAR                                            */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {activeSubTab === 'MARKET' && (
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
-              <span>🛒</span> Botanical Dream Market & Custom Items
-            </h2>
-            <span className="text-xs text-neutral-500 font-mono">P2P Decentralized</span>
-          </div>
+      {activeSubTab === 'MARKET' && (() => {
+        const marketItems: DreamMarketItemDef[] = (catalog.dreamMarketItems && catalog.dreamMarketItems.length > 0)
+          ? catalog.dreamMarketItems
+          : INITIAL_DREAM_MARKET_ITEMS;
 
-          <p className="text-xs text-neutral-400">
-            Exchange your minted Sparks for energy surges, GREEN tokens, and specialized botanical items.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-            <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 flex items-center justify-between">
+        return (
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-800/80 pb-3">
               <div>
-                <div className="font-bold text-zinc-200 text-xs">{CURRENCY_ICONS.GREEN} Convert to GREEN Currency</div>
-                <div className="text-[10px] text-zinc-400">{CURRENCY_ICONS.SPARKS} 500 Sparks &rarr; {CURRENCY_ICONS.GREEN} 25 GREEN Tokens</div>
+                <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-wide flex items-center gap-2">
+                  <span>⚡</span> Botanical Dream Market & Vitals Store
+                </h2>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  Convert your minted Sparks into physical Energy, Food Satiety, Nerve, Happiness, Life, and liquid GREEN coins.
+                </p>
               </div>
-              <button
-                onClick={() => {
-                  const res = exchangeDreamSparks('exc_green_50');
-                  setFeedback(res.message);
-                  setTimeout(() => setFeedback(null), 3000);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition"
-              >
-                Exchange
-              </button>
+              <div className="flex items-center gap-2 self-start sm:self-auto bg-neutral-950 px-3 py-1.5 rounded-xl border border-neutral-800">
+                <span className="text-xs text-neutral-400">Balance:</span>
+                <span className="text-amber-400 text-sm font-bold flex items-center gap-1 font-mono">
+                  <span>{CURRENCY_ICONS.SPARKS}</span>
+                  <span>{formatCompactNumber(player.dreamPoints || 0)}</span>
+                </span>
+              </div>
             </div>
 
-            <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 flex items-center justify-between">
-              <div>
-                <div className="font-bold text-zinc-200 text-xs">⚡ Energy Surge Battery</div>
-                <div className="text-[10px] text-zinc-400">300 Sparks &rarr; +50 City Energy</div>
-              </div>
-              <button
-                onClick={() => {
-                  const res = exchangeDreamSparks('exc_energy_10');
-                  setFeedback(res.message);
-                  setTimeout(() => setFeedback(null), 3000);
-                }}
-                className="bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition"
-              >
-                Exchange
-              </button>
+            {/* Items Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {marketItems.map((item) => {
+                const canAfford = (player.dreamPoints || 0) >= item.sparkCost;
+                const isLocked = Boolean(
+                  item.requiredCardId &&
+                  ((player.dreamCards || {})[item.requiredCardId] || 0) < (item.requiredCardLevel || 1)
+                );
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`bg-neutral-950 border rounded-2xl p-4 flex flex-col justify-between transition-all ${
+                      isLocked
+                        ? 'border-neutral-800/50 opacity-75'
+                        : canAfford
+                        ? 'border-neutral-800 hover:border-indigo-500/50 shadow-lg hover:shadow-indigo-950/20'
+                        : 'border-neutral-800/80'
+                    }`}
+                  >
+                    <div>
+                      {/* Top Header: Icon, Title & Price */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center shrink-0">
+                            <DynamicIcon
+                              icon={item.icon}
+                              alt={item.title}
+                              imgClassName="w-7 h-7 object-contain rounded"
+                              className="text-2xl"
+                              fallback="⚡"
+                            />
+                          </div>
+                          <div>
+                            <h3 className="text-xs sm:text-sm font-bold text-white line-clamp-1">
+                              {item.title}
+                            </h3>
+                            <div className="flex items-center gap-1 text-[11px] font-mono text-amber-400 font-semibold mt-0.5">
+                              <span>{CURRENCY_ICONS.SPARKS}</span>
+                              <span>{formatCompactNumber(item.sparkCost)} Sparks</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <button
+                          disabled={!canAfford || isLocked}
+                          onClick={() => {
+                            const res = exchangeDreamSparks(item.id);
+                            setFeedback(res.message);
+                            setTimeout(() => setFeedback(null), 3000);
+                          }}
+                          className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition cursor-pointer shrink-0 ${
+                            isLocked
+                              ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                              : canAfford
+                              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-950/30'
+                              : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-400 cursor-pointer'
+                          }`}
+                        >
+                          {isLocked ? 'Locked' : canAfford ? 'Exchange' : 'Need Sparks'}
+                        </button>
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-[11px] text-neutral-400 mt-2.5 line-clamp-2 leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    {/* Vitals & Restorations Badges */}
+                    <div className="mt-3 pt-3 border-t border-neutral-850 flex flex-wrap items-center gap-1.5">
+                      {Boolean(item.givesEnergy) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center gap-1">
+                          <span>⚡</span> +{item.givesEnergy} Energy
+                        </span>
+                      )}
+                      {Boolean(item.givesFood) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-orange-500/15 border border-orange-500/30 text-orange-300 flex items-center gap-1">
+                          <span>🍞</span> +{item.givesFood} Satiety
+                        </span>
+                      )}
+                      {Boolean(item.givesNerve) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center gap-1">
+                          <span>🧪</span> +{item.givesNerve} Nerve
+                        </span>
+                      )}
+                      {Boolean(item.givesHappy) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-pink-500/15 border border-pink-500/30 text-pink-300 flex items-center gap-1">
+                          <span>😊</span> +{item.givesHappy} Happy
+                        </span>
+                      )}
+                      {Boolean(item.givesLife) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 flex items-center gap-1">
+                          <span>❤️</span> +{item.givesLife} Life
+                        </span>
+                      )}
+                      {Boolean(item.givesGreen) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center gap-1">
+                          <span>{CURRENCY_ICONS.GREEN}</span> +{item.givesGreen} GREEN
+                        </span>
+                      )}
+
+                      {/* Prerequisite Indicator */}
+                      {isLocked && item.requiredCardId && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-neutral-800 text-neutral-400 border border-neutral-700 flex items-center gap-1">
+                          <Lock className="w-2.5 h-2.5 text-amber-400" />
+                          Req: {item.requiredCardId} Lvl {item.requiredCardLevel || 1}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 4. TREE EVOLUTION                                                   */}

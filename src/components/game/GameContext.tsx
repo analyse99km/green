@@ -2802,6 +2802,89 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const exchangeDreamSparks = (exchangeId: string) => {
     const sparks = player.dreamPoints || 0;
 
+    // 0. Dynamic Dream Market Catalog lookup (Admin-editable items)
+    const catalog = loadCatalogData();
+    const dynamicDreamItem = (catalog.dreamMarketItems || []).find(
+      (it) => it.id === exchangeId || (exchangeId === 'exc_green_50' && it.id === 'dream_mint_green_tokens') || (exchangeId === 'exc_energy_10' && it.id === 'dream_surge_battery')
+    );
+    if (dynamicDreamItem) {
+      const cost = Number(dynamicDreamItem.sparkCost) || 0;
+      if (sparks < cost) {
+        triggerInsufficientFunds({
+          currency: 'SPARKS',
+          requiredAmount: cost,
+          currentBalance: sparks,
+          itemName: dynamicDreamItem.title,
+        });
+        return { success: false, message: `Need ${formatCompactNumber(cost)} Sparks.` };
+      }
+
+      // Check card prerequisite if any
+      if (dynamicDreamItem.requiredCardId) {
+        const currentCardLvl = (player.dreamCards || {})[dynamicDreamItem.requiredCardId] || 0;
+        const reqLvl = dynamicDreamItem.requiredCardLevel || 1;
+        if (currentCardLvl < reqLvl) {
+          return { success: false, message: `Requires Card ${dynamicDreamItem.requiredCardId} at Level ${reqLvl}+!` };
+        }
+      }
+
+      setPlayer((prev) => {
+        const nextEnergy = dynamicDreamItem.givesEnergy
+          ? Math.min(prev.maxEnergy || 100, (prev.energy || 0) + dynamicDreamItem.givesEnergy)
+          : prev.energy;
+        const nextFood = dynamicDreamItem.givesFood
+          ? Math.min(prev.maxFood || 100, (prev.food || 70) + dynamicDreamItem.givesFood)
+          : prev.food;
+        const nextNerve = dynamicDreamItem.givesNerve
+          ? Math.min(prev.maxNerve || 50, (prev.nerve || 0) + dynamicDreamItem.givesNerve)
+          : prev.nerve;
+        const nextHappy = dynamicDreamItem.givesHappy
+          ? Math.min(prev.maxHappy || 100, (prev.happy || 0) + dynamicDreamItem.givesHappy)
+          : prev.happy;
+        const nextLife = dynamicDreamItem.givesLife
+          ? Math.min(prev.maxLife || 100, (prev.life || 0) + dynamicDreamItem.givesLife)
+          : prev.life;
+        const nextMoney = dynamicDreamItem.givesGreen
+          ? (prev.money || 0) + dynamicDreamItem.givesGreen
+          : prev.money;
+        const nextGreen = dynamicDreamItem.givesGreen
+          ? (prev.greenTokens || 0) + dynamicDreamItem.givesGreen
+          : prev.greenTokens;
+
+        return {
+          ...prev,
+          dreamPoints: prev.dreamPoints - cost,
+          energy: nextEnergy,
+          food: nextFood,
+          nerve: nextNerve,
+          happy: nextHappy,
+          life: nextLife,
+          money: nextMoney,
+          greenTokens: nextGreen,
+          hasUnsavedActions: true,
+        };
+      });
+
+      SoundEngine.playLoot(player.soundEnabled);
+      addLog({
+        type: 'CIVILIAN',
+        message: `Dream Market: Exchanged ${cost} Sparks for ${dynamicDreamItem.title}!`,
+      });
+
+      const grantedStats: string[] = [];
+      if (dynamicDreamItem.givesEnergy) grantedStats.push(`+${dynamicDreamItem.givesEnergy} Energy`);
+      if (dynamicDreamItem.givesFood) grantedStats.push(`+${dynamicDreamItem.givesFood} Satiety`);
+      if (dynamicDreamItem.givesNerve) grantedStats.push(`+${dynamicDreamItem.givesNerve} Nerve`);
+      if (dynamicDreamItem.givesHappy) grantedStats.push(`+${dynamicDreamItem.givesHappy} Happy`);
+      if (dynamicDreamItem.givesLife) grantedStats.push(`+${dynamicDreamItem.givesLife} Life`);
+      if (dynamicDreamItem.givesGreen) grantedStats.push(`+${dynamicDreamItem.givesGreen} GREEN`);
+
+      return {
+        success: true,
+        message: `Acquired ${dynamicDreamItem.title}! (${grantedStats.join(', ') || 'Vitals Restored'})`,
+      };
+    }
+
     if (exchangeId === 'GREEN_STARTER' || exchangeId === 'GREEN_10') {
       const cost = 15;
       if (sparks < cost) {

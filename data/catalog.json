@@ -1551,5 +1551,98 @@
     ],
     "rewardSparks": 5000000,
     "isCustomOverride": true
-  }
+  },
+  "dreamMarketItems": [
+    {
+      "id": "dream_surge_battery",
+      "title": "⚡ Overclocked Surge Battery",
+      "description": "Overcharged electrolytic cell providing an immediate injection of operational energy.",
+      "icon": "⚡",
+      "sparkCost": 280,
+      "givesEnergy": 55,
+      "givesFood": 0,
+      "givesNerve": 0,
+      "givesHappy": 0,
+      "givesLife": 0,
+      "givesGreen": 0
+    },
+    {
+      "id": "dream_hydro_sourdough",
+      "title": "Hydro-Nutrient Sourdough",
+      "description": "Dense bio-fermented loaf restoring food satiety and baseline happiness.",
+      "icon": "🍞",
+      "sparkCost": 250,
+      "givesEnergy": 0,
+      "givesFood": 45,
+      "givesNerve": 0,
+      "givesHappy": 15,
+      "givesLife": 0,
+      "givesGreen": 0
+    },
+    {
+      "id": "dream_lucid_nectar",
+      "title": "Lucid Nerve Nectar",
+      "description": "Concentrated neuro-botanical extract restoring nerve capacity and mental focus.",
+      "icon": "🧪",
+      "sparkCost": 350,
+      "givesEnergy": 0,
+      "givesFood": 0,
+      "givesNerve": 20,
+      "givesHappy": 10,
+      "givesLife": 0,
+      "givesGreen": 0
+    },
+    {
+      "id": "dream_euphoria_spores",
+      "title": "Euphoria Spore Vial",
+      "description": "Therapeutic bio-spores soothing stress and restoring player morale & happiness.",
+      "icon": "🌸",
+      "sparkCost": 200,
+      "givesEnergy": 0,
+      "givesFood": 0,
+      "givesNerve": 5,
+      "givesHappy": 45,
+      "givesLife": 0,
+      "givesGreen": 0
+    },
+    {
+      "id": "dream_cellular_salve",
+      "title": "Cellular Regeneration Salve",
+      "description": "Advanced organic stem-gel sealing lacerations and restoring health/life points.",
+      "icon": "💊",
+      "sparkCost": 350,
+      "givesEnergy": 0,
+      "givesFood": 0,
+      "givesNerve": 0,
+      "givesHappy": 5,
+      "givesLife": 60,
+      "givesGreen": 0
+    },
+    {
+      "id": "dream_mint_green_tokens",
+      "title": "Mint 25 GREEN Coins",
+      "description": "Crystallize pure dream sparks into minted liquid GREEN economic currency.",
+      "icon": "🪙",
+      "sparkCost": 500,
+      "givesEnergy": 0,
+      "givesFood": 0,
+      "givesNerve": 0,
+      "givesHappy": 0,
+      "givesLife": 0,
+      "givesGreen": 25
+    },
+    {
+      "id": "dream_grand_restoration",
+      "title": "Grand All-Vitals Tonic",
+      "description": "Master bio-brew revitalizing Energy, Satiety, Nerve, Happy, and Life simultaneously.",
+      "icon": "✨",
+      "sparkCost": 950,
+      "givesEnergy": 40,
+      "givesFood": 40,
+      "givesNerve": 15,
+      "givesHappy": 35,
+      "givesLife": 50,
+      "givesGreen": 10
+    }
+  ]
 }
