@@ -71,6 +71,7 @@ export default function TornSidebar({ currentView, onSelectView }: TornSidebarPr
     { id: 'HOSPITAL', label: 'Hospital', icon: Heart },
     { id: 'FACTION', label: `Faction (${player.faction.name})`, icon: Users },
     { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users },
+    { id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true },
   ];
 
   return (

@@ -63,6 +63,8 @@ export interface InventoryItem {
   isCloudItem?: boolean; // Dynamically synced from cloud catalog
   cloudVersion?: string;
   greenTokenCost?: number; // Price in GREEN coins
+  requiredCardId?: string; // Prerequisite Botanical Card required to purchase/use
+  requiredCardLevel?: number; // Prerequisite Card level required (e.g. lvl 3)
 }
 
 export interface BazaarListing {

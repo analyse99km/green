@@ -24,6 +24,7 @@ import AttackView from '@/components/game/views/AttackView';
 import LuckyWheelView from '@/components/game/views/LuckyWheelView';
 import DreamTapView from '@/components/game/views/DreamTapView';
 import ReferralView from '@/components/game/views/ReferralView';
+import { AdminDashboardView } from '@/components/game/views/AdminDashboardView';
 import MobileNavScroll from '@/components/game/MobileNavScroll';
 import MobileSidebarDrawer from '@/components/game/MobileSidebarDrawer';
 import MobileBottomDock from '@/components/game/MobileBottomDock';
@@ -71,7 +72,7 @@ export function TornCityContent() {
 
         {/* Center Main Stage */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 bg-neutral-950 overflow-y-auto">
-          {!isAwakened && currentView !== 'DREAM_TAP' && currentView !== 'REFERRAL' ? (
+          {!isAwakened && currentView !== 'DREAM_TAP' && currentView !== 'REFERRAL' && currentView !== 'ADMIN' ? (
             <div className="max-w-2xl mx-auto p-6 bg-gradient-to-br from-neutral-900 via-indigo-950/40 to-neutral-900 border border-emerald-500/50 rounded-2xl text-center space-y-4 shadow-2xl animate-fadeIn">
               <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-3xl mx-auto shadow-inner">
                 🔒
@@ -138,6 +139,7 @@ export function TornCityContent() {
               {currentView === 'BANK' && <TornBankView />}
               {currentView === 'HOSPITAL' && <TornHospitalView />}
               {currentView === 'CASINO' && <TornCasinoView />}
+              {currentView === 'ADMIN' && <AdminDashboardView />}
               {currentView === 'FACTION' && <TornFactionView />}
               {currentView === 'JAIL' && (
                 <div className="p-8 text-center bg-neutral-900 rounded-2xl border border-neutral-800">

@@ -32,48 +32,12 @@ export default function TornHomeView({ onNavigate }: TornHomeViewProps) {
     togglePropertyLock,
     upgradeVital,
     updatePlayerName,
-    tapDreamEnergy,
-    exchangeDreamSparks,
   } = useGame();
   const [upgradeFeedback, setUpgradeFeedback] = useState<string | null>(null);
   const [lastUpgradedVital, setLastUpgradedVital] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(player.name || '');
-  const [tapCombo, setTapCombo] = useState(0);
-  const [tapFeedback, setTapFeedback] = useState<string | null>(null);
-  const [tapFloaters, setTapFloaters] = useState<{ id: number; text: string; x: number; y: number }[]>([]);
   const currentProperty = player.properties.find((p) => p.id === player.currentPropertyId);
-
-  const handleDirectTap = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if ((player.tapStamina ?? 500) <= 0) {
-      setTapFeedback('⚠️ Tap Stamina exhausted! Refills +10 every 15s.');
-      setTimeout(() => setTapFeedback(null), 2500);
-      return;
-    }
-    const res = tapDreamEnergy();
-    setTapCombo(res.comboStreak);
-    SoundEngine.playTap(player.soundEnabled);
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const id = Date.now() + Math.random();
-    setTapFloaters((prev) => [...prev, { id, text: `+${res.sparksEarned}✨`, x, y }]);
-    setTimeout(() => {
-      setTapFloaters((prev) => prev.filter((f) => f.id !== id));
-    }, 900);
-  };
-
-  const handleQuickRefill = (exchangeId: string) => {
-    const res = exchangeDreamSparks(exchangeId);
-    setTapFeedback(res.message);
-    if (res.success) {
-      SoundEngine.playCash(player.soundEnabled);
-    } else {
-      SoundEngine.playLoss(player.soundEnabled);
-    }
-    setTimeout(() => setTapFeedback(null), 3000);
-  };
 
   const handleSaveName = () => {
     if (!nameInput.trim()) return;
@@ -183,160 +147,7 @@ export default function TornHomeView({ onNavigate }: TornHomeViewProps) {
         </div>
       </div>
 
-      {/* ───────────────────────────────────────────────────────────────────── */}
-      {/* DIRECT PLAY ON MAIN PAGE: QUICK BOTANICAL TAPPER & VITAL REFILLS      */}
-      {/* ───────────────────────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-neutral-950 via-emerald-950/40 to-neutral-950 border-2 border-emerald-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-500/20 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-900/40 border border-emerald-500/40 flex items-center justify-center text-2xl shadow-inner">
-              ⚡
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white font-mono">
-                  Direct Play: Botanical Energy Node
-                </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Instant Tap & Refill
-                </span>
-              </div>
-              <p className="text-xs text-neutral-400">
-                Tap the node to harvest Dream Sparks & convert directly into Energy, Life, and GREEN!
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-3 font-mono text-xs">
-            <div className="bg-neutral-950 px-3 py-1.5 rounded-xl border border-neutral-800 text-right">
-              <span className="text-[10px] text-neutral-500 block">Dream Sparks Bank</span>
-              <span className="text-emerald-400 font-bold text-sm flex items-center gap-1 justify-end">
-                <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
-                {(player.dreamPoints || 0).toLocaleString()}
-              </span>
-            </div>
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate('DREAM_TAP')}
-                className="px-3 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-emerald-300 font-bold border border-emerald-500/30 text-xs transition-all cursor-pointer"
-              >
-                Full Sanctuary →
-              </button>
-            )}
-          </div>
-        </div>
-
-        {tapFeedback && (
-          <div className="p-2 rounded-xl bg-neutral-950 border border-emerald-500/50 text-emerald-300 font-mono text-xs text-center font-bold animate-fadeIn">
-            {tapFeedback}
-          </div>
-        )}
-
-        {/* Tapping Arena & Direct Action */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
-          {/* Giant Interactive Tap Button */}
-          <div className="relative flex flex-col items-center">
-            <button
-              onClick={handleDirectTap}
-              className="relative w-36 h-36 sm:w-40 sm:h-40 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-500 p-1.5 shadow-2xl ring-4 ring-emerald-400/40 hover:scale-105 active:scale-90 transition-all cursor-pointer flex items-center justify-center select-none"
-            >
-              <div className="w-full h-full rounded-full bg-neutral-950/85 backdrop-blur flex flex-col items-center justify-center border border-white/20 shadow-inner">
-                <span className="text-5xl sm:text-6xl select-none filter drop-shadow animate-bounce">
-                  🌱
-                </span>
-                <span className="text-[10px] font-mono font-black text-emerald-300 tracking-wider mt-1">
-                  TAP TO MINT
-                </span>
-              </div>
-
-              {/* Floating Sparks Numbers */}
-              {tapFloaters.map((f) => (
-                <div
-                  key={f.id}
-                  style={{ left: f.x, top: f.y }}
-                  className="absolute pointer-events-none font-mono font-black text-sm text-emerald-300 animate-floatUp drop-shadow"
-                >
-                  {f.text}
-                </div>
-              ))}
-            </button>
-
-            {/* Tap Stamina Meter */}
-            <div className="w-36 sm:w-40 mt-3 space-y-1">
-              <div className="flex justify-between text-[10px] font-mono text-neutral-400">
-                <span>Stamina</span>
-                <span className="text-cyan-400 font-bold">{player.tapStamina ?? 500} / 500</span>
-              </div>
-              <div className="h-2 bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
-                <div
-                  style={{ width: `${Math.min(100, ((player.tapStamina ?? 500) / 500) * 100)}%` }}
-                  className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-150"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Vital Refills (1-Click Buy on Main Page) */}
-          <div className="flex-1 w-full max-w-md space-y-2 font-mono text-xs">
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
-              1-Click Instant Vital Refills
-            </span>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleQuickRefill('ENERGY_STEM')}
-                className="p-2.5 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-emerald-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-400 flex items-center gap-1">⚡ +10 Energy</span>
-                  <span className="text-[10px] text-neutral-400">25 Sparks</span>
-                </div>
-                <span className="text-[10px] text-neutral-500 mt-1">Restores physical stamina</span>
-              </button>
-
-              <button
-                onClick={() => handleQuickRefill('GREEN_STARTER')}
-                className="p-2.5 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-emerald-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-400 flex items-center gap-1">🌿 +50 GREEN</span>
-                  <span className="text-[10px] text-neutral-400">15 Sparks</span>
-                </div>
-                <span className="text-[10px] text-neutral-500 mt-1">Mints underworld coins</span>
-              </button>
-
-              <button
-                onClick={() => handleQuickRefill('LIFE_RESTORE')}
-                className="p-2.5 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-rose-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-rose-400 flex items-center gap-1">❤️ +50 Life</span>
-                  <span className="text-[10px] text-neutral-400">35 Sparks</span>
-                </div>
-                <span className="text-[10px] text-neutral-500 mt-1">Heals HP wounds</span>
-              </button>
-
-              <button
-                onClick={() => handleQuickRefill('FOOD_RATION')}
-                className="p-2.5 rounded-xl bg-neutral-900/90 border border-neutral-800 hover:border-amber-500 text-left transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-amber-400 flex items-center gap-1">🍔 +20 Food</span>
-                  <span className="text-[10px] text-neutral-400">20 Sparks</span>
-                </div>
-                <span className="text-[10px] text-neutral-500 mt-1">Refills satiety gauge</span>
-              </button>
-            </div>
-
-            <button
-              onClick={() => handleQuickRefill('FULL_REVIVE')}
-              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider shadow cursor-pointer transition-all active:scale-95"
-            >
-              ✨ Full Restoration Bundle (Energy, Life, Happy, Food, GREEN) • 80 Sparks
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Level-Up & Attribute Points Allocation Card */}
       <div className="bg-gradient-to-r from-emerald-950/40 via-neutral-900 to-indigo-950/40 border border-emerald-500/40 rounded-2xl p-5 shadow-sm space-y-4">

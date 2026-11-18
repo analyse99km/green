@@ -58,6 +58,7 @@ import {
 } from './gameCrypto';
 import { InsufficientFundsData } from './InsufficientFundsModal';
 import { P2PPurchaseReceipt } from './types';
+import { loadCatalogData, saveCatalogData, DynamicCatalogData, BotanicalCardDef } from './gameCatalog';
 
 const LOCAL_STORAGE_KEY = 'neon_metropolis_v6_botanical_green';
 
@@ -435,19 +436,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
         const staminaGain = (prev.tapStamina || 0) < (prev.maxTapStamina || 500) ? 10 : 0;
 
-        // 10 Botanical Idle Cards Auto-Production
+        // Botanical Idle Cards Dynamic Auto-Production from catalog
         const cards = prev.dreamCards || {};
-        const idleSparks =
-          (cards.card_photosynthesis || 0) * 1 +
-          (cards.card_mycelium || 0) * 3 +
-          (cards.card_spore_chamber || 0) * 8 +
-          (cards.card_greenhouse || 0) * 20 +
-          (cards.card_hydroponic_array || 0) * 50 +
-          (cards.card_bioluminescent_algae || 0) * 120 +
-          (cards.card_sacred_grove || 0) * 300 +
-          (cards.card_genetic_synthesizer || 0) * 750 +
-          (cards.card_yggdrasil_uplink || 0) * 2000 +
-          (cards.card_quantum_chloroplast || 0) * 6000;
+        const catalog = loadCatalogData();
+        let idleSparks = 0;
+        for (const card of catalog.cards) {
+          const lvl = cards[card.id] || 0;
+          if (lvl > 0) {
+            idleSparks += lvl * (card.sparksPerSec || 1);
+          }
+        }
 
         return {
           ...prev,
@@ -829,6 +827,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const buyItem = (item: InventoryItem) => {
+    // Check prerequisite card if configured
+    if (item.requiredCardId) {
+      const currentCardLvl = (player.dreamCards || {})[item.requiredCardId] || 0;
+      const reqLvl = item.requiredCardLevel || 1;
+      if (currentCardLvl < reqLvl) {
+        const catalog = loadCatalogData();
+        const reqCard = catalog.cards.find((c) => c.id === item.requiredCardId);
+        return {
+          success: false,
+          message: `🔒 Locked! Requires Botanical Card "${reqCard?.title || item.requiredCardId}" at Level ${reqLvl} to purchase.`,
+        };
+      }
+    }
+
     if (player.money < item.price) {
       triggerInsufficientFunds({
         currency: 'GREEN',
@@ -2446,43 +2458,36 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const upgradeDreamCard = (cardId: string) => {
+    const catalog = loadCatalogData();
+    const cardDef = catalog.cards.find((c) => c.id === cardId);
     const cards = player.dreamCards || {};
     const currentLvl = cards[cardId] || 0;
-    const baseCosts: Record<string, number> = {
-      card_photosynthesis: 25,
-      card_mycelium: 80,
-      card_spore_chamber: 250,
-      card_greenhouse: 750,
-      card_hydroponic_array: 2200,
-      card_bioluminescent_algae: 6000,
-      card_sacred_grove: 15000,
-      card_genetic_synthesizer: 40000,
-      card_yggdrasil_uplink: 100000,
-      card_quantum_chloroplast: 250000,
-    };
-    const base = baseCosts[cardId] || 50;
-    const cost = Math.round(base * Math.pow(1.35, currentLvl));
+
+    // Prerequisite card enforcement
+    if (cardDef?.requiredCardId) {
+      const reqLvl = cardDef.requiredCardLevel || 1;
+      const currentReqLvl = cards[cardDef.requiredCardId] || 0;
+      if (currentReqLvl < reqLvl) {
+        const reqCard = catalog.cards.find((c) => c.id === cardDef.requiredCardId);
+        return {
+          success: false,
+          message: `🔒 Locked! Requires Botanical Card "${reqCard?.title || cardDef.requiredCardId}" at Level ${reqLvl} to unlock this card.`,
+        };
+      }
+    }
+
+    const base = cardDef?.baseCost || 25;
+    const mult = cardDef?.costMultiplier || 1.35;
+    const cost = Math.round(base * Math.pow(mult, currentLvl));
 
     if ((player.dreamPoints || 0) < cost) {
-      const cardNames: Record<string, string> = {
-        card_photosynthesis: 'Photosynthesis Core (Spore)',
-        card_mycelium: 'Mycelium Network (Spore)',
-        card_spore_chamber: 'Spore Chamber (Spore)',
-        card_greenhouse: 'Greenhouse Flora Dome',
-        card_hydroponic_array: 'Hydroponic Flora Array',
-        card_bioluminescent_algae: 'Bioluminescent Algae',
-        card_sacred_grove: 'Sacred Banyan Grove',
-        card_genetic_synthesizer: 'Genetic Botanical Synthesizer',
-        card_yggdrasil_uplink: 'Yggdrasil World Tree Uplink',
-        card_quantum_chloroplast: 'Quantum Chloroplast Core',
-      };
       triggerInsufficientFunds({
         currency: 'SPARKS',
         requiredAmount: cost,
         currentBalance: player.dreamPoints || 0,
-        itemName: `Botanical Upgrade: ${cardNames[cardId] || cardId.replace('card_', '').replace('_', ' ').toUpperCase()}`,
+        itemName: `Botanical Upgrade: ${cardDef?.title || cardId}`,
       });
-      return { success: false, message: `Need ${cost} Dream Sparks to upgrade this card.` };
+      return { success: false, message: `Need ${cost.toLocaleString()} Dream Sparks to upgrade this card.` };
     }
 
     const nextLvl = currentLvl + 1;
@@ -3010,6 +3015,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (listing.sellerId === player.id) {
       return { success: false, message: 'You cannot buy your own item! Manage it under My Bazaar.' };
     }
+
+    // Check prerequisite card if configured on the item
+    if (listing.item.requiredCardId) {
+      const currentCardLvl = (player.dreamCards || {})[listing.item.requiredCardId] || 0;
+      const reqLvl = listing.item.requiredCardLevel || 1;
+      if (currentCardLvl < reqLvl) {
+        const catalog = loadCatalogData();
+        const reqCard = catalog.cards.find((c) => c.id === listing.item.requiredCardId);
+        return {
+          success: false,
+          message: `🔒 Locked! Requires Botanical Card "${reqCard?.title || listing.item.requiredCardId}" at Level ${reqLvl} to purchase.`,
+        };
+      }
+    }
+
     if (player.money < listing.price) {
       triggerInsufficientFunds({
         currency: 'GREEN',

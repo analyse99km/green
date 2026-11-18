@@ -93,6 +93,7 @@ export default function MobileSidebarDrawer({
         { id: 'HOSPITAL', label: 'Apex Trauma Hospital', icon: Heart },
         { id: 'JAIL', label: 'Correctional Facility', icon: ShieldAlert },
         { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users, highlight: true },
+        { id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true },
       ],
     },
   ];

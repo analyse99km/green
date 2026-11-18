@@ -54,6 +54,7 @@ export default function MobileNavScroll({ currentView, onSelectView }: MobileNav
     { id: 'FACTION', label: `Faction (${player.faction.tag})`, icon: Users },
     { id: 'JAIL', label: 'Jail', icon: ShieldAlert },
     { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users },
+    { id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true },
   ];
 
   return (
