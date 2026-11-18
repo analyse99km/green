@@ -4,28 +4,374 @@
       "id": "SPORES",
       "name": "Mini Spores & Fungi",
       "icon": "🍄",
-      "badge": "Tier 1"
+      "badge": "Tier 1 - Resource Builders"
     },
     {
       "id": "FLORA",
       "name": "Luminescent Flora",
       "icon": "🌸",
-      "badge": "Tier 2"
+      "badge": "Tier 2 - Energy & Synergies"
     },
     {
       "id": "BIG_TREES",
-      "name": "World Ancient Trees",
+      "name": "Ancient Trees",
       "icon": "🌳",
-      "badge": "Tier 3"
+      "badge": "Tier 3 - Anchors & Defense"
     },
     {
       "id": "COSMIC",
       "name": "Cosmic Bio-Engines",
       "icon": "✨",
-      "badge": "Tier 4"
+      "badge": "Tier 4 - Sci-Fi Planetary Scaling"
+    },
+    {
+      "id": "SPECIAL",
+      "name": "Special Events & Boosters",
+      "icon": "⚡",
+      "badge": "Tier 5 - Wildcards & Events"
+    },
+    {
+      "id": "FAUNA",
+      "name": "Pollinators & Fauna",
+      "icon": "🐝",
+      "badge": "Tier 6 - Living Symbionts"
+    },
+    {
+      "id": "SUBTERRANEAN",
+      "name": "Roots & Subterranean",
+      "icon": "⛏️",
+      "badge": "Tier 7 - Deep Earth Aquifers"
     }
   ],
   "cards": [
+    {
+      "id": "card_mycelial_network",
+      "title": "Mycelial Network",
+      "flavor": "Connects adjacent plant systems, sharing resource generation. Grants +10% Symbiosis link and 25% Spores in the Wind propagation.",
+      "baseCost": 75,
+      "sparksPerSec": 2,
+      "icon": "🕸️",
+      "category": "SPORES",
+      "badge": "Tier 2 Uncommon"
+    },
+    {
+      "id": "card_ghost_fungus",
+      "title": "Ghost Fungus (Omphalotus)",
+      "flavor": "Generates a steady trickle of bio-luminescent energy every turn, with boosted yield when adjacent to decaying soil.",
+      "baseCost": 160,
+      "sparksPerSec": 4,
+      "icon": "🍄",
+      "category": "SPORES",
+      "badge": "Bio-Trickle",
+      "requiredCardId": "card_mycelial_network",
+      "requiredCardLevel": 1
+    },
+    {
+      "id": "card_spore_burst",
+      "title": "Spore Burst Pod",
+      "flavor": "Pressurized spore emitter that rapidly multiplies organic sprouts across adjacent open slots.",
+      "baseCost": 450,
+      "sparksPerSec": 10,
+      "icon": "🫧",
+      "category": "SPORES",
+      "badge": "Burst Multiplier",
+      "requiredCardId": "card_ghost_fungus",
+      "requiredCardLevel": 2
+    },
+    {
+      "id": "card_truffle_symbiont",
+      "title": "Truffle Symbiont",
+      "flavor": "Deep mycorrhizal fungi boosting the soil health and spark output of towering tree canopy systems above.",
+      "baseCost": 1200,
+      "sparksPerSec": 25,
+      "icon": "🥔",
+      "category": "SPORES",
+      "badge": "Soil Enricher",
+      "requiredCardId": "card_spore_burst",
+      "requiredCardLevel": 2
+    },
+    {
+      "id": "card_cordyceps_converter",
+      "title": "Cordyceps Converter",
+      "flavor": "Consumes dead organic matter and spent card nodes to permanently multiply global spore synthesis rates.",
+      "baseCost": 3500,
+      "sparksPerSec": 65,
+      "icon": "🧬",
+      "category": "SPORES",
+      "badge": "Fungal Overlord",
+      "requiredCardId": "card_truffle_symbiont",
+      "requiredCardLevel": 3
+    },
+    {
+      "id": "card_moonpetal_fern",
+      "title": "Moonpetal Fern",
+      "flavor": "Absorbs ambient radiation during the day phase and releases concentrated bursts of bio-light sparks at night.",
+      "baseCost": 8500,
+      "sparksPerSec": 140,
+      "icon": "🌿",
+      "category": "FLORA",
+      "badge": "Bio-Light Battery",
+      "requiredCardId": "card_cordyceps_converter",
+      "requiredCardLevel": 1
+    },
+    {
+      "id": "card_lantern_moss",
+      "title": "Lantern Moss",
+      "flavor": "Luminescent ground cover that illuminates adjacent slots, unlocking hidden deep bio-reserves.",
+      "baseCost": 22000,
+      "sparksPerSec": 320,
+      "icon": "🏮",
+      "category": "FLORA",
+      "badge": "Lumen Ground",
+      "requiredCardId": "card_moonpetal_fern",
+      "requiredCardLevel": 2
+    },
+    {
+      "id": "card_neon_foxglove",
+      "title": "Neon Foxglove",
+      "flavor": "Vibrant beacon flower reducing the upgrade spark cost of all neighboring flora cards.",
+      "baseCost": 65000,
+      "sparksPerSec": 750,
+      "icon": "🌸",
+      "category": "FLORA",
+      "badge": "Synergy Beacon",
+      "requiredCardId": "card_lantern_moss",
+      "requiredCardLevel": 2
+    },
+    {
+      "id": "card_abyssal_kelp",
+      "title": "Abyssal Kelp",
+      "flavor": "Thrives in deep cyber-aqueducts, transmuting excess moisture and runoff directly into raw dream sparks.",
+      "baseCost": 180000,
+      "sparksPerSec": 1800,
+      "icon": "🌊",
+      "category": "FLORA",
+      "badge": "Hydra Engine",
+      "requiredCardId": "card_neon_foxglove",
+      "requiredCardLevel": 3
+    },
+    {
+      "id": "card_starlight_orchid",
+      "title": "Starlight Orchid",
+      "flavor": "Rare hyper-luminescent orchid yielding massive spark surges when surrounded by fungal networks.",
+      "baseCost": 480000,
+      "sparksPerSec": 4200,
+      "icon": "🌺",
+      "category": "FLORA",
+      "badge": "Apex Luminescence",
+      "requiredCardId": "card_abyssal_kelp",
+      "requiredCardLevel": 3
+    },
+    {
+      "id": "card_hyperion_redwood",
+      "title": "Hyperion Redwood",
+      "flavor": "Colossal pre-war redwood capturing tons of carbon and anchoring the entire regional ecosystem.",
+      "baseCost": 1500000,
+      "sparksPerSec": 11000,
+      "icon": "🌲",
+      "category": "BIG_TREES",
+      "badge": "Forest Colossus",
+      "requiredCardId": "card_starlight_orchid",
+      "requiredCardLevel": 1
+    },
+    {
+      "id": "card_whispering_banyan",
+      "title": "Whispering Banyan",
+      "flavor": "Spreads massive aerial roots across adjacent zones, claiming empty space as auxiliary bio-generators.",
+      "baseCost": 4200000,
+      "sparksPerSec": 28000,
+      "icon": "🌳",
+      "category": "BIG_TREES",
+      "badge": "Aerial Root Network",
+      "requiredCardId": "card_hyperion_redwood",
+      "requiredCardLevel": 2
+    },
+    {
+      "id": "card_ironwood_sentinel",
+      "title": "Ironwood Sentinel",
+      "flavor": "Dense petrified core that shields all nearby cards from blights, grid overloads, and weather crises.",
+      "baseCost": 12000000,
+      "sparksPerSec": 68000,
+      "icon": "🛡️",
+      "category": "BIG_TREES",
+      "badge": "Blight Shield",
+      "requiredCardId": "card_whispering_banyan",
+      "requiredCardLevel": 2
+    },
+    {
+      "id": "card_ginkgo_elder",
+      "title": "Ginkgo Elder",
+      "flavor": "Ancient immortal tree immune to debuffs, granting compounding bonus yield for every tree in play.",
+      "baseCost": 35000000,
+      "sparksPerSec": 175000,
+      "icon": "🍂",
+      "category": "BIG_TREES",
+      "badge": "Immortal Elder",
+      "requiredCardId": "card_ironwood_sentinel",
+      "requiredCardLevel": 3
+    },
+    {
+      "id": "card_pando_aspen",
+      "title": "Pando Aspen Colony",
+      "flavor": "Single massive subterranean superorganism connected by one root system; grows exponentially with each tier.",
+      "baseCost": 95000000,
+      "sparksPerSec": 420000,
+      "icon": "🏕️",
+      "category": "BIG_TREES",
+      "badge": "Colony Superorganism",
+      "requiredCardId": "card_ginkgo_elder",
+      "requiredCardLevel": 4
+    },
+    {
+      "id": "card_dyson_canopy",
+      "title": "Dyson Canopy",
+      "flavor": "Planetary-scale photosynthetic solar array capturing full spectrum radiation, multiplying global spark generation.",
+      "baseCost": 280000000,
+      "sparksPerSec": 1100000,
+      "icon": "☀️",
+      "category": "COSMIC",
+      "badge": "Orbital Megastructure",
+      "requiredCardId": "card_pando_aspen",
+      "requiredCardLevel": 2
+    },
+    {
+      "id": "card_chloro_reactor",
+      "title": "Chloro-Core Reactor",
+      "flavor": "Quantum bio-reactor transmuting raw organic biomass directly into ultra-dense Cosmic Green energy.",
+      "baseCost": 750000000,
+      "sparksPerSec": 2800000,
+      "icon": "⚛️",
+      "category": "COSMIC",
+      "badge": "Core Fusion",
+      "requiredCardId": "card_dyson_canopy",
+      "requiredCardLevel": 3
+    },
+    {
+      "id": "card_zerog_algae",
+      "title": "Zero-G Algae Vats",
+      "flavor": "Orbital centrifugal cultivating chambers providing continuous spark yield immune to planetary weather penalties.",
+      "baseCost": 1900000000,
+      "sparksPerSec": 6500000,
+      "icon": "🧪",
+      "category": "COSMIC",
+      "badge": "Orbital Farm",
+      "requiredCardId": "card_chloro_reactor",
+      "requiredCardLevel": 3
+    },
+    {
+      "id": "card_nebula_spore_seeder",
+      "title": "Nebula Spore-Seeder",
+      "flavor": "Interstellar launch cannons dispersing living spores across local orbital rings.",
+      "baseCost": 4800000000,
+      "sparksPerSec": 15000000,
+      "icon": "🌌",
+      "category": "COSMIC",
+      "badge": "Interstellar Seeder",
+      "requiredCardId": "card_zerog_algae",
+      "requiredCardLevel": 4
+    },
+    {
+      "id": "card_gaia_terraformer",
+      "title": "Gaia Terraformer",
+      "flavor": "Apex planetary biosphere engine transmuting scorched wastes into thriving cosmic super-forests.",
+      "baseCost": 12000000000,
+      "sparksPerSec": 38000000,
+      "icon": "🪐",
+      "category": "COSMIC",
+      "badge": "Apex Planetary Engine",
+      "requiredCardId": "card_nebula_spore_seeder",
+      "requiredCardLevel": 5
+    },
+    {
+      "id": "card_monsoon_deluge",
+      "title": "Monsoon Deluge",
+      "flavor": "Seasonal tropical superstorm drenching the biosphere, supercharging output of all Fungi and Flora cards.",
+      "baseCost": 250000,
+      "sparksPerSec": 2500,
+      "icon": "🌧️",
+      "category": "SPECIAL",
+      "badge": "Global Weather Event"
+    },
+    {
+      "id": "card_genetic_mutation",
+      "title": "Genetic Chlorophyll Mutation",
+      "flavor": "Allows DNA splicing between flora species, granting permanent passive efficiency boosts to baseline plants.",
+      "baseCost": 650000,
+      "sparksPerSec": 5800,
+      "icon": "🧬",
+      "category": "SPECIAL",
+      "badge": "Gene Enhancer"
+    },
+    {
+      "id": "card_pollinator_swarm",
+      "title": "Pollinator Swarm",
+      "flavor": "Millions of bioluminescent honey-seekers multiplying floral yield and triggering chain-reaction pollination.",
+      "baseCost": 1800000,
+      "sparksPerSec": 15000,
+      "icon": "🐝",
+      "category": "SPECIAL",
+      "badge": "Permanent Booster"
+    },
+    {
+      "id": "card_seed_vault",
+      "title": "Svalbard Cryo-Seed Vault",
+      "flavor": "Sub-zero bio-archive safeguarding endangered botanical species and locking rare market offers.",
+      "baseCost": 5500000,
+      "sparksPerSec": 42000,
+      "icon": "🏦",
+      "category": "SPECIAL",
+      "badge": "Bio-Storage Utility"
+    },
+    {
+      "id": "card_photosynthetic_surge",
+      "title": "Photosynthetic Surge",
+      "flavor": "Instant solar flashover triggering massive immediate resource production across all active cards.",
+      "baseCost": 15000000,
+      "sparksPerSec": 110000,
+      "icon": "⚡",
+      "category": "SPECIAL",
+      "badge": "Instant Catalyst"
+    },
+    {
+      "id": "card_biomoth_pollinator",
+      "title": "Neon Bio-Moth Colony",
+      "flavor": "Nocturnal pollinator species navigating by starlight, boosting Night-Phase flora cards.",
+      "baseCost": 850000,
+      "sparksPerSec": 7200,
+      "icon": "🦋",
+      "category": "FAUNA",
+      "badge": "Nocturnal Pollinator"
+    },
+    {
+      "id": "card_sol_tortoise",
+      "title": "Solar Galapagos Tortoise",
+      "flavor": "Slow-moving moss-backed ancient wanderer fertilizing soil tiles wherever it roams.",
+      "baseCost": 3200000,
+      "sparksPerSec": 24000,
+      "icon": "🐢",
+      "category": "FAUNA",
+      "badge": "Living Sanctuary"
+    },
+    {
+      "id": "card_subterranean_aquifer",
+      "title": "Deep Geo-Thermal Aquifer",
+      "flavor": "Vast pressurized freshwater reservoir feeding underground taproots with mineral-rich steam.",
+      "baseCost": 950000,
+      "sparksPerSec": 8500,
+      "icon": "💧",
+      "category": "SUBTERRANEAN",
+      "badge": "Aquifer Reservoir"
+    },
+    {
+      "id": "card_crystal_mycelium_cave",
+      "title": "Luminescent Crystal Geode Cave",
+      "flavor": "Subterranean quartz cavern echoing with harmonic resonant frequencies that stimulate root growth.",
+      "baseCost": 4500000,
+      "sparksPerSec": 35000,
+      "icon": "💎",
+      "category": "SUBTERRANEAN",
+      "badge": "Geode Harmonic"
+    },
     {
       "id": "card_photosynthesis",
       "title": "Micro Chlorophyll Sprout",
@@ -111,7 +457,7 @@
       "forgePrice": 450,
       "forgeSparksPrice": 60,
       "forgeDamageBonus": 8.5,
-      "forgeAccuracyBonus": 3.0,
+      "forgeAccuracyBonus": 3,
       "icon": "🔫"
     },
     {
@@ -128,7 +474,7 @@
       },
       "forgePrice": 350,
       "forgeSparksPrice": 50,
-      "forgeDefenseBonus": 5.0,
+      "forgeDefenseBonus": 5,
       "icon": "🦺"
     },
     {
@@ -312,31 +658,95 @@
       "icon": "💿"
     },
     {
-      "id": "item_1795010094407",
-      "name": "one",
-      "description": "use this to revive!",
+      "id": "item_pruning_machete",
+      "name": "Titanium Bio-Pruning Machete",
+      "description": "Heavy titanium alloy blade with razor edge for clearing dense undergrowth and slicing adversaries.",
       "category": "WEAPON",
-      "price": 500,
-      "marketValue": 500,
-      "icon": "📦"
+      "price": 1250,
+      "marketValue": 1200,
+      "damage": 55.4,
+      "accuracy": 62.0,
+      "statBonus": {
+        "strength": 15,
+        "dexterity": 8
+      },
+      "forgePrice": 320,
+      "forgeSparksPrice": 45,
+      "forgeDamageBonus": 7.5,
+      "forgeAccuracyBonus": 2.8,
+      "shopliftDifficulty": 42,
+      "icon": "🗡️"
     },
     {
-      "id": "item_1795010096393",
-      "name": "one",
-      "description": "use this to revive!",
-      "category": "WEAPON",
-      "price": 500,
-      "marketValue": 500,
-      "icon": "📦"
+      "id": "item_bark_exosuit",
+      "name": "Ironwood Bark-Weave Exosuit",
+      "description": "Lightweight flexible tactical body armor woven from compressed ironwood fibers and Kevlar weave.",
+      "category": "ARMOR",
+      "price": 3800,
+      "marketValue": 3650,
+      "defense": 42.5,
+      "statBonus": {
+        "defense": 35
+      },
+      "forgePrice": 420,
+      "forgeSparksPrice": 55,
+      "forgeDefenseBonus": 6.5,
+      "shopliftDifficulty": 60,
+      "icon": "🦺"
     },
     {
-      "id": "item_1795010098612",
-      "name": "one",
-      "description": "use this to revive!",
-      "category": "WEAPON",
-      "price": 500,
-      "marketValue": 500,
-      "icon": "📦"
+      "id": "item_spore_vial",
+      "name": "Bioluminescent Spore Tonic",
+      "description": "Concentrated micro-algae and spore serum that instantly supercharges adrenaline and cognitive stamina.",
+      "category": "MEDICAL",
+      "price": 420,
+      "marketValue": 400,
+      "lifeRestore": 65,
+      "energyRestore": 30,
+      "happyRestore": 20,
+      "shopliftDifficulty": 30,
+      "icon": "🧪"
+    },
+    {
+      "id": "item_compost_ration",
+      "name": "Hydroponic Superfood Ration",
+      "description": "Nutrient-packed meal block made from compressed microgreens, quinoa, and synthetic plant protein.",
+      "category": "FOOD",
+      "price": 110,
+      "marketValue": 105,
+      "foodRestore": 40,
+      "energyRestore": 30,
+      "happyRestore": 15,
+      "lifeRestore": 15,
+      "usableIn": [
+        "ALL",
+        "HOME",
+        "RESTAURANT"
+      ],
+      "shopliftDifficulty": 20,
+      "icon": "🥗"
+    },
+    {
+      "id": "item_soil_enricher",
+      "name": "Bio-Nutrient Soil Injector",
+      "description": "Specialized agricultural tool enhancing burglary and shoplifting extraction operations.",
+      "category": "TOOL",
+      "price": 850,
+      "marketValue": 800,
+      "perkDescription": "+12% Burglary success & +5% crime XP",
+      "shopliftDifficulty": 38,
+      "icon": "💉"
+    },
+    {
+      "id": "item_queen_cage",
+      "name": "Apex Bio-Pollinator Queen Specimen",
+      "description": "Exotic bioluminescent queen bee housed in a gold-plated atmospheric terrarium. Extremely valuable.",
+      "category": "LUXURY",
+      "price": 5500,
+      "marketValue": 5500,
+      "perkDescription": "High-yield luxury asset with premium pawn value",
+      "shopliftDifficulty": 68,
+      "icon": "👑"
     }
   ],
   "dailyComboOverride": {
