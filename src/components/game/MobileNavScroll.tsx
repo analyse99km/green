@@ -32,6 +32,12 @@ interface MobileNavScrollProps {
 export default function MobileNavScroll({ currentView, onSelectView }: MobileNavScrollProps) {
   const { player } = useGame();
 
+  const isLocalAdmin =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.search.includes('admin=true'));
+
   const navItems = [
     { id: 'DREAM_TAP', label: '⚡ Dream Tap', icon: Zap, special: true },
     { id: 'HOME', label: 'Home', icon: Home },
@@ -54,7 +60,7 @@ export default function MobileNavScroll({ currentView, onSelectView }: MobileNav
     { id: 'FACTION', label: `Faction (${player.faction.tag})`, icon: Users },
     { id: 'JAIL', label: 'Jail', icon: ShieldAlert },
     { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users },
-    { id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true },
+    ...(isLocalAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
   ];
 
   return (

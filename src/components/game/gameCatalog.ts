@@ -253,10 +253,82 @@ export const INITIAL_BOTANICAL_CARDS: BotanicalCardDef[] = [
 
 const CATALOG_STORAGE_KEY = 'METROPOLIS_DYNAMIC_CATALOG';
 
+export interface DailyComboDef {
+  date: string; // YYYY-MM-DD
+  cardIds: [string, string, string];
+  rewardSparks: number;
+  isCustomOverride?: boolean;
+}
+
+export interface DailyStreakRewardItem {
+  day: number;
+  label: string;
+  reward: string;
+  icon: string;
+  cash?: number;
+  energy?: number;
+  nerve?: number;
+  sparks?: number;
+  green?: number;
+  item?: string;
+}
+
+export const DEFAULT_DAILY_STREAK_REWARDS: DailyStreakRewardItem[] = [
+  { day: 1, label: 'Day 1', reward: '$10,000 Cash + 25 Energy', icon: '🪙', cash: 10000, energy: 25 },
+  { day: 2, label: 'Day 2', reward: '50 Sparks + 10 Nerve', icon: '🔑', sparks: 50, nerve: 10 },
+  { day: 3, label: 'Day 3', reward: 'Titanium Lockpick + $25,000', icon: '🪙', cash: 25000, item: 'Titanium Tension Lockpick' },
+  { day: 4, label: 'Day 4', reward: '🌿 50 GREEN + 50 Energy Surge', icon: '🔑', green: 50, energy: 50 },
+  { day: 5, label: 'Day 5', reward: 'Tactical Wagyu Ribeye + 15 Nerve', icon: '🪙', nerve: 15, item: 'Tactical Wagyu Ribeye' },
+  { day: 6, label: 'Day 6', reward: '18k Gold Ring + 100 Sparks', icon: '🔑', sparks: 100, item: '18k Gold Signet Ring' },
+  { day: 7, label: 'Day 7', reward: '👑 Syndicate Grand Crate: 🌿 150 GREEN + $100K', icon: '🌿', cash: 100000, energy: 100, nerve: 20, green: 150 },
+];
+
 export interface DynamicCatalogData {
   categories: BotanicalCategoryDef[];
   cards: BotanicalCardDef[];
   customItems: DynamicItemDef[];
+  dailyComboOverride?: DailyComboDef;
+  customDailyStreakRewards?: DailyStreakRewardItem[];
+}
+
+export function getTodayDateString(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getTodayDailyCombo(catalog: DynamicCatalogData): DailyComboDef {
+  const today = getTodayDateString();
+  if (
+    catalog.dailyComboOverride &&
+    catalog.dailyComboOverride.date === today &&
+    catalog.dailyComboOverride.isCustomOverride
+  ) {
+    return catalog.dailyComboOverride;
+  }
+
+  // Automatic deterministic daily pseudo-random selection based on date string
+  const cards = catalog.cards && catalog.cards.length >= 3 ? catalog.cards : INITIAL_BOTANICAL_CARDS;
+  let hash = 0;
+  for (let i = 0; i < today.length; i++) {
+    hash = (hash << 5) - hash + today.charCodeAt(i);
+    hash |= 0;
+  }
+  const absHash = Math.abs(hash);
+  const idx1 = absHash % cards.length;
+  let idx2 = (absHash * 3 + 7) % cards.length;
+  if (idx2 === idx1) idx2 = (idx1 + 1) % cards.length;
+  let idx3 = (absHash * 7 + 13) % cards.length;
+  if (idx3 === idx1 || idx3 === idx2) idx3 = (idx1 + 2) % cards.length;
+
+  return {
+    date: today,
+    cardIds: [cards[idx1].id, cards[idx2].id, cards[idx3].id],
+    rewardSparks: catalog.dailyComboOverride?.rewardSparks || 5000000,
+    isCustomOverride: false,
+  };
 }
 
 export function loadCatalogData(): DynamicCatalogData {
@@ -276,6 +348,8 @@ export function loadCatalogData(): DynamicCatalogData {
         categories: parsed.categories && parsed.categories.length > 0 ? parsed.categories : INITIAL_BOTANICAL_CATEGORIES,
         cards: parsed.cards && parsed.cards.length > 0 ? parsed.cards : INITIAL_BOTANICAL_CARDS,
         customItems: parsed.customItems || [],
+        dailyComboOverride: parsed.dailyComboOverride,
+        customDailyStreakRewards: parsed.customDailyStreakRewards,
       };
     }
   } catch (err) {

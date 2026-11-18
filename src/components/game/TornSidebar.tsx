@@ -49,6 +49,12 @@ export default function TornSidebar({ currentView, onSelectView }: TornSidebarPr
     player.workingStats.intelligence +
     player.workingStats.endurance;
 
+  const isLocalAdmin =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.search.includes('admin=true'));
+
   const navItems = [
     { id: 'HOME', label: 'Home', icon: Home },
     { id: 'ITEMS', label: '🎒 Items & Outfitter', icon: Package },
@@ -71,7 +77,7 @@ export default function TornSidebar({ currentView, onSelectView }: TornSidebarPr
     { id: 'HOSPITAL', label: 'Hospital', icon: Heart },
     { id: 'FACTION', label: `Faction (${player.faction.name})`, icon: Users },
     { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users },
-    { id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true },
+    ...(isLocalAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
   ];
 
   return (

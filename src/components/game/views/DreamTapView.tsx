@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import ReferralView from './ReferralView';
 import { SoundEngine } from '../gameAudio';
-import { loadCatalogData, DynamicCatalogData, BotanicalCardDef } from '../gameCatalog';
+import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef } from '../gameCatalog';
 
 interface FloatingText {
   id: number;
@@ -64,6 +64,8 @@ export default function DreamTapView() {
   const [isPressing, setIsPressing] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyWeekTab, setDailyWeekTab] = useState<number>(1);
+
+  const todayCombo = getTodayDailyCombo(catalog);
 
   // Load catalog data
   useEffect(() => {
@@ -263,7 +265,7 @@ export default function DreamTapView() {
       {/* 1. DIRECT PLAY: 100% ZERO-SCROLL TAPPING VIEWPORT (HAMSTER STYLE)   */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeSubTab === 'TAP_CORE' && (
-        <div className="bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border border-neutral-800 rounded-3xl p-4 sm:p-5 shadow-2xl relative flex flex-col justify-between min-h-[580px]">
+        <div className="bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border border-neutral-800 rounded-3xl p-3 sm:p-5 shadow-2xl relative flex flex-col justify-between">
           {/* TOP STATS TRIO (Exact Hamster Kombat Pill Headers) */}
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-2.5 text-center">
@@ -291,17 +293,17 @@ export default function DreamTapView() {
           </div>
 
           {/* MAIN BALANCE & LEVEL STATUS */}
-          <div className="text-center my-3">
+          <div className="text-center my-1.5 sm:my-3">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-3xl sm:text-4xl animate-bounce">🪙</span>
-              <span className="text-3xl sm:text-4xl font-black tracking-tight text-white font-mono">
+              <span className="text-2xl sm:text-4xl animate-bounce">🪙</span>
+              <span className="text-2xl sm:text-4xl font-black tracking-tight text-white font-mono">
                 {(player.dreamPoints || 0).toLocaleString()}
               </span>
             </div>
 
             {/* Level Bar */}
-            <div className="max-w-md mx-auto mt-2 px-2">
-              <div className="flex items-center justify-between text-[11px] text-neutral-400 mb-1">
+            <div className="max-w-md mx-auto mt-1 sm:mt-2 px-2">
+              <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-neutral-400 mb-0.5 sm:mb-1">
                 <span className="font-bold text-zinc-300">
                   🌿 {currentPlant.name}
                 </span>
@@ -309,7 +311,7 @@ export default function DreamTapView() {
                   Level {player.level || 1}/10
                 </span>
               </div>
-              <div className="w-full bg-neutral-900 h-2.5 rounded-full overflow-hidden border border-neutral-800">
+              <div className="w-full bg-neutral-900 h-2 sm:h-2.5 rounded-full overflow-hidden border border-neutral-800">
                 <div
                   className="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 h-full rounded-full transition-all duration-300 shadow-sm"
                   style={{ width: `${Math.min(100, ((player.dreamPoints || 0) / (5000 * (player.level || 1))) * 100)}%` }}
@@ -319,22 +321,22 @@ export default function DreamTapView() {
           </div>
 
           {/* QUICK ACTION ROW (Daily Reward, Daily Combo, Quick Awake) */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-w-lg mx-auto w-full my-1">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-w-lg mx-auto w-full my-1">
             <button
               onClick={() => {
                 SoundEngine.playTick(player.soundEnabled);
                 setShowDailyRewardModal(true);
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-2 text-center transition flex flex-col items-center justify-center gap-1 group"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 group"
             >
               <div className="relative">
-                <span className="text-lg">🎁</span>
+                <span className="text-base sm:text-lg">🎁</span>
                 {canClaim && (
                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
                 )}
               </div>
-              <span className="text-[10px] font-bold text-neutral-200">Daily Reward</span>
-              <span className="text-[9px] text-emerald-400 font-mono">
+              <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Daily Reward</span>
+              <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono">
                 {canClaim ? 'CLAIM NOW' : `Day ${currentStreakDay}`}
               </span>
             </button>
@@ -344,11 +346,11 @@ export default function DreamTapView() {
                 SoundEngine.playTick(player.soundEnabled);
                 setActiveSubTab('CARDS_STORE');
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-2 text-center transition flex flex-col items-center justify-center gap-1"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1"
             >
-              <span className="text-lg">🃏</span>
-              <span className="text-[10px] font-bold text-neutral-200">Daily Combo</span>
-              <span className="text-[9px] text-amber-400 font-mono">+5M Sparks</span>
+              <span className="text-base sm:text-lg">🃏</span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Daily Combo</span>
+              <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">+{(todayCombo.rewardSparks / 1000000).toFixed(0)}M Sparks</span>
             </button>
 
             <button
@@ -356,11 +358,11 @@ export default function DreamTapView() {
                 SoundEngine.playTick(player.soundEnabled);
                 setActiveSubTab('REFERRALS');
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-2 text-center transition flex flex-col items-center justify-center gap-1"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1"
             >
-              <span className="text-lg">👥</span>
-              <span className="text-[10px] font-bold text-neutral-200">Friends</span>
-              <span className="text-[9px] text-cyan-400 font-mono">Royalty +50G</span>
+              <span className="text-base sm:text-lg">👥</span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Friends</span>
+              <span className="text-[8px] sm:text-[9px] text-cyan-400 font-mono">Royalty +50G</span>
             </button>
 
             <button
@@ -377,9 +379,9 @@ export default function DreamTapView() {
           </div>
 
           {/* CENTER: THE BIG CIRCULAR GLOWING ARENA (DIRECT PLAY) */}
-          <div className="relative flex items-center justify-center my-3 select-none">
+          <div className="relative flex items-center justify-center my-1 sm:my-3 select-none">
             {/* Ambient Multi-Ring Glow */}
-            <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-full bg-gradient-to-tr from-emerald-600/30 via-teal-500/20 to-cyan-500/30 blur-2xl absolute pointer-events-none animate-pulse" />
+            <div className="w-44 h-44 sm:w-60 sm:h-60 rounded-full bg-gradient-to-tr from-emerald-600/30 via-teal-500/20 to-cyan-500/30 blur-2xl absolute pointer-events-none animate-pulse" />
 
             <button
               onClick={handleTap}
@@ -387,18 +389,18 @@ export default function DreamTapView() {
               onTouchEnd={() => setIsPressing(false)}
               onMouseDown={() => setIsPressing(true)}
               onMouseUp={() => setIsPressing(false)}
-              className={`relative z-10 w-48 h-48 sm:w-56 sm:h-56 rounded-full p-2 bg-gradient-to-b from-emerald-400 via-teal-600 to-emerald-950 shadow-2xl transition-all duration-100 flex items-center justify-center cursor-pointer outline-none ${
+              className={`relative z-10 w-36 h-36 sm:w-52 sm:h-52 rounded-full p-2 bg-gradient-to-b from-emerald-400 via-teal-600 to-emerald-950 shadow-2xl transition-all duration-100 flex items-center justify-center cursor-pointer outline-none ${
                 isPressing ? 'scale-95 shadow-inner' : 'hover:scale-102 hover:shadow-emerald-500/30'
               }`}
             >
               {/* Inner Circle Disc */}
               <div className="w-full h-full rounded-full bg-gradient-to-b from-neutral-900 to-black border-4 border-emerald-400/40 flex flex-col items-center justify-center relative overflow-hidden">
-                <span className="text-7xl sm:text-8xl filter drop-shadow-[0_0_15px_rgba(52,211,153,0.6)] transform transition-transform duration-100 select-none">
+                <span className="text-5xl sm:text-7xl filter drop-shadow-[0_0_15px_rgba(52,211,153,0.6)] transform transition-transform duration-100 select-none">
                   {currentPlant.icon}
                 </span>
 
-                <div className="absolute bottom-3 text-center">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                <div className="absolute bottom-2 sm:bottom-3 text-center">
+                  <div className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-400">
                     TAP TO MINT
                   </div>
                 </div>
@@ -451,28 +453,54 @@ export default function DreamTapView() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-neutral-200">Daily combo</span>
+                <span className="text-[10px] font-mono text-zinc-400">({todayCombo.date})</span>
                 <div className="flex gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                  {todayCombo.cardIds.map((cid, i) => (
+                    <span
+                      key={i}
+                      className={`w-2.5 h-2.5 rounded-full ${
+                        (cards[cid] || 0) > 0 ? 'bg-emerald-500' : 'bg-neutral-700'
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
               <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1 shadow">
-                <span>🪙</span> +5,000,000 Sparks
+                <span>🪙</span> +{todayCombo.rewardSparks.toLocaleString()} Sparks
               </div>
             </div>
 
             {/* 3 Mystery Slots */}
-            <div className="grid grid-cols-3 gap-3">
-              {[0, 1, 2].map((slot) => (
-                <div
-                  key={slot}
-                  className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 flex flex-col items-center justify-center min-h-[90px] relative overflow-hidden"
-                >
-                  <span className="text-3xl text-amber-400/80 font-black">?</span>
-                  <div className="text-[10px] text-neutral-400 mt-1">Secret Card</div>
-                </div>
-              ))}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              {todayCombo.cardIds.map((cid, slot) => {
+                const isGuessed = (cards[cid] || 0) > 0;
+                const foundCard = catalog.cards.find((c) => c.id === cid);
+                return (
+                  <div
+                    key={slot}
+                    className={`border rounded-xl p-2.5 sm:p-3 flex flex-col items-center justify-center min-h-[90px] relative overflow-hidden transition ${
+                      isGuessed
+                        ? 'bg-emerald-950/40 border-emerald-500/60'
+                        : 'bg-neutral-950 border-neutral-800'
+                    }`}
+                  >
+                    {isGuessed ? (
+                      <>
+                        <span className="text-2xl">{foundCard?.icon || '🌱'}</span>
+                        <div className="text-[10px] font-bold text-emerald-300 mt-1 text-center line-clamp-1">
+                          {foundCard?.title || cid}
+                        </div>
+                        <span className="absolute top-1 right-1 text-emerald-400 text-xs">✓</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-3xl text-amber-400/80 font-black">?</span>
+                        <div className="text-[10px] text-neutral-400 mt-1">Secret Card</div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

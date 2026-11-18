@@ -53,6 +53,12 @@ export default function MobileSidebarDrawer({
     onClose();
   };
 
+  const isLocalAdmin =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.search.includes('admin=true'));
+
   const navSections = [
     {
       title: 'Action & Underworld',
@@ -93,7 +99,7 @@ export default function MobileSidebarDrawer({
         { id: 'HOSPITAL', label: 'Apex Trauma Hospital', icon: Heart },
         { id: 'JAIL', label: 'Correctional Facility', icon: ShieldAlert },
         { id: 'REFERRAL', label: '👥 Referrals & Rewards', icon: Users, highlight: true },
-        { id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true },
+        ...(isLocalAdmin ? [{ id: 'ADMIN', label: '🛠️ Admin Console', icon: ShieldAlert, highlight: true }] : []),
       ],
     },
   ];
