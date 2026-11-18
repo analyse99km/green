@@ -2331,8 +2331,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const currentLevel = item.upgradeLevel || 0;
     if (currentLevel >= 10) return { success: false, message: 'Item is already at MAX Level (+10)!' };
 
-    const cashCost = (currentLevel + 1) * 250;
-    const sparkCost = (currentLevel + 1) * 40;
+    const cashCost = (currentLevel + 1) * (item.forgePrice ?? 250);
+    const sparkCost = (currentLevel + 1) * (item.forgeSparksPrice ?? 40);
 
     if (useSparks) {
       if ((player.dreamPoints || 0) < sparkCost) {
@@ -2379,9 +2379,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const cleanBaseName = item.name.replace(/\s\(\+\d+\)$/, '');
     const newName = `${cleanBaseName} (+${nextLevel})`;
 
-    const bonusDamage = item.damage ? Math.round(item.damage * 1.15 * 10) / 10 : undefined;
-    const bonusAccuracy = item.accuracy ? Math.min(99, Math.round(item.accuracy * 1.05 * 10) / 10) : undefined;
-    const bonusDefense = item.defense ? Math.round(item.defense * 1.20 * 10) / 10 : undefined;
+    const bonusDamage = item.damage
+      ? (item.forgeDamageBonus !== undefined
+          ? Math.round((item.damage + item.forgeDamageBonus) * 10) / 10
+          : Math.round(item.damage * 1.15 * 10) / 10)
+      : undefined;
+    const bonusAccuracy = item.accuracy
+      ? Math.min(
+          99,
+          item.forgeAccuracyBonus !== undefined
+            ? Math.round((item.accuracy + item.forgeAccuracyBonus) * 10) / 10
+            : Math.round(item.accuracy * 1.05 * 10) / 10
+        )
+      : undefined;
+    const bonusDefense = item.defense
+      ? (item.forgeDefenseBonus !== undefined
+          ? Math.round((item.defense + item.forgeDefenseBonus) * 10) / 10
+          : Math.round(item.defense * 1.20 * 10) / 10)
+      : undefined;
     const bonusValue = Math.round(item.marketValue * 1.35);
 
     setPlayer((prev) => ({

@@ -73,7 +73,272 @@
       "requiredCardLevel": 3
     }
   ],
-  "customItems": [],
+  "customItems": [
+    {
+      "id": "item_knife",
+      "name": "Combat Trench Knife",
+      "description": "Basic serrated combat knife.",
+      "category": "WEAPON",
+      "price": 450,
+      "marketValue": 430,
+      "shopliftDifficulty": 35,
+      "damage": 46.06,
+      "accuracy": 51.82,
+      "statBonus": {
+        "strength": 8,
+        "dexterity": 4
+      },
+      "forgePrice": 250,
+      "forgeSparksPrice": 40,
+      "forgeDamageBonus": 6.5,
+      "forgeAccuracyBonus": 2.5,
+      "icon": "🗡️"
+    },
+    {
+      "id": "item_pistol",
+      "name": "Glock 19 (9mm Silenced)",
+      "description": "Tactical sidearm with suppressor.",
+      "category": "WEAPON",
+      "price": 3200,
+      "marketValue": 3100,
+      "shopliftDifficulty": 65,
+      "damage": 61.51,
+      "accuracy": 55.23,
+      "statBonus": {
+        "strength": 25,
+        "speed": 10
+      },
+      "forgePrice": 450,
+      "forgeSparksPrice": 60,
+      "forgeDamageBonus": 8.5,
+      "forgeAccuracyBonus": 3.0,
+      "icon": "🔫"
+    },
+    {
+      "id": "item_kevlar",
+      "name": "Concealed Kevlar Vest",
+      "description": "Basic small-arms ballistic protection.",
+      "category": "ARMOR",
+      "price": 2400,
+      "marketValue": 2350,
+      "shopliftDifficulty": 55,
+      "defense": 29.51,
+      "statBonus": {
+        "defense": 25
+      },
+      "forgePrice": 350,
+      "forgeSparksPrice": 50,
+      "forgeDefenseBonus": 5.0,
+      "icon": "🦺"
+    },
+    {
+      "id": "item_glasses",
+      "name": "Detective Sunglasses",
+      "description": "Enhancer: +5% Search for cash crime exp & skill gain.",
+      "category": "ENHANCER",
+      "price": 18000,
+      "marketValue": 17500,
+      "shopliftDifficulty": 40,
+      "perkDescription": "+5% Search for cash crime exp & skill gain",
+      "icon": "🕶️"
+    },
+    {
+      "id": "item_megaphone",
+      "name": "Street Megaphone",
+      "description": "Enhancer: +5% Hustling crime exp & skill gain.",
+      "category": "ENHANCER",
+      "price": 29741,
+      "marketValue": 29741,
+      "shopliftDifficulty": 45,
+      "perkDescription": "+5% Hustling crime exp & skill gain",
+      "icon": "📢"
+    },
+    {
+      "id": "item_ramen",
+      "name": "Synthetix Cyber Ramen",
+      "description": "Chef-crafted food: Restores +25 Energy & +15 Happy.",
+      "category": "FOOD",
+      "price:": 45,
+      "price": 45,
+      "marketValue": 45,
+      "shopliftDifficulty": 20,
+      "foodRestore": 25,
+      "energyRestore": 25,
+      "happyRestore": 15,
+      "lifeRestore": 5,
+      "usableIn": [
+        "ALL",
+        "HOME",
+        "RESTAURANT"
+      ],
+      "icon": "🍜"
+    },
+    {
+      "id": "item_shake",
+      "name": "Dragon Heavy Protein Shake",
+      "description": "Chef-crafted food: Restores +40 Energy immediately.",
+      "category": "FOOD",
+      "price": 95,
+      "marketValue": 95,
+      "shopliftDifficulty": 25,
+      "foodRestore": 15,
+      "energyRestore": 40,
+      "happyRestore": 10,
+      "lifeRestore": 10,
+      "usableIn": [
+        "ALL",
+        "HOME",
+        "RESTAURANT"
+      ],
+      "icon": "🥤"
+    },
+    {
+      "id": "item_medkit",
+      "name": "First Aid Emergency Kit",
+      "description": "Restores 50 HP immediately.",
+      "category": "MEDICAL",
+      "price": 350,
+      "marketValue": 340,
+      "shopliftDifficulty": 25,
+      "lifeRestore": 50,
+      "energyRestore": 10,
+      "happyRestore": 5,
+      "usableIn": [
+        "ALL",
+        "HOME",
+        "RESTAURANT"
+      ],
+      "icon": "🩹"
+    },
+    {
+      "id": "item_steak",
+      "name": "Tactical Wagyu Ribeye",
+      "description": "High-protein chef meal: Restores +30 Food, +35 Energy, +25 Happy & +40 Life.",
+      "category": "FOOD",
+      "price": 320,
+      "marketValue": 310,
+      "shopliftDifficulty": 40,
+      "foodRestore": 30,
+      "energyRestore": 35,
+      "happyRestore": 25,
+      "lifeRestore": 40,
+      "usableIn": [
+        "ALL",
+        "HOME",
+        "RESTAURANT"
+      ],
+      "icon": "🥩"
+    },
+    {
+      "id": "item_sandwich",
+      "name": "Clubhouse Deli Sub",
+      "description": "Fresh deli sandwich: Restores +20 Food & +15 Energy.",
+      "category": "FOOD",
+      "price": 25,
+      "marketValue": 25,
+      "shopliftDifficulty": 15,
+      "foodRestore": 20,
+      "energyRestore": 15,
+      "happyRestore": 10,
+      "lifeRestore": 5,
+      "usableIn": [
+        "ALL",
+        "HOME",
+        "RESTAURANT"
+      ],
+      "icon": "🥪"
+    },
+    {
+      "id": "item_energy_drink",
+      "name": "Neon Voltage Energy Can",
+      "description": "High caffeine stamina boost: Restores +25 Energy & +10 Happy.",
+      "category": "FOOD",
+      "price": 35,
+      "marketValue": 35,
+      "shopliftDifficulty": 15,
+      "foodRestore": 5,
+      "energyRestore": 25,
+      "happyRestore": 10,
+      "lifeRestore": 0,
+      "usableIn": [
+        "ALL",
+        "HOME",
+        "RESTAURANT"
+      ],
+      "icon": "⚡"
+    },
+    {
+      "id": "item_gold_ring",
+      "name": "Vintage Gold Signet Ring",
+      "description": "Valuable jewelry found while beachcombing. Can be pawned for cash.",
+      "category": "LUXURY",
+      "price": 1800,
+      "marketValue": 1800,
+      "shopliftDifficulty": 50,
+      "perkDescription": "High liquidity luxury asset",
+      "icon": "💍"
+    },
+    {
+      "id": "item_lockpick",
+      "name": "Titanium Tension Lockpick",
+      "description": "Essential burglar tool. Boosts success rate on residential heists.",
+      "category": "TOOL",
+      "price": 650,
+      "marketValue": 650,
+      "shopliftDifficulty": 45,
+      "perkDescription": "+15% Burglary success rate",
+      "icon": "🗝️"
+    },
+    {
+      "id": "item_spray_can",
+      "name": "Industrial Chrome Spray Paint",
+      "description": "High-pressure acrylic paint used to tag faction graffiti across city districts.",
+      "category": "TOOL",
+      "price": 85,
+      "marketValue": 85,
+      "shopliftDifficulty": 25,
+      "perkDescription": "Required for Graffiti tagging",
+      "icon": "🎨"
+    },
+    {
+      "id": "item_blank_dvd",
+      "name": "Optical Cyber Discs (10-Pack)",
+      "description": "Writable high-capacity discs used for the Bootlegging syndicate crime.",
+      "category": "CONTRABAND",
+      "price": 120,
+      "marketValue": 120,
+      "shopliftDifficulty": 30,
+      "perkDescription": "Used in Bootlegging burner units",
+      "icon": "💿"
+    },
+    {
+      "id": "item_1795010094407",
+      "name": "one",
+      "description": "use this to revive!",
+      "category": "WEAPON",
+      "price": 500,
+      "marketValue": 500,
+      "icon": "📦"
+    },
+    {
+      "id": "item_1795010096393",
+      "name": "one",
+      "description": "use this to revive!",
+      "category": "WEAPON",
+      "price": 500,
+      "marketValue": 500,
+      "icon": "📦"
+    },
+    {
+      "id": "item_1795010098612",
+      "name": "one",
+      "description": "use this to revive!",
+      "category": "WEAPON",
+      "price": 500,
+      "marketValue": 500,
+      "icon": "📦"
+    }
+  ],
   "dailyComboOverride": {
     "date": "2026-11-18",
     "cardIds": [

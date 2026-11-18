@@ -65,6 +65,11 @@ export interface InventoryItem {
   greenTokenCost?: number; // Price in GREEN coins
   requiredCardId?: string; // Prerequisite Botanical Card required to purchase/use
   requiredCardLevel?: number; // Prerequisite Card level required (e.g. lvl 3)
+  forgePrice?: number;
+  forgeSparksPrice?: number;
+  forgeDamageBonus?: number;
+  forgeAccuracyBonus?: number;
+  forgeDefenseBonus?: number;
 }
 
 export interface BazaarListing {

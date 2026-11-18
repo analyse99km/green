@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../GameContext';
 import { STORE_ITEMS } from '../gameData';
 import {
   Package,
   ShoppingBag,
   EyeOff,
+  Shield,
   ShieldCheck,
   Sparkles,
   Check,
@@ -19,9 +20,12 @@ import {
   Flame,
   ArrowUpCircle,
   X,
+  Target,
+  Swords,
 } from 'lucide-react';
 import { InventoryItem } from '../types';
 import DynamicIcon from '../DynamicIcon';
+import { loadCatalogData, syncCatalogFromServer, DynamicCatalogData } from '../gameCatalog';
 
 export default function TornItemsView() {
   const { player, buyItem, shopliftItem, consumeItem, upgradeItemInForge, syncCloudItems } = useGame();
@@ -35,6 +39,15 @@ export default function TornItemsView() {
     success: boolean;
   } | null>(null);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [catalog, setCatalog] = useState<DynamicCatalogData>(() => loadCatalogData());
+
+  useEffect(() => {
+    syncCatalogFromServer((updated) => setCatalog(updated));
+    const interval = setInterval(() => {
+      syncCatalogFromServer((updated) => setCatalog(updated));
+    }, 20000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleBuy = (item: InventoryItem) => {
     const res = buyItem(item);
@@ -70,11 +83,45 @@ export default function TornItemsView() {
 
   const handleSyncCloud = async () => {
     setIsSyncingCloud(true);
+    await syncCatalogFromServer((updated) => setCatalog(updated));
     const res = await syncCloudItems();
     setIsSyncingCloud(false);
     setFeedback(res.message);
     setTimeout(() => setFeedback(null), 4000);
   };
+
+  const rawShopList = (catalog.customItems && catalog.customItems.length > 0)
+    ? catalog.customItems
+    : STORE_ITEMS;
+
+  const shopItems: InventoryItem[] = rawShopList.map((item) => ({
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    price: item.price,
+    marketValue: item.marketValue ?? item.price,
+    shopliftDifficulty: item.shopliftDifficulty ?? 40,
+    icon: item.icon,
+    quantity: 1,
+    damage: item.damage,
+    accuracy: item.accuracy,
+    defense: item.defense,
+    foodRestore: item.foodRestore,
+    energyRestore: item.energyRestore,
+    happyRestore: item.happyRestore,
+    lifeRestore: item.lifeRestore,
+    usableIn: item.usableIn,
+    statBonus: (item as any).statBonus,
+    perkDescription: item.perkDescription,
+    forgePrice: item.forgePrice,
+    forgeSparksPrice: item.forgeSparksPrice,
+    forgeDamageBonus: item.forgeDamageBonus,
+    forgeAccuracyBonus: item.forgeAccuracyBonus,
+    forgeDefenseBonus: item.forgeDefenseBonus,
+    requiredCardId: item.requiredCardId,
+    requiredCardLevel: item.requiredCardLevel,
+  }));
 
   const selectedForgeItem = player.inventory.find((i) => i.id === selectedForgeItemId);
   const forgeableItems = player.inventory.filter((i) => i.category === 'WEAPON' || i.category === 'ARMOR' || i.category === 'TOOL');
@@ -228,15 +275,18 @@ export default function TornItemsView() {
       {/* Tab 2: Municipal Outfitter (Starter Stock) */}
       {activeTab === 'SHOP' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {STORE_ITEMS.map((item) => {
+          {shopItems.map((item) => {
             const canAfford = player.money >= item.price;
             const shopliftOdds = Math.max(
               15,
               Math.min(
                 90,
-                Math.round(player.criminalSkills.shoplifting * 8 - item.shopliftDifficulty * 0.4 + 40)
+                Math.round(player.criminalSkills.shoplifting * 8 - (item.shopliftDifficulty || 35) * 0.4 + 40)
               )
             );
+            const reqCard = item.requiredCardId ? catalog.cards.find((c) => c.id === item.requiredCardId) : null;
+            const playerCardLevel = item.requiredCardId && (player as any).dreamCards?.[item.requiredCardId]?.level;
+            const meetsCardReq = !item.requiredCardId || (playerCardLevel && playerCardLevel >= (item.requiredCardLevel || 1));
 
             return (
               <div
@@ -262,19 +312,84 @@ export default function TornItemsView() {
                   </div>
 
                   <p className="text-xs text-neutral-400 my-3 leading-relaxed">{item.description}</p>
+
+                  {/* Rich Stat Badges */}
+                  <div className="flex flex-wrap gap-1.5 text-[11px] font-mono mb-3">
+                    {item.damage && (
+                      <span className="px-2 py-0.5 rounded bg-rose-950/40 text-rose-300 border border-rose-800/40 font-bold flex items-center gap-1">
+                        <Swords className="w-3 h-3 text-rose-400" /> Dmg: {item.damage}
+                      </span>
+                    )}
+                    {item.accuracy && (
+                      <span className="px-2 py-0.5 rounded bg-blue-950/40 text-blue-300 border border-blue-800/40 flex items-center gap-1">
+                        <Target className="w-3 h-3 text-blue-400" /> Aim: {item.accuracy}%
+                      </span>
+                    )}
+                    {item.defense && (
+                      <span className="px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/40 font-bold flex items-center gap-1">
+                        <Shield className="w-3 h-3 text-emerald-400" /> Def: {item.defense}
+                      </span>
+                    )}
+                    {item.foodRestore && (
+                      <span className="px-2 py-0.5 rounded bg-amber-950/40 text-amber-300 border border-amber-800/40 font-bold flex items-center gap-1">
+                        <Utensils className="w-3 h-3 text-amber-400" /> +{item.foodRestore} Food
+                      </span>
+                    )}
+                    {item.energyRestore && (
+                      <span className="px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/40 font-bold flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-emerald-400" /> +{item.energyRestore} Energy
+                      </span>
+                    )}
+                    {item.happyRestore && (
+                      <span className="px-2 py-0.5 rounded bg-pink-950/40 text-pink-300 border border-pink-800/40 font-bold flex items-center gap-1">
+                        <Smile className="w-3 h-3 text-pink-400" /> +{item.happyRestore} Happy
+                      </span>
+                    )}
+                    {item.lifeRestore && (
+                      <span className="px-2 py-0.5 rounded bg-red-950/40 text-red-300 border border-red-800/40 font-bold flex items-center gap-1">
+                        ❤️ +{item.lifeRestore} HP
+                      </span>
+                    )}
+                    {item.perkDescription && (
+                      <span className="px-2 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-800/40">
+                        ✨ {item.perkDescription}
+                      </span>
+                    )}
+                    {(item.forgePrice || item.forgeDamageBonus || item.forgeDefenseBonus) && (
+                      <span className="px-2 py-0.5 rounded bg-orange-950/40 text-orange-300 border border-orange-800/40 text-[10px]">
+                        🔨 Forge: 🌿{item.forgePrice ?? 250}{item.forgeDamageBonus ? ` (+${item.forgeDamageBonus} Dmg)` : ''}{item.forgeDefenseBonus ? ` (+${item.forgeDefenseBonus} Def)` : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  {item.requiredCardId && (
+                    <div className="mb-2">
+                      {meetsCardReq ? (
+                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                          ✓ Card Requirement Met: {reqCard?.title || item.requiredCardId} Lvl {item.requiredCardLevel || 1}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-amber-400 font-mono flex items-center gap-1">
+                          🔒 Requires {reqCard?.title || item.requiredCardId} Lvl {item.requiredCardLevel || 1}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2 pt-3 border-t border-neutral-800">
                   <button
                     onClick={() => handleBuy(item)}
-                    disabled={!canAfford}
+                    disabled={!canAfford || !meetsCardReq}
                     className={`w-full py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      canAfford
+                      canAfford && meetsCardReq
                         ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow'
                         : 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
                     }`}
                   >
-                    Buy Legitimately (🌿 {item.price.toLocaleString()} GREEN)
+                    {!meetsCardReq
+                      ? `Locked (Requires Card Lvl ${item.requiredCardLevel || 1})`
+                      : `Buy Legitimately (🌿 ${item.price.toLocaleString()} GREEN)`}
                   </button>
 
                   <button
@@ -370,7 +485,15 @@ export default function TornItemsView() {
                       <div className="bg-neutral-900 p-2 rounded-lg">
                         <span className="text-neutral-500 block text-[10px]">Damage</span>
                         <span className="text-rose-400 font-bold">
-                          {selectedForgeItem.damage} → +{Math.round(selectedForgeItem.damage * 1.15 * 10) / 10}
+                          {selectedForgeItem.damage} → +{selectedForgeItem.forgeDamageBonus !== undefined ? Math.round((selectedForgeItem.damage + selectedForgeItem.forgeDamageBonus) * 10) / 10 : Math.round(selectedForgeItem.damage * 1.15 * 10) / 10}
+                        </span>
+                      </div>
+                    )}
+                    {selectedForgeItem.accuracy && (
+                      <div className="bg-neutral-900 p-2 rounded-lg">
+                        <span className="text-neutral-500 block text-[10px]">Aim / Accuracy</span>
+                        <span className="text-blue-400 font-bold">
+                          {selectedForgeItem.accuracy}% → {Math.min(99, selectedForgeItem.forgeAccuracyBonus !== undefined ? Math.round((selectedForgeItem.accuracy + selectedForgeItem.forgeAccuracyBonus) * 10) / 10 : Math.round(selectedForgeItem.accuracy * 1.05 * 10) / 10)}%
                         </span>
                       </div>
                     )}
@@ -378,7 +501,7 @@ export default function TornItemsView() {
                       <div className="bg-neutral-900 p-2 rounded-lg">
                         <span className="text-neutral-500 block text-[10px]">Defense</span>
                         <span className="text-emerald-400 font-bold">
-                          {selectedForgeItem.defense} → +{Math.round(selectedForgeItem.defense * 1.20 * 10) / 10}
+                          {selectedForgeItem.defense} → +{selectedForgeItem.forgeDefenseBonus !== undefined ? Math.round((selectedForgeItem.defense + selectedForgeItem.forgeDefenseBonus) * 10) / 10 : Math.round(selectedForgeItem.defense * 1.20 * 10) / 10}
                         </span>
                       </div>
                     )}
@@ -408,7 +531,7 @@ export default function TornItemsView() {
                       >
                         <span className="text-[10px] text-neutral-400 font-mono tracking-wider uppercase">Liquid Cash</span>
                         <span className="text-emerald-400 font-bold font-mono text-sm">
-                          🌿 {((selectedForgeItem.upgradeLevel || 0) + 1) * 250} GREEN
+                          🌿 {((selectedForgeItem.upgradeLevel || 0) + 1) * (selectedForgeItem.forgePrice ?? 250)} GREEN
                         </span>
                       </button>
 
@@ -424,7 +547,7 @@ export default function TornItemsView() {
                       >
                         <span className="text-[10px] text-cyan-400/80 font-mono tracking-wider uppercase">Dream Sparks</span>
                         <span className="text-cyan-300 font-bold font-mono text-sm">
-                          ⚡ {((selectedForgeItem.upgradeLevel || 0) + 1) * 40} Sparks
+                          ⚡ {((selectedForgeItem.upgradeLevel || 0) + 1) * (selectedForgeItem.forgeSparksPrice ?? 40)} Sparks
                         </span>
                       </button>
                     </div>

@@ -27,15 +27,26 @@ export interface DynamicItemDef {
   description: string;
   category: 'WEAPON' | 'ARMOR' | 'FOOD' | 'MEDICAL' | 'CONTRABAND' | 'TOOL' | 'LUXURY' | 'ENHANCER';
   price: number;
-  marketValue: number;
+  marketValue?: number;
+  shopliftDifficulty?: number;
   icon: string;
   damage?: number;
+  accuracy?: number;
   defense?: number;
   foodRestore?: number;
   energyRestore?: number;
+  happyRestore?: number;
   lifeRestore?: number;
+  usableIn?: ('ALL' | 'HOME' | 'RESTAURANT')[];
+  statBonus?: Record<string, number>;
+  perkDescription?: string;
   requiredCardId?: string; // Prerequisite card required
   requiredCardLevel?: number; // Prerequisite card level
+  forgePrice?: number;
+  forgeSparksPrice?: number;
+  forgeDamageBonus?: number;
+  forgeAccuracyBonus?: number;
+  forgeDefenseBonus?: number;
 }
 
 export const INITIAL_BOTANICAL_CATEGORIES: BotanicalCategoryDef[] = [

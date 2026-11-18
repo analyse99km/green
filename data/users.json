@@ -34,7 +34,7 @@
       "maxNerve": 10,
       "happy": 100,
       "maxHappy": 100,
-      "food": 67,
+      "food": 18,
       "maxFood": 100,
       "chain": 0,
       "maxChain": 10,
@@ -669,7 +669,7 @@
       "isSleeping": false,
       "sleepRemainingSeconds": 0,
       "stateHash": "c9b5c4a4a848ce1e02dad8800dd1c57e7b1aac08b2bba4b54e0dff788c1c9b1d",
-      "lastSaveTimestamp": 1794998421329,
+      "lastSaveTimestamp": 1795011262236,
       "hasUnsavedActions": false,
       "isAwakened": false
     },
@@ -1345,7 +1345,7 @@
     "userReferralCode": "NEON-71F63E20",
     "referredBy": "NEON-E7CC880D",
     "createdAt": 1794998780043,
-    "lastLoginAt": 1794998902812,
+    "lastLoginAt": 1795005309480,
     "playerState": {
       "id": "usr_71f63e2038a30959",
       "name": "Dhruv11",
@@ -1359,7 +1359,7 @@
       "ageDays": 1,
       "maritalStatus": "Single",
       "networth": 150,
-      "money": 505,
+      "money": 495,
       "bankMoney": 0,
       "points": 0,
       "missionCredits": 0,
@@ -1371,7 +1371,7 @@
       "maxNerve": 10,
       "happy": 100,
       "maxHappy": 100,
-      "food": 92,
+      "food": 70,
       "maxFood": 100,
       "chain": 0,
       "maxChain": 10,
@@ -1925,9 +1925,9 @@
       "dailyWheelSpinsAvailable": 1,
       "lastWheelSpinTimestamp": 0,
       "soundEnabled": true,
-      "dreamPoints": 174,
+      "dreamPoints": 175,
       "dreamMultiplier": 1,
-      "totalTaps": 48,
+      "totalTaps": 49,
       "tapStamina": 100,
       "maxTapStamina": 100,
       "dreamCards": {},
@@ -1950,7 +1950,8 @@
         "claimedMilestones": [],
         "referredBy": "NEON-E7CC880D",
         "hasClaimedWelcomeBonus": false,
-        "lastDailyStipendClaimTimestamp": 1794998792414
+        "lastDailyStipendClaimTimestamp": 1794998792414,
+        "networkTotalCitizens": 0
       },
       "arsonStats": {
         "breaches": 1,
@@ -1984,15 +1985,15 @@
       "totalFinesPaid": 0,
       "isSleeping": false,
       "sleepRemainingSeconds": 0,
-      "stateHash": "6b45566e185a5ee4885f36dadf332f02853ef95a57a8c7e0ce4e199e717503f2",
-      "lastSaveTimestamp": 1794998902087,
+      "stateHash": "bc384044d2cb3b590f917e94d1ccdf02a47197c69e0276cbb8847bafa5d4b5c6",
+      "lastSaveTimestamp": 1795005308796,
       "hasUnsavedActions": false,
       "isAwakened": false
     },
-    "money": 505,
-    "sparks": 174,
+    "money": 495,
+    "sparks": 175,
     "level": 1,
     "rank": "#1 Neon Operative",
-    "lastSaveAt": 1794998902812
+    "lastSaveAt": 1795005309458
   }
 }
