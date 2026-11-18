@@ -168,8 +168,8 @@ export function TornCityContent() {
         </main>
       </div>
 
-      {/* Floating Smartphone (Hidden on Dream Tap to prevent overlapping mobile Boost button) */}
-      {currentView !== 'DREAM_TAP' && <CityPhone />}
+      {/* Floating City Smartphone with Admin Broadcast Red Dot & Live Chat */}
+      <CityPhone />
 
       {/* Pre-Release Pioneer Edition Airdrop Modal */}
       <PreReleaseNoticeModal />
