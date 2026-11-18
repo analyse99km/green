@@ -1,57 +1,1998 @@
 {
   "d8r21v@gmail.com": {
+    "userId": "usr_44861f741ad920d4",
     "email": "d8r21v@gmail.com",
     "name": "Dhruv",
-    "userId": "usr_44861f741ad920d4",
+    "salt": "293a8e5ffb3b4e9818031c082e86538a",
+    "passwordHash": "61a89a9d8685a6f07851c69776933b152a220b125c27e095f173a1bcac2d7210ce8c23a582e403c4b332bed47c3c0e61f66fd3b3238ac8efeb334b9d9169739c",
     "userReferralCode": "NEON-44861F74",
-    "referredBy": "None (Direct)",
-    "createdAt": 1794994531046,
-    "lastLoginAt": 1794995040242,
-    "passwordHash": "6dbf9741ff4e1495...",
-    "salt": "3e60564b01...",
-    "money": 10000,
-    "sparks": 500000,
-    "level": 2,
-    "rank": "#1 Neon Operative",
+    "referredBy": null,
+    "createdAt": 1794996362058,
+    "lastLoginAt": 1795000289901,
     "playerState": {
       "id": "usr_44861f741ad920d4",
       "name": "Dhruv",
-      "xid": "4486100",
+      "xid": "2941332",
       "role": "CITIZEN",
       "rank": "#1 Neon Operative",
-      "level": 2,
-      "xp": 150,
-      "xpNeeded": 250,
-      "money": 10000,
-      "bankMoney": 5000,
-      "points": 10,
+      "level": 99,
+      "xp": 0,
+      "xpNeeded": 100,
+      "unallocatedStatPoints": 0,
+      "ageDays": 1,
+      "maritalStatus": "Single",
+      "networth": 150,
+      "money": 9.999999999e+259,
+      "bankMoney": 0,
+      "points": 0,
+      "missionCredits": 0,
+      "life": 100,
+      "maxLife": 100,
       "energy": 100,
       "maxEnergy": 100,
       "nerve": 10,
       "maxNerve": 10,
       "happy": 100,
       "maxHappy": 100,
-      "life": 100,
-      "maxLife": 100,
-      "food": 100,
+      "food": 67,
       "maxFood": 100,
-      "dreamPoints": 500000,
+      "chain": 0,
+      "maxChain": 10,
+      "battleStats": {
+        "strength": 5,
+        "defense": 5,
+        "speed": 5,
+        "dexterity": 5
+      },
+      "workingStats": {
+        "manualLabor": 5,
+        "intelligence": 5,
+        "endurance": 5
+      },
+      "criminalSkills": {
+        "searchForCash": 1,
+        "shoplifting": 1,
+        "graffiti": 1,
+        "bootlegging": 0,
+        "forgery": 0,
+        "burglary": 0,
+        "cardSkimming": 0,
+        "hustling": 0,
+        "cracking": 0,
+        "arson": 0
+      },
+      "criminalRecord": {
+        "totalOffenses": 0,
+        "theft": 0,
+        "vandalism": 0,
+        "counterfeiting": 0,
+        "fraud": 0,
+        "cybercrime": 0,
+        "extortion": 0,
+        "organizedCrimes": 0
+      },
+      "job": {
+        "companyName": "Green Organic Nursery",
+        "companyType": "Nightclub",
+        "position": "Apprentice Cleaner",
+        "income": 500,
+        "jobPoints": 0,
+        "daysInCompany": 1
+      },
+      "educationCourses": [
+        {
+          "id": "edu_law",
+          "title": "Criminal Law & Tactical Enforcement",
+          "category": "LAW",
+          "description": "Master municipal statutes, custody procedures, and tactical apprehension. Required to serve as a sworn Police Officer.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "POLICE",
+          "requiredStats": {
+            "manualLabor": 10,
+            "endurance": 5
+          },
+          "examQuestions": [
+            {
+              "question": "What constitutes probable cause prior to detaining a suspect for store robbery?",
+              "options": [
+                "Mere personal hunch",
+                "Triggered perimeter alarms or eyewitness physical evidence",
+                "Direct mayor instruction"
+              ],
+              "answerIndex": 1
+            },
+            {
+              "question": "Which constitutional legal safeguard guarantees the right against self-incrimination upon arrest?",
+              "options": [
+                "Statutory Miranda Silence & Legal Representation",
+                "Commercial Franchise Clause",
+                "General Bail Bond Act"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is the standard procedure when a suspect attempts to escape on foot through an alleyway?",
+              "options": [
+                "Immediate lethal firearm engagement",
+                "Deploy radio dispatch cordon and non-lethal apprehension",
+                "Disregard the suspect"
+              ],
+              "answerIndex": 1
+            }
+          ]
+        },
+        {
+          "id": "edu_med",
+          "title": "Emergency Trauma, Surgery & Pharmacology",
+          "category": "MEDICINE",
+          "description": "Learn combat wound triage, surgical stitching, and critical pharmacology. Required to qualify as a Medical Doctor and operate private Clinics.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "DOCTOR",
+          "requiredStats": {
+            "intelligence": 15
+          },
+          "examQuestions": [
+            {
+              "question": "What is the immediate priority when treating an arterial hemorrhage from a knife wound?",
+              "options": [
+                "Direct pressure dressing or tactical arterial tourniquet",
+                "Giving energy drinks",
+                "Waiting for emergency room intake"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "Which pharmaceutical antagonist reverses life-threatening opioid respiratory depression?",
+              "options": [
+                "Broad-spectrum penicillin",
+                "Naloxone / Narcan",
+                "Aspirin"
+              ],
+              "answerIndex": 1
+            },
+            {
+              "question": "What municipal license must be filed to admit hospital patients and perform trauma surgery?",
+              "options": [
+                "City Hall Board of Health Clinical Deed",
+                "Street Vending Certificate",
+                "Standard notary stamp"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_culinary",
+          "title": "Culinary Arts & Nutritional Science",
+          "category": "CULINARY",
+          "description": "Study gastronomy, nutrition, food preservation, and kitchen logistics. Required to qualify as a Master Chef and open Restaurants/Bakeries.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "CHEF",
+          "requiredStats": {
+            "intelligence": 10,
+            "manualLabor": 5
+          },
+          "examQuestions": [
+            {
+              "question": "What core benefit does high-protein tactical food provide to active street operatives?",
+              "options": [
+                "Instant Energy regeneration and Happy morale recovery",
+                "Decreased speed",
+                "Increased jail time"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What food safety protocol is required for high-volume commercial meal production?",
+              "options": [
+                "Sterile food preservation and municipal sanitary health inspection",
+                "Cooking outdoors without permits",
+                "Storing raw meat at room temperature"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What license tier allows a restaurant to produce up to 1,000 meals daily?",
+              "options": [
+                "Commercial Enterprise Tier",
+                "Micro Cart Tier",
+                "Unlicensed vendor"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_fitness",
+          "title": "Sports Science & Fitness Management",
+          "category": "FITNESS",
+          "description": "Study biomechanics, resistance training, and facility operations. Required to open and operate private Gyms & Dojos.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "GYM_OWNER",
+          "requiredStats": {
+            "endurance": 15,
+            "manualLabor": 10
+          },
+          "examQuestions": [
+            {
+              "question": "What training regimen maximizes combat physical resilience and blunt impact absorption?",
+              "options": [
+                "Heavy resistance core & compound hypertrophy",
+                "Sedentary desk work",
+                "Skipping meals"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "How do player-owned gym facilities generate sustainable commercial revenue?",
+              "options": [
+                "Selling monthly gym memberships and custom training sets to other players",
+                "Begging on the avenue",
+                "Only training the owner"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is required to expand gym capacity beyond 500 members?",
+              "options": [
+                "Upgraded Municipal Facility License & verified capital reserve",
+                "Bribing gym attendees",
+                "Nothing"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_biz",
+          "title": "Corporate Finance & Franchise Management",
+          "category": "COMMERCE",
+          "description": "Master commercial accounting, supply chains, and franchise tax structures. Required to register Corporations and Nightclubs.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "BUSINESS_OWNER",
+          "requiredStats": {
+            "intelligence": 12
+          },
+          "examQuestions": [
+            {
+              "question": "How is net daily dividend calculated for a chartered commercial entity?",
+              "options": [
+                "Gross receipts minus operational upkeep and worker payroll",
+                "Pocket cash multiplied by level",
+                "Total property square footage"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What occurs if a registered business fails to maintain daily operational upkeep?",
+              "options": [
+                "Municipal asset freeze and temporary operational shutdown",
+                "Automatic unlimited grant from city",
+                "No effect"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is required to register a commercial charter at City Hall?",
+              "options": [
+                "Accredited Business Exam certificate plus capital reserves in bank",
+                "A verbal handshake",
+                "Zero bank balance"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_combat",
+          "title": "Syndicate Logistics & Electronic Countermeasures",
+          "category": "COMBAT",
+          "description": "Study counter-surveillance, digital decrypters, and turf logistics. Unlocks Syndicate Captain rank and advanced heists.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "GOON",
+          "requiredStats": {
+            "endurance": 10
+          },
+          "examQuestions": [
+            {
+              "question": "What is the primary method to neutralize commercial store infrared sweep sensors?",
+              "options": [
+                "Deploying electronic decrypters and moving through blind-spot intervals",
+                "Running quickly through sirens",
+                "Wearing brightly colored vests"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "Where should unlaundered heist revenue be stashed to prevent street muggings?",
+              "options": [
+                "Inside your locked property reinforced safe vault",
+                "In an open wallet on the avenue",
+                "Given to strangers"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What role in an organized heist coordinates communication and police scanner alerts?",
+              "options": [
+                "The Cyber Communications Specialist",
+                "The getaway courier",
+                "The building cleaner"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        }
+      ],
+      "businessRegistries": [
+        {
+          "id": "biz_wok",
+          "name": "Neon Wok Gourmet Kitchen & Grill",
+          "type": "RESTAURANT",
+          "licenseTitle": "Master Culinary Commercial Deed",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_culinary",
+          "requiredCapital": 45000,
+          "monthlyTax": 1200,
+          "dailyRevenue": 5800,
+          "dailyUpkeep": 950,
+          "employeesCount": 5,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_ramen",
+              "name": "Synthetix Cyber Ramen",
+              "type": "FOOD",
+              "productionCost": 15,
+              "sellingPrice": 45,
+              "effectDescription": "Restores +25 Energy & +15 Happy when consumed.",
+              "active": true
+            },
+            {
+              "id": "srv_shake",
+              "name": "Dragon Heavy Protein Shake",
+              "type": "FOOD",
+              "productionCost": 35,
+              "sellingPrice": 95,
+              "effectDescription": "Restores +40 Energy instantly.",
+              "active": true
+            },
+            {
+              "id": "srv_steak",
+              "name": "Wagyu Tactical Ribeye",
+              "type": "FOOD",
+              "productionCost": 120,
+              "sellingPrice": 320,
+              "effectDescription": "Restores +60 Happy & +75 Life.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_hospital",
+          "name": "Apex Health & Emergency Trauma Pavilion",
+          "type": "HOSPITAL",
+          "licenseTitle": "Municipal Surgical & Clinical Charter",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_med",
+          "requiredCapital": 95000,
+          "monthlyTax": 2800,
+          "dailyRevenue": 13500,
+          "dailyUpkeep": 2500,
+          "employeesCount": 8,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_trauma",
+              "name": "Emergency Gunshot & Knife Suture",
+              "type": "TREATMENT",
+              "productionCost": 50,
+              "sellingPrice": 200,
+              "effectDescription": "Instantly discharges patient from Hospital and restores 100% Life.",
+              "active": true
+            },
+            {
+              "id": "srv_detox",
+              "name": "Neuro-Chemical Toxin Detox",
+              "type": "TREATMENT",
+              "productionCost": 80,
+              "sellingPrice": 350,
+              "effectDescription": "Clears narcotics addiction trauma and boosts Happy.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_gym",
+          "name": "Titan Underground Iron Gym",
+          "type": "GYM",
+          "licenseTitle": "Chartered Sports & Resistance Facility Deed",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_fitness",
+          "requiredCapital": 75000,
+          "monthlyTax": 1800,
+          "dailyRevenue": 9200,
+          "dailyUpkeep": 1600,
+          "employeesCount": 6,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_powerlift",
+              "name": "Olympic Powerlifting & Heavy Sparring",
+              "type": "WORKOUT_PLAN",
+              "productionCost": 10,
+              "sellingPrice": 60,
+              "effectDescription": "Grants +25% bonus Battle Stat gains when training here.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_nightclub",
+          "name": "The Striking Gutters VIP Lounge",
+          "type": "NIGHTCLUB",
+          "licenseTitle": "Metropolitan Commercial Liquor & Venue Charter",
+          "licenseTier": "ENTERPRISE_5000",
+          "maxDailyCapacity": 5000,
+          "requiredExamId": "edu_biz",
+          "requiredCapital": 280000,
+          "monthlyTax": 6000,
+          "dailyRevenue": 42000,
+          "dailyUpkeep": 8000,
+          "employeesCount": 25,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_vip",
+              "name": "VIP Skybox Bottle Service",
+              "type": "MERCHANDISE",
+              "productionCost": 200,
+              "sellingPrice": 1500,
+              "effectDescription": "Boosts max Happy capacity by +50.",
+              "active": true
+            }
+          ]
+        }
+      ],
+      "missions": [
+        {
+          "id": "msn_1",
+          "title": "Getting Started in the Underworld",
+          "contractor": "Fixer Vance",
+          "description": "Execute your first Search for Cash crime to prove you can navigate the streets.",
+          "rewardCredits": 5,
+          "rewardCash": 500,
+          "completed": true,
+          "reqType": "CRIME",
+          "targetCount": 1,
+          "currentCount": 1
+        },
+        {
+          "id": "msn_2",
+          "title": "Combat Dummy Bashing",
+          "contractor": "Fixer Vance",
+          "description": "Train at the gym until your Strength reaches at least 30.",
+          "rewardCredits": 5,
+          "rewardCash": 1200,
+          "completed": true,
+          "reqType": "STAT",
+          "targetCount": 30,
+          "currentCount": 34
+        },
+        {
+          "id": "msn_3",
+          "title": "Exploring the Municipal Sectors",
+          "contractor": "Fixer Vance",
+          "description": "Visit the City Hall and inspect commercial business deeds.",
+          "rewardCredits": 5,
+          "rewardCash": 2500,
+          "completed": true,
+          "reqType": "BUY",
+          "targetCount": 1,
+          "currentCount": 1
+        },
+        {
+          "id": "msn_4",
+          "title": "High-Level Syndicate Heist",
+          "contractor": "Syndicate Boss Duke",
+          "description": "Reach Level 5 and execute 10 successful crimes to earn executive respect.",
+          "rewardCredits": 10,
+          "rewardCash": 15000,
+          "completed": false,
+          "reqType": "LEVEL",
+          "targetCount": 5,
+          "currentCount": 4
+        }
+      ],
+      "properties": [
+        {
+          "id": "prop_slum",
+          "name": "Derelict Motel Room",
+          "tier": "SLUM",
+          "cost": 0,
+          "fees": 10,
+          "upkeepPerDay": 10,
+          "maxEnergyBonus": 0,
+          "maxHappyBonus": 0,
+          "vaultCapacity": 2000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 2,
+          "owned": false
+        },
+        {
+          "id": "prop_apt",
+          "name": "Downtown Studio Apartment",
+          "tier": "APARTMENT",
+          "cost": 31250,
+          "fees": 50,
+          "upkeepPerDay": 25,
+          "maxEnergyBonus": 10,
+          "maxHappyBonus": 20,
+          "vaultCapacity": 50000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 5,
+          "owned": true
+        },
+        {
+          "id": "prop_villa",
+          "name": "Gated Suburb Villa",
+          "tier": "VILLA",
+          "cost": 150000,
+          "fees": 120,
+          "upkeepPerDay": 80,
+          "maxEnergyBonus": 25,
+          "maxHappyBonus": 50,
+          "vaultCapacity": 350000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 7,
+          "owned": false
+        },
+        {
+          "id": "prop_penthouse",
+          "name": "High-Rise Sky Penthouse",
+          "tier": "PENTHOUSE",
+          "cost": 650000,
+          "fees": 350,
+          "upkeepPerDay": 250,
+          "maxEnergyBonus": 50,
+          "maxHappyBonus": 100,
+          "vaultCapacity": 2000000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 9,
+          "owned": false
+        }
+      ],
+      "currentPropertyId": "prop_apt",
+      "inventory": [],
+      "bazaarListings": [],
+      "bazaarTillCash": 0,
+      "dailyWheelSpinsAvailable": 1,
+      "lastWheelSpinTimestamp": 0,
+      "soundEnabled": true,
+      "dreamPoints": 1e+171,
+      "dreamMultiplier": 1,
+      "totalTaps": 100,
       "tapStamina": 100,
       "maxTapStamina": 100,
-      "isAwakened": true,
-      "inventory": [],
-      "dreamCards": {},
+      "dreamCards": {
+        "card_photosynthesis": 15,
+        "card_mycelium": 11,
+        "card_spore_chamber": 6,
+        "card_bioluminescent_algae": 9
+      },
+      "activeTapperSkinId": "tree_oak",
+      "unlockedTapperSkins": [
+        "tree_sprout",
+        "tree_oak"
+      ],
+      "bodyAugmentations": [],
+      "settledReceiptIds": [],
+      "greenTokens": 5,
+      "dailyStreak": 2,
+      "lastStreakClaimTimestamp": 1794996367122,
+      "canClaimDailyStreak": false,
       "referrals": {
         "referralCode": "NEON-44861F74",
+        "totalRecruits": 1,
+        "unclaimedCommissionGreen": 100,
+        "lifetimeCommissionGreen": 100,
+        "recruits": [
+          {
+            "id": "usr_e7cc880df8118651",
+            "name": "Dhruv (dhruv2424@outlook.com)",
+            "email": "dhruv2424@outlook.com",
+            "joinedAt": 1794997114345,
+            "level": 1,
+            "tier": 1,
+            "dailyGameplayEarned": 150,
+            "totalGeneratedGreen": 15,
+            "lastActive": "Active today (Syndicate recruit)"
+          }
+        ],
+        "claimedMilestones": [
+          1
+        ],
+        "hasClaimedWelcomeBonus": false,
+        "lastDailyStipendClaimTimestamp": 0,
+        "networkTotalCitizens": 1,
+        "lastDailyRoyaltyClaimTimestamp": 1794997340493
+      },
+      "arsonStats": {
+        "breaches": 1,
+        "fails": 10,
+        "alerts": 0
+      },
+      "arsonProgress": {
+        "arson_shed": 0,
+        "arson_shack": 0,
+        "arson_storage": 0,
+        "arson_beach_hut": 0,
+        "arson_hunting_lodge": 0,
+        "arson_forgery_workshop": 0
+      },
+      "fixedDeposits": [],
+      "loans": [],
+      "faction": {
+        "id": "fac_knights",
+        "name": "Knights",
+        "tag": "KNT",
+        "respect": 40290,
+        "membersCount": 21,
+        "daysInFaction": 1,
+        "territory": "Downtown Entertainment Core",
+        "isJoined": true
+      },
+      "jailTimeRemainingSeconds": 0,
+      "hospitalTimeRemainingSeconds": 0,
+      "currentBailAmount": 0,
+      "lastCrimeReason": "",
+      "totalFinesPaid": 0,
+      "isSleeping": false,
+      "sleepRemainingSeconds": 0,
+      "stateHash": "c9b5c4a4a848ce1e02dad8800dd1c57e7b1aac08b2bba4b54e0dff788c1c9b1d",
+      "lastSaveTimestamp": 1794998421329,
+      "hasUnsavedActions": false,
+      "isAwakened": false
+    },
+    "level": 99,
+    "money": 9.999999999e+259,
+    "sparks": 1e+171,
+    "rank": "#1 Neon Operative",
+    "lastSaveAt": 1794998422572
+  },
+  "dhruv2424@outlook.com": {
+    "email": "dhruv2424@outlook.com",
+    "name": "Dhruv",
+    "userId": "usr_e7cc880df8118651",
+    "userReferralCode": "NEON-E7CC880D",
+    "referredBy": "NEON-44861F74",
+    "createdAt": 1794997114345,
+    "lastLoginAt": 1794997114744,
+    "passwordHash": "862c9410d85bf2c7...",
+    "salt": "a9f8f11f32...",
+    "money": 505,
+    "sparks": 38,
+    "level": 1,
+    "playerState": {
+      "id": "usr_e7cc880df8118651",
+      "name": "Dhruv",
+      "xid": "9485379",
+      "role": "CITIZEN",
+      "rank": "#1 Neon Operative",
+      "level": 1,
+      "xp": 0,
+      "xpNeeded": 100,
+      "unallocatedStatPoints": 0,
+      "ageDays": 1,
+      "maritalStatus": "Single",
+      "networth": 150,
+      "money": 505,
+      "bankMoney": 0,
+      "points": 0,
+      "missionCredits": 0,
+      "life": 100,
+      "maxLife": 100,
+      "energy": 100,
+      "maxEnergy": 100,
+      "nerve": 10,
+      "maxNerve": 10,
+      "happy": 100,
+      "maxHappy": 100,
+      "food": 35,
+      "maxFood": 100,
+      "chain": 0,
+      "maxChain": 10,
+      "battleStats": {
+        "strength": 5,
+        "defense": 5,
+        "speed": 5,
+        "dexterity": 5
+      },
+      "workingStats": {
+        "manualLabor": 5,
+        "intelligence": 5,
+        "endurance": 5
+      },
+      "criminalSkills": {
+        "searchForCash": 1,
+        "shoplifting": 1,
+        "graffiti": 1,
+        "bootlegging": 0,
+        "forgery": 0,
+        "burglary": 0,
+        "cardSkimming": 0,
+        "hustling": 0,
+        "cracking": 0,
+        "arson": 0
+      },
+      "criminalRecord": {
+        "totalOffenses": 0,
+        "theft": 0,
+        "vandalism": 0,
+        "counterfeiting": 0,
+        "fraud": 0,
+        "cybercrime": 0,
+        "extortion": 0,
+        "organizedCrimes": 0
+      },
+      "job": {
+        "companyName": "Green Organic Nursery",
+        "companyType": "Nightclub",
+        "position": "Apprentice Cleaner",
+        "income": 500,
+        "jobPoints": 0,
+        "daysInCompany": 1
+      },
+      "educationCourses": [
+        {
+          "id": "edu_law",
+          "title": "Criminal Law & Tactical Enforcement",
+          "category": "LAW",
+          "description": "Master municipal statutes, custody procedures, and tactical apprehension. Required to serve as a sworn Police Officer.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "POLICE",
+          "requiredStats": {
+            "manualLabor": 10,
+            "endurance": 5
+          },
+          "examQuestions": [
+            {
+              "question": "What constitutes probable cause prior to detaining a suspect for store robbery?",
+              "options": [
+                "Mere personal hunch",
+                "Triggered perimeter alarms or eyewitness physical evidence",
+                "Direct mayor instruction"
+              ],
+              "answerIndex": 1
+            },
+            {
+              "question": "Which constitutional legal safeguard guarantees the right against self-incrimination upon arrest?",
+              "options": [
+                "Statutory Miranda Silence & Legal Representation",
+                "Commercial Franchise Clause",
+                "General Bail Bond Act"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is the standard procedure when a suspect attempts to escape on foot through an alleyway?",
+              "options": [
+                "Immediate lethal firearm engagement",
+                "Deploy radio dispatch cordon and non-lethal apprehension",
+                "Disregard the suspect"
+              ],
+              "answerIndex": 1
+            }
+          ]
+        },
+        {
+          "id": "edu_med",
+          "title": "Emergency Trauma, Surgery & Pharmacology",
+          "category": "MEDICINE",
+          "description": "Learn combat wound triage, surgical stitching, and critical pharmacology. Required to qualify as a Medical Doctor and operate private Clinics.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "DOCTOR",
+          "requiredStats": {
+            "intelligence": 15
+          },
+          "examQuestions": [
+            {
+              "question": "What is the immediate priority when treating an arterial hemorrhage from a knife wound?",
+              "options": [
+                "Direct pressure dressing or tactical arterial tourniquet",
+                "Giving energy drinks",
+                "Waiting for emergency room intake"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "Which pharmaceutical antagonist reverses life-threatening opioid respiratory depression?",
+              "options": [
+                "Broad-spectrum penicillin",
+                "Naloxone / Narcan",
+                "Aspirin"
+              ],
+              "answerIndex": 1
+            },
+            {
+              "question": "What municipal license must be filed to admit hospital patients and perform trauma surgery?",
+              "options": [
+                "City Hall Board of Health Clinical Deed",
+                "Street Vending Certificate",
+                "Standard notary stamp"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_culinary",
+          "title": "Culinary Arts & Nutritional Science",
+          "category": "CULINARY",
+          "description": "Study gastronomy, nutrition, food preservation, and kitchen logistics. Required to qualify as a Master Chef and open Restaurants/Bakeries.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "CHEF",
+          "requiredStats": {
+            "intelligence": 10,
+            "manualLabor": 5
+          },
+          "examQuestions": [
+            {
+              "question": "What core benefit does high-protein tactical food provide to active street operatives?",
+              "options": [
+                "Instant Energy regeneration and Happy morale recovery",
+                "Decreased speed",
+                "Increased jail time"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What food safety protocol is required for high-volume commercial meal production?",
+              "options": [
+                "Sterile food preservation and municipal sanitary health inspection",
+                "Cooking outdoors without permits",
+                "Storing raw meat at room temperature"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What license tier allows a restaurant to produce up to 1,000 meals daily?",
+              "options": [
+                "Commercial Enterprise Tier",
+                "Micro Cart Tier",
+                "Unlicensed vendor"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_fitness",
+          "title": "Sports Science & Fitness Management",
+          "category": "FITNESS",
+          "description": "Study biomechanics, resistance training, and facility operations. Required to open and operate private Gyms & Dojos.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "GYM_OWNER",
+          "requiredStats": {
+            "endurance": 15,
+            "manualLabor": 10
+          },
+          "examQuestions": [
+            {
+              "question": "What training regimen maximizes combat physical resilience and blunt impact absorption?",
+              "options": [
+                "Heavy resistance core & compound hypertrophy",
+                "Sedentary desk work",
+                "Skipping meals"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "How do player-owned gym facilities generate sustainable commercial revenue?",
+              "options": [
+                "Selling monthly gym memberships and custom training sets to other players",
+                "Begging on the avenue",
+                "Only training the owner"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is required to expand gym capacity beyond 500 members?",
+              "options": [
+                "Upgraded Municipal Facility License & verified capital reserve",
+                "Bribing gym attendees",
+                "Nothing"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_biz",
+          "title": "Corporate Finance & Franchise Management",
+          "category": "COMMERCE",
+          "description": "Master commercial accounting, supply chains, and franchise tax structures. Required to register Corporations and Nightclubs.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "BUSINESS_OWNER",
+          "requiredStats": {
+            "intelligence": 12
+          },
+          "examQuestions": [
+            {
+              "question": "How is net daily dividend calculated for a chartered commercial entity?",
+              "options": [
+                "Gross receipts minus operational upkeep and worker payroll",
+                "Pocket cash multiplied by level",
+                "Total property square footage"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What occurs if a registered business fails to maintain daily operational upkeep?",
+              "options": [
+                "Municipal asset freeze and temporary operational shutdown",
+                "Automatic unlimited grant from city",
+                "No effect"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is required to register a commercial charter at City Hall?",
+              "options": [
+                "Accredited Business Exam certificate plus capital reserves in bank",
+                "A verbal handshake",
+                "Zero bank balance"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_combat",
+          "title": "Syndicate Logistics & Electronic Countermeasures",
+          "category": "COMBAT",
+          "description": "Study counter-surveillance, digital decrypters, and turf logistics. Unlocks Syndicate Captain rank and advanced heists.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "GOON",
+          "requiredStats": {
+            "endurance": 10
+          },
+          "examQuestions": [
+            {
+              "question": "What is the primary method to neutralize commercial store infrared sweep sensors?",
+              "options": [
+                "Deploying electronic decrypters and moving through blind-spot intervals",
+                "Running quickly through sirens",
+                "Wearing brightly colored vests"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "Where should unlaundered heist revenue be stashed to prevent street muggings?",
+              "options": [
+                "Inside your locked property reinforced safe vault",
+                "In an open wallet on the avenue",
+                "Given to strangers"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What role in an organized heist coordinates communication and police scanner alerts?",
+              "options": [
+                "The Cyber Communications Specialist",
+                "The getaway courier",
+                "The building cleaner"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        }
+      ],
+      "businessRegistries": [
+        {
+          "id": "biz_wok",
+          "name": "Neon Wok Gourmet Kitchen & Grill",
+          "type": "RESTAURANT",
+          "licenseTitle": "Master Culinary Commercial Deed",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_culinary",
+          "requiredCapital": 45000,
+          "monthlyTax": 1200,
+          "dailyRevenue": 5800,
+          "dailyUpkeep": 950,
+          "employeesCount": 5,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_ramen",
+              "name": "Synthetix Cyber Ramen",
+              "type": "FOOD",
+              "productionCost": 15,
+              "sellingPrice": 45,
+              "effectDescription": "Restores +25 Energy & +15 Happy when consumed.",
+              "active": true
+            },
+            {
+              "id": "srv_shake",
+              "name": "Dragon Heavy Protein Shake",
+              "type": "FOOD",
+              "productionCost": 35,
+              "sellingPrice": 95,
+              "effectDescription": "Restores +40 Energy instantly.",
+              "active": true
+            },
+            {
+              "id": "srv_steak",
+              "name": "Wagyu Tactical Ribeye",
+              "type": "FOOD",
+              "productionCost": 120,
+              "sellingPrice": 320,
+              "effectDescription": "Restores +60 Happy & +75 Life.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_hospital",
+          "name": "Apex Health & Emergency Trauma Pavilion",
+          "type": "HOSPITAL",
+          "licenseTitle": "Municipal Surgical & Clinical Charter",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_med",
+          "requiredCapital": 95000,
+          "monthlyTax": 2800,
+          "dailyRevenue": 13500,
+          "dailyUpkeep": 2500,
+          "employeesCount": 8,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_trauma",
+              "name": "Emergency Gunshot & Knife Suture",
+              "type": "TREATMENT",
+              "productionCost": 50,
+              "sellingPrice": 200,
+              "effectDescription": "Instantly discharges patient from Hospital and restores 100% Life.",
+              "active": true
+            },
+            {
+              "id": "srv_detox",
+              "name": "Neuro-Chemical Toxin Detox",
+              "type": "TREATMENT",
+              "productionCost": 80,
+              "sellingPrice": 350,
+              "effectDescription": "Clears narcotics addiction trauma and boosts Happy.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_gym",
+          "name": "Titan Underground Iron Gym",
+          "type": "GYM",
+          "licenseTitle": "Chartered Sports & Resistance Facility Deed",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_fitness",
+          "requiredCapital": 75000,
+          "monthlyTax": 1800,
+          "dailyRevenue": 9200,
+          "dailyUpkeep": 1600,
+          "employeesCount": 6,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_powerlift",
+              "name": "Olympic Powerlifting & Heavy Sparring",
+              "type": "WORKOUT_PLAN",
+              "productionCost": 10,
+              "sellingPrice": 60,
+              "effectDescription": "Grants +25% bonus Battle Stat gains when training here.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_nightclub",
+          "name": "The Striking Gutters VIP Lounge",
+          "type": "NIGHTCLUB",
+          "licenseTitle": "Metropolitan Commercial Liquor & Venue Charter",
+          "licenseTier": "ENTERPRISE_5000",
+          "maxDailyCapacity": 5000,
+          "requiredExamId": "edu_biz",
+          "requiredCapital": 280000,
+          "monthlyTax": 6000,
+          "dailyRevenue": 42000,
+          "dailyUpkeep": 8000,
+          "employeesCount": 25,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_vip",
+              "name": "VIP Skybox Bottle Service",
+              "type": "MERCHANDISE",
+              "productionCost": 200,
+              "sellingPrice": 1500,
+              "effectDescription": "Boosts max Happy capacity by +50.",
+              "active": true
+            }
+          ]
+        }
+      ],
+      "missions": [
+        {
+          "id": "msn_1",
+          "title": "Getting Started in the Underworld",
+          "contractor": "Fixer Vance",
+          "description": "Execute your first Search for Cash crime to prove you can navigate the streets.",
+          "rewardCredits": 5,
+          "rewardCash": 500,
+          "completed": true,
+          "reqType": "CRIME",
+          "targetCount": 1,
+          "currentCount": 1
+        },
+        {
+          "id": "msn_2",
+          "title": "Combat Dummy Bashing",
+          "contractor": "Fixer Vance",
+          "description": "Train at the gym until your Strength reaches at least 30.",
+          "rewardCredits": 5,
+          "rewardCash": 1200,
+          "completed": true,
+          "reqType": "STAT",
+          "targetCount": 30,
+          "currentCount": 34
+        },
+        {
+          "id": "msn_3",
+          "title": "Exploring the Municipal Sectors",
+          "contractor": "Fixer Vance",
+          "description": "Visit the City Hall and inspect commercial business deeds.",
+          "rewardCredits": 5,
+          "rewardCash": 2500,
+          "completed": true,
+          "reqType": "BUY",
+          "targetCount": 1,
+          "currentCount": 1
+        },
+        {
+          "id": "msn_4",
+          "title": "High-Level Syndicate Heist",
+          "contractor": "Syndicate Boss Duke",
+          "description": "Reach Level 5 and execute 10 successful crimes to earn executive respect.",
+          "rewardCredits": 10,
+          "rewardCash": 15000,
+          "completed": false,
+          "reqType": "LEVEL",
+          "targetCount": 5,
+          "currentCount": 4
+        }
+      ],
+      "properties": [
+        {
+          "id": "prop_slum",
+          "name": "Derelict Motel Room",
+          "tier": "SLUM",
+          "cost": 0,
+          "fees": 10,
+          "upkeepPerDay": 10,
+          "maxEnergyBonus": 0,
+          "maxHappyBonus": 0,
+          "vaultCapacity": 2000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 2,
+          "owned": false
+        },
+        {
+          "id": "prop_apt",
+          "name": "Downtown Studio Apartment",
+          "tier": "APARTMENT",
+          "cost": 31250,
+          "fees": 50,
+          "upkeepPerDay": 25,
+          "maxEnergyBonus": 10,
+          "maxHappyBonus": 20,
+          "vaultCapacity": 50000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 5,
+          "owned": true
+        },
+        {
+          "id": "prop_villa",
+          "name": "Gated Suburb Villa",
+          "tier": "VILLA",
+          "cost": 150000,
+          "fees": 120,
+          "upkeepPerDay": 80,
+          "maxEnergyBonus": 25,
+          "maxHappyBonus": 50,
+          "vaultCapacity": 350000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 7,
+          "owned": false
+        },
+        {
+          "id": "prop_penthouse",
+          "name": "High-Rise Sky Penthouse",
+          "tier": "PENTHOUSE",
+          "cost": 650000,
+          "fees": 350,
+          "upkeepPerDay": 250,
+          "maxEnergyBonus": 50,
+          "maxHappyBonus": 100,
+          "vaultCapacity": 2000000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 9,
+          "owned": false
+        }
+      ],
+      "currentPropertyId": "prop_apt",
+      "inventory": [],
+      "bazaarListings": [],
+      "bazaarTillCash": 0,
+      "dailyWheelSpinsAvailable": 1,
+      "lastWheelSpinTimestamp": 0,
+      "soundEnabled": true,
+      "dreamPoints": 38,
+      "dreamMultiplier": 1,
+      "totalTaps": 12,
+      "tapStamina": 100,
+      "maxTapStamina": 100,
+      "dreamCards": {},
+      "activeTapperSkinId": "tree_sprout",
+      "unlockedTapperSkins": [
+        "tree_sprout"
+      ],
+      "bodyAugmentations": [],
+      "settledReceiptIds": [],
+      "greenTokens": 5,
+      "dailyStreak": 2,
+      "lastStreakClaimTimestamp": 1794997190833,
+      "canClaimDailyStreak": false,
+      "referrals": {
+        "referralCode": "NEON-E7CC880D",
         "totalRecruits": 0,
         "unclaimedCommissionGreen": 0,
         "lifetimeCommissionGreen": 0,
         "recruits": [],
         "claimedMilestones": [],
-        "referredBy": "None (Direct)",
-        "hasClaimedWelcomeBonus": true
+        "referredBy": "NEON-44861F74",
+        "hasClaimedWelcomeBonus": false,
+        "lastDailyStipendClaimTimestamp": 1794997190833
       },
-      "lastSaveTimestamp": 1794995040242
+      "arsonStats": {
+        "breaches": 1,
+        "fails": 10,
+        "alerts": 0
+      },
+      "arsonProgress": {
+        "arson_shed": 0,
+        "arson_shack": 0,
+        "arson_storage": 0,
+        "arson_beach_hut": 0,
+        "arson_hunting_lodge": 0,
+        "arson_forgery_workshop": 0
+      },
+      "fixedDeposits": [],
+      "loans": [],
+      "faction": {
+        "id": "fac_knights",
+        "name": "Knights",
+        "tag": "KNT",
+        "respect": 40290,
+        "membersCount": 21,
+        "daysInFaction": 1,
+        "territory": "Downtown Entertainment Core",
+        "isJoined": true
+      },
+      "jailTimeRemainingSeconds": 0,
+      "hospitalTimeRemainingSeconds": 0,
+      "currentBailAmount": 0,
+      "lastCrimeReason": "",
+      "totalFinesPaid": 0,
+      "isSleeping": false,
+      "sleepRemainingSeconds": 0,
+      "stateHash": "GENESIS_METROPOLIS_HASH",
+      "lastSaveTimestamp": 1794998965862,
+      "hasUnsavedActions": false,
+      "isAwakened": false
     }
+  },
+  "dhruv19240@gmail.com": {
+    "userId": "usr_71f63e2038a30959",
+    "email": "dhruv19240@gmail.com",
+    "name": "Dhruv11",
+    "salt": "346f6edf06c434a485e448c90810bf67",
+    "passwordHash": "522fdecf260839adc41b6fed88e6868d49ca3f704682b2020015018639f072dc53b69bbb4f2ab24b43f92729a5401aa6965a4698907aa127fb3b5b2e6d011e4c",
+    "userReferralCode": "NEON-71F63E20",
+    "referredBy": "NEON-E7CC880D",
+    "createdAt": 1794998780043,
+    "lastLoginAt": 1794998902812,
+    "playerState": {
+      "id": "usr_71f63e2038a30959",
+      "name": "Dhruv11",
+      "xid": "5837207",
+      "role": "CITIZEN",
+      "rank": "#1 Neon Operative",
+      "level": 1,
+      "xp": 0,
+      "xpNeeded": 100,
+      "unallocatedStatPoints": 0,
+      "ageDays": 1,
+      "maritalStatus": "Single",
+      "networth": 150,
+      "money": 505,
+      "bankMoney": 0,
+      "points": 0,
+      "missionCredits": 0,
+      "life": 100,
+      "maxLife": 100,
+      "energy": 100,
+      "maxEnergy": 100,
+      "nerve": 10,
+      "maxNerve": 10,
+      "happy": 100,
+      "maxHappy": 100,
+      "food": 92,
+      "maxFood": 100,
+      "chain": 0,
+      "maxChain": 10,
+      "battleStats": {
+        "strength": 5,
+        "defense": 5,
+        "speed": 5,
+        "dexterity": 5
+      },
+      "workingStats": {
+        "manualLabor": 5,
+        "intelligence": 5,
+        "endurance": 5
+      },
+      "criminalSkills": {
+        "searchForCash": 1,
+        "shoplifting": 1,
+        "graffiti": 1,
+        "bootlegging": 0,
+        "forgery": 0,
+        "burglary": 0,
+        "cardSkimming": 0,
+        "hustling": 0,
+        "cracking": 0,
+        "arson": 0
+      },
+      "criminalRecord": {
+        "totalOffenses": 0,
+        "theft": 0,
+        "vandalism": 0,
+        "counterfeiting": 0,
+        "fraud": 0,
+        "cybercrime": 0,
+        "extortion": 0,
+        "organizedCrimes": 0
+      },
+      "job": {
+        "companyName": "Green Organic Nursery",
+        "companyType": "Nightclub",
+        "position": "Apprentice Cleaner",
+        "income": 500,
+        "jobPoints": 0,
+        "daysInCompany": 1
+      },
+      "educationCourses": [
+        {
+          "id": "edu_law",
+          "title": "Criminal Law & Tactical Enforcement",
+          "category": "LAW",
+          "description": "Master municipal statutes, custody procedures, and tactical apprehension. Required to serve as a sworn Police Officer.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "POLICE",
+          "requiredStats": {
+            "manualLabor": 10,
+            "endurance": 5
+          },
+          "examQuestions": [
+            {
+              "question": "What constitutes probable cause prior to detaining a suspect for store robbery?",
+              "options": [
+                "Mere personal hunch",
+                "Triggered perimeter alarms or eyewitness physical evidence",
+                "Direct mayor instruction"
+              ],
+              "answerIndex": 1
+            },
+            {
+              "question": "Which constitutional legal safeguard guarantees the right against self-incrimination upon arrest?",
+              "options": [
+                "Statutory Miranda Silence & Legal Representation",
+                "Commercial Franchise Clause",
+                "General Bail Bond Act"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is the standard procedure when a suspect attempts to escape on foot through an alleyway?",
+              "options": [
+                "Immediate lethal firearm engagement",
+                "Deploy radio dispatch cordon and non-lethal apprehension",
+                "Disregard the suspect"
+              ],
+              "answerIndex": 1
+            }
+          ]
+        },
+        {
+          "id": "edu_med",
+          "title": "Emergency Trauma, Surgery & Pharmacology",
+          "category": "MEDICINE",
+          "description": "Learn combat wound triage, surgical stitching, and critical pharmacology. Required to qualify as a Medical Doctor and operate private Clinics.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "DOCTOR",
+          "requiredStats": {
+            "intelligence": 15
+          },
+          "examQuestions": [
+            {
+              "question": "What is the immediate priority when treating an arterial hemorrhage from a knife wound?",
+              "options": [
+                "Direct pressure dressing or tactical arterial tourniquet",
+                "Giving energy drinks",
+                "Waiting for emergency room intake"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "Which pharmaceutical antagonist reverses life-threatening opioid respiratory depression?",
+              "options": [
+                "Broad-spectrum penicillin",
+                "Naloxone / Narcan",
+                "Aspirin"
+              ],
+              "answerIndex": 1
+            },
+            {
+              "question": "What municipal license must be filed to admit hospital patients and perform trauma surgery?",
+              "options": [
+                "City Hall Board of Health Clinical Deed",
+                "Street Vending Certificate",
+                "Standard notary stamp"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_culinary",
+          "title": "Culinary Arts & Nutritional Science",
+          "category": "CULINARY",
+          "description": "Study gastronomy, nutrition, food preservation, and kitchen logistics. Required to qualify as a Master Chef and open Restaurants/Bakeries.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "CHEF",
+          "requiredStats": {
+            "intelligence": 10,
+            "manualLabor": 5
+          },
+          "examQuestions": [
+            {
+              "question": "What core benefit does high-protein tactical food provide to active street operatives?",
+              "options": [
+                "Instant Energy regeneration and Happy morale recovery",
+                "Decreased speed",
+                "Increased jail time"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What food safety protocol is required for high-volume commercial meal production?",
+              "options": [
+                "Sterile food preservation and municipal sanitary health inspection",
+                "Cooking outdoors without permits",
+                "Storing raw meat at room temperature"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What license tier allows a restaurant to produce up to 1,000 meals daily?",
+              "options": [
+                "Commercial Enterprise Tier",
+                "Micro Cart Tier",
+                "Unlicensed vendor"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_fitness",
+          "title": "Sports Science & Fitness Management",
+          "category": "FITNESS",
+          "description": "Study biomechanics, resistance training, and facility operations. Required to open and operate private Gyms & Dojos.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "GYM_OWNER",
+          "requiredStats": {
+            "endurance": 15,
+            "manualLabor": 10
+          },
+          "examQuestions": [
+            {
+              "question": "What training regimen maximizes combat physical resilience and blunt impact absorption?",
+              "options": [
+                "Heavy resistance core & compound hypertrophy",
+                "Sedentary desk work",
+                "Skipping meals"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "How do player-owned gym facilities generate sustainable commercial revenue?",
+              "options": [
+                "Selling monthly gym memberships and custom training sets to other players",
+                "Begging on the avenue",
+                "Only training the owner"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is required to expand gym capacity beyond 500 members?",
+              "options": [
+                "Upgraded Municipal Facility License & verified capital reserve",
+                "Bribing gym attendees",
+                "Nothing"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_biz",
+          "title": "Corporate Finance & Franchise Management",
+          "category": "COMMERCE",
+          "description": "Master commercial accounting, supply chains, and franchise tax structures. Required to register Corporations and Nightclubs.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "BUSINESS_OWNER",
+          "requiredStats": {
+            "intelligence": 12
+          },
+          "examQuestions": [
+            {
+              "question": "How is net daily dividend calculated for a chartered commercial entity?",
+              "options": [
+                "Gross receipts minus operational upkeep and worker payroll",
+                "Pocket cash multiplied by level",
+                "Total property square footage"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What occurs if a registered business fails to maintain daily operational upkeep?",
+              "options": [
+                "Municipal asset freeze and temporary operational shutdown",
+                "Automatic unlimited grant from city",
+                "No effect"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What is required to register a commercial charter at City Hall?",
+              "options": [
+                "Accredited Business Exam certificate plus capital reserves in bank",
+                "A verbal handshake",
+                "Zero bank balance"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        },
+        {
+          "id": "edu_combat",
+          "title": "Syndicate Logistics & Electronic Countermeasures",
+          "category": "COMBAT",
+          "description": "Study counter-surveillance, digital decrypters, and turf logistics. Unlocks Syndicate Captain rank and advanced heists.",
+          "durationMinutes": 1,
+          "completed": false,
+          "examPassed": false,
+          "unlocksProfession": "GOON",
+          "requiredStats": {
+            "endurance": 10
+          },
+          "examQuestions": [
+            {
+              "question": "What is the primary method to neutralize commercial store infrared sweep sensors?",
+              "options": [
+                "Deploying electronic decrypters and moving through blind-spot intervals",
+                "Running quickly through sirens",
+                "Wearing brightly colored vests"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "Where should unlaundered heist revenue be stashed to prevent street muggings?",
+              "options": [
+                "Inside your locked property reinforced safe vault",
+                "In an open wallet on the avenue",
+                "Given to strangers"
+              ],
+              "answerIndex": 0
+            },
+            {
+              "question": "What role in an organized heist coordinates communication and police scanner alerts?",
+              "options": [
+                "The Cyber Communications Specialist",
+                "The getaway courier",
+                "The building cleaner"
+              ],
+              "answerIndex": 0
+            }
+          ]
+        }
+      ],
+      "businessRegistries": [
+        {
+          "id": "biz_wok",
+          "name": "Neon Wok Gourmet Kitchen & Grill",
+          "type": "RESTAURANT",
+          "licenseTitle": "Master Culinary Commercial Deed",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_culinary",
+          "requiredCapital": 45000,
+          "monthlyTax": 1200,
+          "dailyRevenue": 5800,
+          "dailyUpkeep": 950,
+          "employeesCount": 5,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_ramen",
+              "name": "Synthetix Cyber Ramen",
+              "type": "FOOD",
+              "productionCost": 15,
+              "sellingPrice": 45,
+              "effectDescription": "Restores +25 Energy & +15 Happy when consumed.",
+              "active": true
+            },
+            {
+              "id": "srv_shake",
+              "name": "Dragon Heavy Protein Shake",
+              "type": "FOOD",
+              "productionCost": 35,
+              "sellingPrice": 95,
+              "effectDescription": "Restores +40 Energy instantly.",
+              "active": true
+            },
+            {
+              "id": "srv_steak",
+              "name": "Wagyu Tactical Ribeye",
+              "type": "FOOD",
+              "productionCost": 120,
+              "sellingPrice": 320,
+              "effectDescription": "Restores +60 Happy & +75 Life.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_hospital",
+          "name": "Apex Health & Emergency Trauma Pavilion",
+          "type": "HOSPITAL",
+          "licenseTitle": "Municipal Surgical & Clinical Charter",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_med",
+          "requiredCapital": 95000,
+          "monthlyTax": 2800,
+          "dailyRevenue": 13500,
+          "dailyUpkeep": 2500,
+          "employeesCount": 8,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_trauma",
+              "name": "Emergency Gunshot & Knife Suture",
+              "type": "TREATMENT",
+              "productionCost": 50,
+              "sellingPrice": 200,
+              "effectDescription": "Instantly discharges patient from Hospital and restores 100% Life.",
+              "active": true
+            },
+            {
+              "id": "srv_detox",
+              "name": "Neuro-Chemical Toxin Detox",
+              "type": "TREATMENT",
+              "productionCost": 80,
+              "sellingPrice": 350,
+              "effectDescription": "Clears narcotics addiction trauma and boosts Happy.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_gym",
+          "name": "Titan Underground Iron Gym",
+          "type": "GYM",
+          "licenseTitle": "Chartered Sports & Resistance Facility Deed",
+          "licenseTier": "COMMERCIAL_500",
+          "maxDailyCapacity": 500,
+          "requiredExamId": "edu_fitness",
+          "requiredCapital": 75000,
+          "monthlyTax": 1800,
+          "dailyRevenue": 9200,
+          "dailyUpkeep": 1600,
+          "employeesCount": 6,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_powerlift",
+              "name": "Olympic Powerlifting & Heavy Sparring",
+              "type": "WORKOUT_PLAN",
+              "productionCost": 10,
+              "sellingPrice": 60,
+              "effectDescription": "Grants +25% bonus Battle Stat gains when training here.",
+              "active": true
+            }
+          ]
+        },
+        {
+          "id": "biz_nightclub",
+          "name": "The Striking Gutters VIP Lounge",
+          "type": "NIGHTCLUB",
+          "licenseTitle": "Metropolitan Commercial Liquor & Venue Charter",
+          "licenseTier": "ENTERPRISE_5000",
+          "maxDailyCapacity": 5000,
+          "requiredExamId": "edu_biz",
+          "requiredCapital": 280000,
+          "monthlyTax": 6000,
+          "dailyRevenue": 42000,
+          "dailyUpkeep": 8000,
+          "employeesCount": 25,
+          "isRegistered": false,
+          "services": [
+            {
+              "id": "srv_vip",
+              "name": "VIP Skybox Bottle Service",
+              "type": "MERCHANDISE",
+              "productionCost": 200,
+              "sellingPrice": 1500,
+              "effectDescription": "Boosts max Happy capacity by +50.",
+              "active": true
+            }
+          ]
+        }
+      ],
+      "missions": [
+        {
+          "id": "msn_1",
+          "title": "Getting Started in the Underworld",
+          "contractor": "Fixer Vance",
+          "description": "Execute your first Search for Cash crime to prove you can navigate the streets.",
+          "rewardCredits": 5,
+          "rewardCash": 500,
+          "completed": true,
+          "reqType": "CRIME",
+          "targetCount": 1,
+          "currentCount": 1
+        },
+        {
+          "id": "msn_2",
+          "title": "Combat Dummy Bashing",
+          "contractor": "Fixer Vance",
+          "description": "Train at the gym until your Strength reaches at least 30.",
+          "rewardCredits": 5,
+          "rewardCash": 1200,
+          "completed": true,
+          "reqType": "STAT",
+          "targetCount": 30,
+          "currentCount": 34
+        },
+        {
+          "id": "msn_3",
+          "title": "Exploring the Municipal Sectors",
+          "contractor": "Fixer Vance",
+          "description": "Visit the City Hall and inspect commercial business deeds.",
+          "rewardCredits": 5,
+          "rewardCash": 2500,
+          "completed": true,
+          "reqType": "BUY",
+          "targetCount": 1,
+          "currentCount": 1
+        },
+        {
+          "id": "msn_4",
+          "title": "High-Level Syndicate Heist",
+          "contractor": "Syndicate Boss Duke",
+          "description": "Reach Level 5 and execute 10 successful crimes to earn executive respect.",
+          "rewardCredits": 10,
+          "rewardCash": 15000,
+          "completed": false,
+          "reqType": "LEVEL",
+          "targetCount": 5,
+          "currentCount": 4
+        }
+      ],
+      "properties": [
+        {
+          "id": "prop_slum",
+          "name": "Derelict Motel Room",
+          "tier": "SLUM",
+          "cost": 0,
+          "fees": 10,
+          "upkeepPerDay": 10,
+          "maxEnergyBonus": 0,
+          "maxHappyBonus": 0,
+          "vaultCapacity": 2000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 2,
+          "owned": false
+        },
+        {
+          "id": "prop_apt",
+          "name": "Downtown Studio Apartment",
+          "tier": "APARTMENT",
+          "cost": 31250,
+          "fees": 50,
+          "upkeepPerDay": 25,
+          "maxEnergyBonus": 10,
+          "maxHappyBonus": 20,
+          "vaultCapacity": 50000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 5,
+          "owned": true
+        },
+        {
+          "id": "prop_villa",
+          "name": "Gated Suburb Villa",
+          "tier": "VILLA",
+          "cost": 150000,
+          "fees": 120,
+          "upkeepPerDay": 80,
+          "maxEnergyBonus": 25,
+          "maxHappyBonus": 50,
+          "vaultCapacity": 350000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 7,
+          "owned": false
+        },
+        {
+          "id": "prop_penthouse",
+          "name": "High-Rise Sky Penthouse",
+          "tier": "PENTHOUSE",
+          "cost": 650000,
+          "fees": 350,
+          "upkeepPerDay": 250,
+          "maxEnergyBonus": 50,
+          "maxHappyBonus": 100,
+          "vaultCapacity": 2000000,
+          "vaultCash": 0,
+          "isLocked": true,
+          "securityLevel": 9,
+          "owned": false
+        }
+      ],
+      "currentPropertyId": "prop_apt",
+      "inventory": [],
+      "bazaarListings": [],
+      "bazaarTillCash": 0,
+      "dailyWheelSpinsAvailable": 1,
+      "lastWheelSpinTimestamp": 0,
+      "soundEnabled": true,
+      "dreamPoints": 174,
+      "dreamMultiplier": 1,
+      "totalTaps": 48,
+      "tapStamina": 100,
+      "maxTapStamina": 100,
+      "dreamCards": {},
+      "activeTapperSkinId": "tree_sprout",
+      "unlockedTapperSkins": [
+        "tree_sprout"
+      ],
+      "bodyAugmentations": [],
+      "settledReceiptIds": [],
+      "greenTokens": 5,
+      "dailyStreak": 2,
+      "lastStreakClaimTimestamp": 1794998792414,
+      "canClaimDailyStreak": false,
+      "referrals": {
+        "referralCode": "NEON-71F63E20",
+        "totalRecruits": 0,
+        "unclaimedCommissionGreen": 0,
+        "lifetimeCommissionGreen": 0,
+        "recruits": [],
+        "claimedMilestones": [],
+        "referredBy": "NEON-E7CC880D",
+        "hasClaimedWelcomeBonus": false,
+        "lastDailyStipendClaimTimestamp": 1794998792414
+      },
+      "arsonStats": {
+        "breaches": 1,
+        "fails": 10,
+        "alerts": 0
+      },
+      "arsonProgress": {
+        "arson_shed": 0,
+        "arson_shack": 0,
+        "arson_storage": 0,
+        "arson_beach_hut": 0,
+        "arson_hunting_lodge": 0,
+        "arson_forgery_workshop": 0
+      },
+      "fixedDeposits": [],
+      "loans": [],
+      "faction": {
+        "id": "fac_knights",
+        "name": "Knights",
+        "tag": "KNT",
+        "respect": 40290,
+        "membersCount": 21,
+        "daysInFaction": 1,
+        "territory": "Downtown Entertainment Core",
+        "isJoined": true
+      },
+      "jailTimeRemainingSeconds": 0,
+      "hospitalTimeRemainingSeconds": 0,
+      "currentBailAmount": 0,
+      "lastCrimeReason": "",
+      "totalFinesPaid": 0,
+      "isSleeping": false,
+      "sleepRemainingSeconds": 0,
+      "stateHash": "6b45566e185a5ee4885f36dadf332f02853ef95a57a8c7e0ce4e199e717503f2",
+      "lastSaveTimestamp": 1794998902087,
+      "hasUnsavedActions": false,
+      "isAwakened": false
+    },
+    "money": 505,
+    "sparks": 174,
+    "level": 1,
+    "rank": "#1 Neon Operative",
+    "lastSaveAt": 1794998902812
   }
 }

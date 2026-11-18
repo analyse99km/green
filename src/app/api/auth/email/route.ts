@@ -130,6 +130,74 @@ export async function POST(req: NextRequest) {
       };
 
       users[cleanEmail] = newUser;
+
+      // Real-time Recruiter Attribution
+      if (newUser.referredBy) {
+        const targetRefCode = newUser.referredBy;
+        // Search local users or fetch remote master users
+        let recruiterEmail = Object.keys(users).find(
+          em => (users[em].userReferralCode && users[em].userReferralCode.toUpperCase() === targetRefCode) ||
+                (users[em].playerState?.referrals?.referralCode && users[em].playerState.referrals.referralCode.toUpperCase() === targetRefCode)
+        );
+
+        if (!recruiterEmail) {
+          try {
+            const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
+            if (remoteRes.ok) {
+              const remoteUsers = await remoteRes.json();
+              for (const [rEm, rUser] of Object.entries(remoteUsers as Record<string, any>)) {
+                if (!users[rEm]) users[rEm] = rUser;
+                if ((rUser.userReferralCode && rUser.userReferralCode.toUpperCase() === targetRefCode) ||
+                    (rUser.playerState?.referrals?.referralCode && rUser.playerState.referrals.referralCode.toUpperCase() === targetRefCode)) {
+                  recruiterEmail = rEm;
+                }
+              }
+            }
+          } catch {}
+        }
+
+        if (recruiterEmail && users[recruiterEmail]) {
+          const recruiter = users[recruiterEmail];
+          if (!recruiter.playerState) recruiter.playerState = {};
+          if (!recruiter.playerState.referrals) {
+            recruiter.playerState.referrals = {
+              referralCode: recruiter.userReferralCode || targetRefCode,
+              recruits: [],
+              totalRecruits: 0,
+              networkTotalCitizens: 0,
+              unclaimedCommissionGreen: 0,
+              lifetimeCommissionGreen: 0,
+              claimedMilestones: [],
+            };
+          }
+          if (!Array.isArray(recruiter.playerState.referrals.recruits)) {
+            recruiter.playerState.referrals.recruits = [];
+          }
+
+          const alreadyAdded = recruiter.playerState.referrals.recruits.some(
+            (r: any) => r.id === newUser.userId || r.name === newUser.name || (r.email && r.email.toLowerCase() === newUser.email.toLowerCase())
+          );
+
+          if (!alreadyAdded) {
+            recruiter.playerState.referrals.recruits.unshift({
+              id: newUser.userId,
+              name: newUser.name,
+              email: newUser.email,
+              joinedAt: Date.now(),
+              level: 1,
+              tier: 1,
+              dailyGameplayEarned: 100,
+              totalGeneratedGreen: 10,
+              lastActive: 'Active today (Joined via link)'
+            });
+            recruiter.playerState.referrals.totalRecruits = recruiter.playerState.referrals.recruits.length;
+            recruiter.playerState.referrals.networkTotalCitizens = recruiter.playerState.referrals.recruits.length;
+            recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + 10;
+            recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + 10;
+          }
+        }
+      }
+
       saveUsers(users);
       pushUsersToMaster(users).catch(() => {});
 

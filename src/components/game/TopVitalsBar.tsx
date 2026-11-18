@@ -12,6 +12,7 @@ import {
   Sparkles,
   AlertTriangle,
 } from 'lucide-react';
+import { formatCompactNumber, CURRENCY_ICONS } from './formatters';
 
 interface TopVitalsBarProps {
   onOpenStreak?: () => void;
@@ -77,21 +78,24 @@ export default function TopVitalsBar({
             </div>
 
             {/* GREEN Coins */}
-            <div className="flex items-center gap-1 text-emerald-300 font-bold bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-500/30">
-              <span>🌿</span>
-              <span>{(player.money || 0).toLocaleString()}</span>
+            <div
+              className="flex items-center gap-1 text-emerald-300 font-bold bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-500/30 font-mono text-xs"
+              title={`Full Balance: ${(player.money || 0).toLocaleString()} GREEN`}
+            >
+              <span>{CURRENCY_ICONS.GREEN}</span>
+              <span>{formatCompactNumber(player.money || 0)}</span>
               <span className="text-[10px] text-emerald-400 font-semibold">GREEN</span>
             </div>
 
             {/* Dream Sparks Bank */}
             <button
               onClick={onOpenDreamTap}
-              className="flex items-center gap-1 text-cyan-400 font-bold bg-cyan-950/60 px-2.5 py-1 rounded-lg border border-cyan-500/30 hover:border-cyan-400 cursor-pointer transition-colors"
-              title="Click to enter Lucid Dream Generator"
+              className="flex items-center gap-1 text-amber-300 font-bold bg-amber-950/40 px-2.5 py-1 rounded-lg border border-amber-500/30 hover:border-amber-400 cursor-pointer transition-colors font-mono text-xs"
+              title={`Full Sparks: ${(player.dreamPoints || 0).toLocaleString()} Sparks`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-              <span>{(player.dreamPoints || 0).toLocaleString()}</span>
-              <span className="text-[10px] text-cyan-300 font-semibold">Sparks</span>
+              <span>{CURRENCY_ICONS.SPARKS}</span>
+              <span>{formatCompactNumber(player.dreamPoints || 0)}</span>
+              <span className="text-[10px] text-amber-300 font-semibold">Sparks</span>
             </button>
           </div>
 

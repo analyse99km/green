@@ -99,6 +99,57 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Player not found' }, { status: 404 });
     }
 
+    // Real-time aggregate referrals
+    const myCode = (user.userReferralCode || user.playerState?.referrals?.referralCode || '').toUpperCase();
+    if (myCode) {
+      if (!user.playerState) user.playerState = {};
+      if (!user.playerState.referrals) {
+        user.playerState.referrals = {
+          referralCode: myCode,
+          recruits: [],
+          totalRecruits: 0,
+          networkTotalCitizens: 0,
+          unclaimedCommissionGreen: 0,
+          lifetimeCommissionGreen: 0,
+          claimedMilestones: [],
+        };
+      }
+      if (!Array.isArray(user.playerState.referrals.recruits)) {
+        user.playerState.referrals.recruits = [];
+      }
+
+      let modified = false;
+      for (const [em, other] of Object.entries(users)) {
+        if (em.toLowerCase() !== email && other.referredBy && other.referredBy.toUpperCase() === myCode) {
+          const exists = user.playerState.referrals.recruits.some(
+            (r: any) => r.id === other.userId || r.name === other.name || (r.email && r.email.toLowerCase() === em.toLowerCase())
+          );
+          if (!exists) {
+            user.playerState.referrals.recruits.unshift({
+              id: other.userId,
+              name: other.name || em.split('@')[0],
+              email: em,
+              joinedAt: other.createdAt || Date.now(),
+              level: other.level || other.playerState?.level || 1,
+              tier: 1,
+              dailyGameplayEarned: 100,
+              totalGeneratedGreen: 10,
+              lastActive: 'Active Operative'
+            });
+            modified = true;
+          }
+        }
+      }
+
+      if (modified) {
+        user.playerState.referrals.totalRecruits = user.playerState.referrals.recruits.length;
+        user.playerState.referrals.networkTotalCitizens = user.playerState.referrals.recruits.length;
+        users[email] = user;
+        saveUsers(users);
+        pushToMaster(users).catch(() => {});
+      }
+    }
+
     return NextResponse.json({
       success: true,
       email,
@@ -150,6 +201,60 @@ export async function POST(req: NextRequest) {
         referredBy: playerState.referrals?.referredBy || null,
         createdAt: Date.now()
       };
+    }
+
+    // Preserve and merge existing recruits so a client save never wipes real downlines
+    const existingRecruits = (user.playerState?.referrals?.recruits && Array.isArray(user.playerState.referrals.recruits))
+      ? user.playerState.referrals.recruits
+      : [];
+
+    const incomingRecruits = (playerState.referrals?.recruits && Array.isArray(playerState.referrals.recruits))
+      ? playerState.referrals.recruits
+      : [];
+
+    const mergedRecruits = [...incomingRecruits];
+    for (const er of existingRecruits) {
+      if (!mergedRecruits.some((r: any) => r.id === er.id || (r.email && er.email && r.email.toLowerCase() === er.email.toLowerCase()))) {
+        mergedRecruits.push(er);
+      }
+    }
+
+    // Auto-discover any new recruits from the users database who registered using my code
+    const myRefCode = (user.userReferralCode || playerState.referrals?.referralCode || '').toUpperCase();
+    if (myRefCode) {
+      for (const [em, other] of Object.entries(users)) {
+        if (em.toLowerCase() !== cleanEmail && other.referredBy && other.referredBy.toUpperCase() === myRefCode) {
+          if (!mergedRecruits.some((r: any) => r.id === other.userId || (r.email && r.email.toLowerCase() === em.toLowerCase()))) {
+            mergedRecruits.unshift({
+              id: other.userId,
+              name: other.name || em.split('@')[0],
+              email: em,
+              joinedAt: other.createdAt || Date.now(),
+              level: other.level || 1,
+              tier: 1,
+              dailyGameplayEarned: 100,
+              totalGeneratedGreen: 10,
+              lastActive: 'Active Operative'
+            });
+          }
+        }
+      }
+    }
+
+    if (!playerState.referrals) {
+      playerState.referrals = {
+        referralCode: myRefCode,
+        recruits: mergedRecruits,
+        totalRecruits: mergedRecruits.length,
+        networkTotalCitizens: mergedRecruits.length,
+        unclaimedCommissionGreen: 0,
+        lifetimeCommissionGreen: 0,
+        claimedMilestones: [],
+      };
+    } else {
+      playerState.referrals.recruits = mergedRecruits;
+      playerState.referrals.totalRecruits = mergedRecruits.length;
+      playerState.referrals.networkTotalCitizens = mergedRecruits.length;
     }
 
     // Update with latest player state

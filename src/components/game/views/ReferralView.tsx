@@ -24,6 +24,7 @@ import {
   ChevronRight,
   Coins,
 } from 'lucide-react';
+import { formatCompactNumber, CURRENCY_ICONS } from '../formatters';
 
 export default function ReferralView() {
   const {
@@ -34,17 +35,17 @@ export default function ReferralView() {
     claimDailyRoyaltyDividends,
     calculateNetworkTiers,
     redeemInviteCode,
-    simulateNewRecruit,
+    refreshReferralNetwork,
   } = useGame();
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [inviteInput, setInviteInput] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [selectedSimTier, setSelectedSimTier] = useState<number>(1);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
+    refreshReferralNetwork();
     const timer = setInterval(() => setNow(Date.now()), 10000);
     return () => clearInterval(timer);
   }, []);
@@ -125,13 +126,10 @@ export default function ReferralView() {
   const handleRedeemInvite = () => {
     const res = redeemInviteCode(inviteInput);
     setFeedback(res.message);
-    if (res.success) setInviteInput('');
-    setTimeout(() => setFeedback(null), 3500);
-  };
-
-  const handleSimulate = (tier: number) => {
-    const res = simulateNewRecruit(tier);
-    setFeedback(res.message);
+    if (res.success) {
+      setInviteInput('');
+      setTimeout(() => { refreshReferralNetwork(); }, 600);
+    }
     setTimeout(() => setFeedback(null), 3500);
   };
 
@@ -181,8 +179,8 @@ export default function ReferralView() {
             <div className="bg-neutral-950 px-3.5 py-2 rounded-xl border border-neutral-800 font-mono text-xs">
               <span className="text-[10px] text-neutral-500 block">Lifetime Royalties</span>
               <span className="text-amber-400 font-bold text-sm sm:text-base flex items-center gap-0.5">
-                <span>🌿</span>
-                <span>{(refs.lifetimeCommissionGreen || 0).toLocaleString()}</span>
+                <span>{CURRENCY_ICONS.GREEN}</span>
+                <span>{formatCompactNumber(refs.lifetimeCommissionGreen || 0)}</span>
                 <span className="text-[10px] text-amber-300 ml-0.5">GREEN</span>
               </span>
             </div>
@@ -337,7 +335,7 @@ export default function ReferralView() {
                 </div>
                 <div className="flex justify-between text-neutral-400">
                   <span>Gameplay:</span>
-                  <span className="text-neutral-300 font-bold">🌿 {tier.dailyGameplayVolume.toLocaleString()}</span>
+                  <span className="text-neutral-300 font-bold">{CURRENCY_ICONS.GREEN} {formatCompactNumber(tier.dailyGameplayVolume)}</span>
                 </div>
                 <div className="flex justify-between text-emerald-400 font-bold pt-1 border-t border-neutral-900">
                   <span>Today's Dividend:</span>
@@ -346,41 +344,6 @@ export default function ReferralView() {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Multi-Tier Simulation Toolbar (Test All 5 Tiers) */}
-        <div className="p-3.5 rounded-xl bg-neutral-950 border border-neutral-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-          <div className="flex items-center gap-2 text-neutral-400">
-            <Sparkles className="w-4 h-4 text-cyan-400" />
-            <span>Simulate Network Growth across Jumps:</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => handleSimulate(1)}
-              className="px-2.5 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold cursor-pointer transition-all"
-            >
-              + Direct (Tier 1 • 10%)
-            </button>
-            <button
-              onClick={() => handleSimulate(2)}
-              className="px-2.5 py-1.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/40 text-indigo-300 text-[11px] font-bold cursor-pointer transition-all"
-            >
-              + 1 Jump (Tier 2 • 4%)
-            </button>
-            <button
-              onClick={() => handleSimulate(3)}
-              className="px-2.5 py-1.5 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold cursor-pointer transition-all"
-            >
-              + 2 Jumps (Tier 3 • 2%)
-            </button>
-            <button
-              onClick={() => handleSimulate(4)}
-              className="px-2.5 py-1.5 rounded-lg bg-amber-950/70 hover:bg-amber-900/80 border border-amber-500/40 text-amber-300 text-[11px] font-bold cursor-pointer transition-all"
-            >
-              + 3 Jumps (Tier 4 • 1%)
-            </button>
-          </div>
         </div>
       </div>
 
@@ -561,7 +524,17 @@ export default function ReferralView() {
             <Users className="w-4 h-4 text-emerald-400" />
             <h3 className="font-bold text-white text-sm">Your Syndicate Network Roster ({totalNetworkCitizens})</h3>
           </div>
-          <span className="text-[11px] font-mono text-neutral-500">Live Downline Activity</span>
+          <button
+            onClick={() => {
+              refreshReferralNetwork();
+              setFeedback('Synced live syndicate network from cluster!');
+              setTimeout(() => setFeedback(null), 3000);
+            }}
+            className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 hover:text-emerald-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-neutral-800 hover:border-emerald-500/40 cursor-pointer transition-all"
+          >
+            <span>🔄</span>
+            <span>Refresh Roster</span>
+          </button>
         </div>
 
         {totalNetworkCitizens === 0 ? (
@@ -571,14 +544,6 @@ export default function ReferralView() {
             <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
               Share your link to recruit citizens. You earn milestone bounties and multi-jump royalties once a day based on active gameplay!
             </p>
-            <div className="pt-2">
-              <button
-                onClick={() => handleSimulate(1)}
-                className="px-3.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 text-xs font-mono font-bold cursor-pointer"
-              >
-                + Test-Add a Recruit Now
-              </button>
-            </div>
           </div>
         ) : (
           <div className="divide-y divide-neutral-800/80 overflow-x-auto">

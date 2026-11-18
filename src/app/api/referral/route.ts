@@ -1,0 +1,236 @@
+import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+
+const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
+const MASTER_STORAGE_REPO = 'pocomon9/green-status';
+const MASTER_PAT = process.env.GH_PAT || process.env.MASTER_PAT || '';
+
+function loadUsers(): Record<string, any> {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+    }
+  } catch (err) {
+    console.error('Failed to load users for referral:', err);
+  }
+  return {};
+}
+
+function saveUsers(users: Record<string, any>) {
+  try {
+    const dir = path.dirname(USERS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to save users from referral:', err);
+  }
+}
+
+async function pushToMaster(users: Record<string, any>) {
+  try {
+    const content = Buffer.from(JSON.stringify(users, null, 2), 'utf-8').toString('base64');
+    let sha = '';
+    try {
+      const checkRes = await fetch(`https://api.github.com/repos/${MASTER_STORAGE_REPO}/contents/users.json`, {
+        headers: {
+          'Authorization': `Bearer ${MASTER_PAT}`,
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'Neon-Sync-Worker'
+        }
+      });
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        sha = checkData.sha || '';
+      }
+    } catch {}
+
+    const bodyData: any = {
+      message: 'referral network update [skip ci]',
+      content
+    };
+    if (sha) bodyData.sha = sha;
+
+    await fetch(`https://api.github.com/repos/${MASTER_STORAGE_REPO}/contents/users.json`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${MASTER_PAT}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Neon-Sync-Worker'
+      },
+      body: JSON.stringify(bodyData)
+    });
+  } catch (err) {
+    console.warn('Asynchronous master push error in referral:', err);
+  }
+}
+
+// POST /api/referral - Redeem code & affiliate recruit
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { action, referralCode, recruitEmail, recruitName, recruitUserId } = body;
+
+    const cleanCode = String(referralCode || '').trim().toUpperCase();
+    const cleanRecruitEmail = String(recruitEmail || '').trim().toLowerCase();
+
+    if (!cleanCode) {
+      return NextResponse.json({ success: false, message: 'Referral code is required.' }, { status: 400 });
+    }
+
+    let users = loadUsers();
+
+    // Check remote storage if not found locally
+    if (Object.keys(users).length === 0) {
+      try {
+        const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
+        if (remoteRes.ok) {
+          users = await remoteRes.json();
+          saveUsers(users);
+        }
+      } catch {}
+    }
+
+    // Find recruiter
+    let recruiterEmail = Object.keys(users).find(
+      (em) =>
+        (users[em].userReferralCode && users[em].userReferralCode.toUpperCase() === cleanCode) ||
+        (users[em].playerState?.referrals?.referralCode &&
+          users[em].playerState.referrals.referralCode.toUpperCase() === cleanCode)
+    );
+
+    if (!recruiterEmail) {
+      // Pull remote master users.json again in case recruiter registered on another node
+      try {
+        const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
+        if (remoteRes.ok) {
+          const remoteUsers = await remoteRes.json();
+          for (const [em, rUser] of Object.entries(remoteUsers as Record<string, any>)) {
+            if (!users[em]) users[em] = rUser;
+            if (
+              (rUser.userReferralCode && rUser.userReferralCode.toUpperCase() === cleanCode) ||
+              (rUser.playerState?.referrals?.referralCode &&
+                rUser.playerState.referrals.referralCode.toUpperCase() === cleanCode)
+            ) {
+              recruiterEmail = em;
+            }
+          }
+        }
+      } catch {}
+    }
+
+    if (!recruiterEmail || !users[recruiterEmail]) {
+      return NextResponse.json({ success: false, message: `Operative code "${cleanCode}" not found in City records.` }, { status: 404 });
+    }
+
+    if (cleanRecruitEmail && recruiterEmail.toLowerCase() === cleanRecruitEmail) {
+      return NextResponse.json({ success: false, message: 'You cannot redeem your own referral code.' }, { status: 400 });
+    }
+
+    const recruiter = users[recruiterEmail];
+    if (!recruiter.playerState) recruiter.playerState = {};
+    if (!recruiter.playerState.referrals) {
+      recruiter.playerState.referrals = {
+        referralCode: recruiter.userReferralCode || cleanCode,
+        recruits: [],
+        totalRecruits: 0,
+        networkTotalCitizens: 0,
+        unclaimedCommissionGreen: 0,
+        lifetimeCommissionGreen: 0,
+        claimedMilestones: [],
+      };
+    }
+    if (!Array.isArray(recruiter.playerState.referrals.recruits)) {
+      recruiter.playerState.referrals.recruits = [];
+    }
+
+    const effectiveName = recruitName || (cleanRecruitEmail ? cleanRecruitEmail.split('@')[0] : 'New Operative');
+    const effectiveId = recruitUserId || (cleanRecruitEmail ? `usr_${cleanRecruitEmail.slice(0, 8)}` : `usr_${Date.now()}`);
+
+    // Check if recruit already recorded
+    const existingIndex = recruiter.playerState.referrals.recruits.findIndex(
+      (r: any) =>
+        r.id === effectiveId ||
+        (cleanRecruitEmail && r.email && r.email.toLowerCase() === cleanRecruitEmail) ||
+        r.name === effectiveName
+    );
+
+    if (existingIndex === -1) {
+      recruiter.playerState.referrals.recruits.unshift({
+        id: effectiveId,
+        name: effectiveName,
+        email: cleanRecruitEmail,
+        joinedAt: Date.now(),
+        level: 1,
+        tier: 1,
+        dailyGameplayEarned: 150,
+        totalGeneratedGreen: 15,
+        lastActive: 'Active today (Redeemed invite code)',
+      });
+      recruiter.playerState.referrals.totalRecruits = recruiter.playerState.referrals.recruits.length;
+      recruiter.playerState.referrals.networkTotalCitizens = recruiter.playerState.referrals.recruits.length;
+      // Instant +100 GREEN bounty added to recruiter till!
+      recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
+      recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
+    }
+
+    // Update recruit's record if they have an email profile
+    if (cleanRecruitEmail && users[cleanRecruitEmail]) {
+      users[cleanRecruitEmail].referredBy = cleanCode;
+      if (!users[cleanRecruitEmail].playerState) users[cleanRecruitEmail].playerState = {};
+      if (!users[cleanRecruitEmail].playerState.referrals) users[cleanRecruitEmail].playerState.referrals = {};
+      users[cleanRecruitEmail].playerState.referrals.referredBy = cleanCode;
+      users[cleanRecruitEmail].playerState.referrals.hasClaimedWelcomeBonus = true;
+    }
+
+    users[recruiterEmail] = recruiter;
+    saveUsers(users);
+    pushToMaster(users).catch(() => {});
+
+    return NextResponse.json({
+      success: true,
+      message: `Syndicate affiliation confirmed! You are now part of ${recruiter.name || 'Operative'}'s network.`,
+      recruiterName: recruiter.name || 'Operative',
+      recruiterEmail,
+      referralCode: cleanCode,
+      bonusGreen: 50,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  }
+}
+
+// GET /api/referral?email=...
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+
+    if (!email) {
+      return NextResponse.json({ success: false, message: 'Email required' }, { status: 400 });
+    }
+
+    const users = loadUsers();
+    const user = users[email];
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: 'Player not found' }, { status: 404 });
+    }
+
+    const refs = user.playerState?.referrals || {
+      referralCode: user.userReferralCode || '',
+      recruits: [],
+      totalRecruits: 0,
+      unclaimedCommissionGreen: 0,
+      lifetimeCommissionGreen: 0,
+    };
+
+    return NextResponse.json({
+      success: true,
+      referrals: refs,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  }
+}

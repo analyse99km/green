@@ -158,6 +158,7 @@ interface GameContextType {
   claimDailyRoyaltyDividends: () => { success: boolean; message: string; amount: number; tierBreakdown: NetworkTierStats[] };
   calculateNetworkTiers: () => NetworkTierStats[];
   redeemInviteCode: (code: string) => { success: boolean; message: string };
+  refreshReferralNetwork: () => Promise<void>;
   simulateNewRecruit: (tier?: number) => { success: boolean; recruitName: string; message: string };
   updatePlayerName: (newName: string) => { success: boolean; message: string };
   insufficientFundsModal: InsufficientFundsData | null;
@@ -553,9 +554,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       addLog({
         type: 'SAVE',
-        message: '💾 Auto-Save: Operative game state securely saved & encrypted (2-minute cycle).',
+        message: '💾 Auto-Save: Operative game state securely saved & encrypted (1-minute cycle).',
       });
-    }, 120000); // exactly 2 minutes
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    }, 60000); // exactly 1 minute
 
     return () => clearInterval(autoSaveInterval);
   }, [addLog]);
@@ -3543,10 +3546,88 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       message: `REDEEM CODE: Activated invite [${trimmed}]! Received +🌿 50 GREEN & Welcome Meal!`,
     });
 
+    // Real-time network sync with recruiter so recruiter sees recruit & till commission
+    const recruitEmail = (typeof localStorage !== 'undefined' ? localStorage.getItem('metropolis_user_email') || localStorage.getItem('green_market_user_email') : '') || '';
+    if (typeof fetch !== 'undefined') {
+      fetch('/api/referral', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'redeem',
+          referralCode: trimmed,
+          recruitEmail,
+          recruitName: player.name,
+          recruitUserId: player.id,
+        }),
+      }).then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          if (data.recruiterName) {
+            addLog({
+              type: 'CIVILIAN',
+              message: `SYNDICATE NETWORK: Connected under Operative "${data.recruiterName}" [${trimmed}]!`,
+            });
+          }
+        }
+      }).catch(() => {});
+    }
+
     return {
       success: true,
       message: `Starter pack unlocked! +🌿 50 GREEN, +10 Energy & Fresh Baguette added to inventory.`,
     };
+  };
+
+  const refreshReferralNetwork = async () => {
+    let authEmail = '';
+    if (typeof localStorage !== 'undefined') {
+      const authRaw = localStorage.getItem('metropolis_auth_user') || localStorage.getItem('green_market_auth_user');
+      if (authRaw) {
+        try { authEmail = JSON.parse(authRaw).email; } catch {}
+      }
+      if (!authEmail) {
+        authEmail = localStorage.getItem('metropolis_user_email') || localStorage.getItem('green_market_user_email') || '';
+      }
+    }
+
+    if (!authEmail) return;
+
+    try {
+      const res = await fetch(`/api/player/sync?email=${encodeURIComponent(authEmail.trim().toLowerCase())}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.playerState?.referrals) {
+          const serverRefs = data.playerState.referrals;
+          setPlayer((prev) => {
+            const currentRecruits = prev.referrals?.recruits || [];
+            const serverRecruits = serverRefs.recruits || [];
+            const mergedRecruits = [...serverRecruits];
+            for (const cr of currentRecruits) {
+              if (!mergedRecruits.some((r: any) => r.id === cr.id || (r.email && cr.email && r.email.toLowerCase() === cr.email.toLowerCase()))) {
+                mergedRecruits.push(cr);
+              }
+            }
+            return {
+              ...prev,
+              referrals: {
+                ...(prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
+                ...serverRefs,
+                recruits: mergedRecruits,
+                totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), mergedRecruits.length),
+                unclaimedCommissionGreen: Math.max(
+                  Number(prev.referrals?.unclaimedCommissionGreen || 0),
+                  Number(serverRefs.unclaimedCommissionGreen || 0)
+                ),
+                lifetimeCommissionGreen: Math.max(
+                  Number(prev.referrals?.lifetimeCommissionGreen || 0),
+                  Number(serverRefs.lifetimeCommissionGreen || 0)
+                ),
+              },
+            };
+          });
+        }
+      }
+    } catch {}
   };
 
   // MULTI-TIER JUMP ROYALTY COMPUTATION (Divided Once a Day based strictly on Active Gameplay)
@@ -3698,78 +3779,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  // MULTI-TIER SIMULATION (supports direct tier 1 or 1-jump, 2-jump downlines)
-  const simulateNewRecruit = (targetTier: number = 1) => {
-    const mockNames = [
-      'CipherBlade_99',
-      'NeonPhantom_X',
-      'Valkyrie_Rose',
-      'GhostRunner_404',
-      'QuantumMonk',
-      'ApexDrifter_07',
-      'ShadowProtocol',
-      'EmeraldRonin',
-      'ZeroDay_Merc',
-      'Solaris_Titan',
-      'AeroKnight_88',
-      'ChronoStalker',
-      'ViperGrid_01',
-      'PixelRebel_X',
-      'SynapseReaper',
-    ];
-    const randomName = mockNames[Math.floor(Math.random() * mockNames.length)] + '_' + Math.floor(Math.random() * 90 + 10);
-    // Active daily gameplay generated by recruit (80 - 320 GREEN from crimes/workouts)
-    const dailyGameplay = Math.floor(Math.random() * 240) + 80;
-
-    const tierRates: Record<number, { percent: number; label: string }> = {
-      1: { percent: 10, label: 'Direct Link (0 Jumps)' },
-      2: { percent: 4, label: '1 Jump (2nd Gen)' },
-      3: { percent: 2, label: '2 Jumps (3rd Gen)' },
-      4: { percent: 1, label: '3 Jumps (4th Gen)' },
-      5: { percent: 0.5, label: '4+ Jumps (5th Gen)' },
-    };
-
-    const tierConfig = tierRates[targetTier] || tierRates[1];
-    const instantCommission = Math.round(dailyGameplay * (tierConfig.percent / 100));
-
-    const newRecruit: ReferredUser = {
-      id: 'rec_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
-      name: randomName,
-      joinedAt: Date.now(),
-      level: Math.floor(Math.random() * 4) + 1,
-      tier: targetTier,
-      dailyGameplayEarned: dailyGameplay,
-      totalGeneratedGreen: instantCommission,
-      lastActive: 'Active today (Gameplay logged)',
-    };
-
-    setPlayer((prev) => {
-      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-      const isDirect = targetTier === 1;
-      return {
-        ...prev,
-        referrals: {
-          ...currentRefs,
-          totalRecruits: isDirect ? currentRefs.totalRecruits + 1 : currentRefs.totalRecruits,
-          networkTotalCitizens: (currentRefs.networkTotalCitizens || currentRefs.totalRecruits) + 1,
-          unclaimedCommissionGreen: currentRefs.unclaimedCommissionGreen + instantCommission,
-          lifetimeCommissionGreen: currentRefs.lifetimeCommissionGreen + instantCommission,
-          recruits: [newRecruit, ...(currentRefs.recruits || [])],
-        },
-        hasUnsavedActions: true,
-      };
-    });
-
-    SoundEngine.playCash(player.soundEnabled);
-    addLog({
-      type: 'CIVILIAN',
-      message: `NETWORK EXPANSION: New citizen "${randomName}" joined at Tier ${targetTier} [${tierConfig.label}]! Daily Gameplay: 🌿 ${dailyGameplay} GREEN → +${tierConfig.percent}% Royalty!`,
-    });
-
+  // Multi-tier simulation disabled in production
+  const simulateNewRecruit = (_targetTier: number = 1) => {
     return {
-      success: true,
-      recruitName: randomName,
-      message: `Added Tier ${targetTier} citizen: ${randomName} (${tierConfig.label}). Earning +${tierConfig.percent}% daily royalty!`,
+      success: false,
+      recruitName: '',
+      message: 'Simulation disabled in production. Recruit real citizens via your referral link!',
     };
   };
 
@@ -3853,6 +3868,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         claimDailyRoyaltyDividends,
         calculateNetworkTiers,
         redeemInviteCode,
+        refreshReferralNetwork,
         simulateNewRecruit,
         updatePlayerName,
         insufficientFundsModal,

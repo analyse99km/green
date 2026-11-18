@@ -272,6 +272,7 @@ export interface NetworkTierStats {
 export interface ReferredUser {
   id: string;
   name: string;
+  email?: string;
   joinedAt: number;
   level: number;
   tier: number; // 1 = Direct (0 jumps), 2 = 1 Jump, 3 = 2 Jumps, etc.

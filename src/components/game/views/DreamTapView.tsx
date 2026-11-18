@@ -23,11 +23,14 @@ import {
   Gift,
   Award,
   ChevronRight,
+  Clock,
+  Info,
 } from 'lucide-react';
 import ReferralView from './ReferralView';
 import { SoundEngine } from '../gameAudio';
 import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef } from '../gameCatalog';
 import DynamicIcon from '../DynamicIcon';
+import { formatCompactNumber, CURRENCY_ICONS } from '../formatters';
 
 interface FloatingText {
   id: number;
@@ -67,6 +70,22 @@ export default function DreamTapView() {
   const [dailyWeekTab, setDailyWeekTab] = useState<number>(1);
 
   const todayCombo = getTodayDailyCombo(catalog);
+
+  const [comboCountdownStr, setComboCountdownStr] = useState('02:18:07');
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+      const diffSec = Math.max(0, Math.floor((midnight.getTime() - now.getTime()) / 1000));
+      const hrs = String(Math.floor(diffSec / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
+      const secs = String(diffSec % 60).padStart(2, '0');
+      setComboCountdownStr(`${hrs}:${mins}:${secs}`);
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load catalog data
   useEffect(() => {
@@ -271,8 +290,8 @@ export default function DreamTapView() {
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-2.5 text-center">
               <div className="text-[10px] text-neutral-400 font-mono uppercase">Earn per tap</div>
-              <div className="flex items-center justify-center gap-1 text-amber-400 font-black text-sm sm:text-base mt-0.5">
-                <span>🪙</span>
+              <div className="flex items-center justify-center gap-1 text-amber-300 font-black text-sm sm:text-base mt-0.5">
+                <span>{CURRENCY_ICONS.SPARKS}</span>
                 <span>{currentPlant.bonus}</span>
               </div>
             </div>
@@ -280,15 +299,15 @@ export default function DreamTapView() {
             <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-2.5 text-center">
               <div className="text-[10px] text-cyan-400 font-mono uppercase">Coins to lvl up</div>
               <div className="flex items-center justify-center gap-1 text-cyan-300 font-black text-sm sm:text-base mt-0.5 font-mono">
-                <span>{(5000 * (player.level || 1)).toLocaleString()}</span>
+                <span>{formatCompactNumber(5000 * (player.level || 1))}</span>
               </div>
             </div>
 
             <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-2.5 text-center">
               <div className="text-[10px] text-emerald-400 font-mono uppercase">Profit per sec</div>
-              <div className="flex items-center justify-center gap-1 text-emerald-400 font-black text-sm sm:text-base mt-0.5">
+              <div className="flex items-center justify-center gap-1 text-emerald-400 font-black text-sm sm:text-base mt-0.5 font-mono">
                 <span>📈</span>
-                <span>+{autoSparksPerSec}</span>
+                <span>+{formatCompactNumber(autoSparksPerSec)}</span>
               </div>
             </div>
           </div>
@@ -296,9 +315,9 @@ export default function DreamTapView() {
           {/* MAIN BALANCE & LEVEL STATUS */}
           <div className="text-center my-1.5 sm:my-3">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-2xl sm:text-4xl animate-bounce">🪙</span>
-              <span className="text-2xl sm:text-4xl font-black tracking-tight text-white font-mono">
-                {(player.dreamPoints || 0).toLocaleString()}
+              <span className="text-3xl sm:text-4xl animate-bounce">{CURRENCY_ICONS.SPARKS}</span>
+              <span className="text-3xl sm:text-5xl font-black tracking-tight text-white font-mono">
+                {formatCompactNumber(player.dreamPoints || 0)}
               </span>
             </div>
 
@@ -306,7 +325,7 @@ export default function DreamTapView() {
             <div className="max-w-md mx-auto mt-1 sm:mt-2 px-2">
               <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-neutral-400 mb-0.5 sm:mb-1">
                 <span className="font-bold text-zinc-300">
-                  🌿 {currentPlant.name}
+                  {CURRENCY_ICONS.GREEN} {currentPlant.name}
                 </span>
                 <span className="font-mono text-cyan-400 font-bold">
                   Level {player.level || 1}/10
@@ -351,7 +370,7 @@ export default function DreamTapView() {
             >
               <span className="text-base sm:text-lg">🃏</span>
               <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Daily Combo</span>
-              <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">+{(todayCombo.rewardSparks / 1000000).toFixed(0)}M Sparks</span>
+              <span className="text-[8px] sm:text-[9px] text-amber-300 font-mono">+{formatCompactNumber(todayCombo.rewardSparks)} Sparks</span>
             </button>
 
             <button
@@ -363,7 +382,7 @@ export default function DreamTapView() {
             >
               <span className="text-base sm:text-lg">👥</span>
               <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Friends</span>
-              <span className="text-[8px] sm:text-[9px] text-cyan-400 font-mono">Royalty +50G</span>
+              <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono">+50G Direct</span>
             </button>
 
             <button
@@ -379,10 +398,10 @@ export default function DreamTapView() {
             </button>
           </div>
 
-          {/* CENTER: THE BIG CIRCULAR GLOWING ARENA (DIRECT PLAY) */}
-          <div className="relative flex items-center justify-center my-1 sm:my-3 select-none">
+          {/* CENTER: THE BIG CIRCULAR GLOWING ARENA (DIRECT PLAY - ENLARGED COIN) */}
+          <div className="relative flex items-center justify-center my-2 sm:my-4 select-none">
             {/* Ambient Multi-Ring Glow */}
-            <div className="w-44 h-44 sm:w-60 sm:h-60 rounded-full bg-gradient-to-tr from-emerald-600/30 via-teal-500/20 to-cyan-500/30 blur-2xl absolute pointer-events-none animate-pulse" />
+            <div className="w-60 h-60 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-emerald-600/30 via-teal-500/25 to-cyan-500/30 blur-2xl absolute pointer-events-none animate-pulse" />
 
             <button
               onClick={handleTap}
@@ -390,18 +409,18 @@ export default function DreamTapView() {
               onTouchEnd={() => setIsPressing(false)}
               onMouseDown={() => setIsPressing(true)}
               onMouseUp={() => setIsPressing(false)}
-              className={`relative z-10 w-36 h-36 sm:w-52 sm:h-52 rounded-full p-2 bg-gradient-to-b from-emerald-400 via-teal-600 to-emerald-950 shadow-2xl transition-all duration-100 flex items-center justify-center cursor-pointer outline-none ${
-                isPressing ? 'scale-95 shadow-inner' : 'hover:scale-102 hover:shadow-emerald-500/30'
+              className={`relative z-10 w-48 h-48 sm:w-64 sm:h-64 rounded-full p-2.5 bg-gradient-to-b from-emerald-400 via-teal-600 to-emerald-950 shadow-2xl transition-all duration-100 flex items-center justify-center cursor-pointer outline-none ${
+                isPressing ? 'scale-95 shadow-inner' : 'hover:scale-102 hover:shadow-emerald-500/40'
               }`}
             >
               {/* Inner Circle Disc */}
               <div className="w-full h-full rounded-full bg-gradient-to-b from-neutral-900 to-black border-4 border-emerald-400/40 flex flex-col items-center justify-center relative overflow-hidden">
-                <span className="text-5xl sm:text-7xl filter drop-shadow-[0_0_15px_rgba(52,211,153,0.6)] transform transition-transform duration-100 select-none">
+                <span className="text-6xl sm:text-8xl filter drop-shadow-[0_0_20px_rgba(52,211,153,0.7)] transform transition-transform duration-100 select-none">
                   {currentPlant.icon}
                 </span>
 
-                <div className="absolute bottom-2 sm:bottom-3 text-center">
-                  <div className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                <div className="absolute bottom-2.5 sm:bottom-4 text-center">
+                  <div className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-400">
                     TAP TO MINT
                   </div>
                 </div>
@@ -453,30 +472,43 @@ export default function DreamTapView() {
       {/* 2. CARDS STORE (MINE - Exact Hamster Kombat Screenshot 3)           */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeSubTab === 'CARDS_STORE' && (
-        <div className="space-y-4">
-          {/* Daily Combo 3 Mystery Cards Banner */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
+        <div className="space-y-3.5">
+          {/* Daily Combo Card Banner (Hamster Kombat Style) */}
+          <div className="bg-[#171a21] border border-[#262c36] rounded-3xl p-3.5 sm:p-4 shadow-xl space-y-3">
+            {/* Header: "Daily combo" + 3 Dots + Timer + Reward Badge */}
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-neutral-200">Daily combo</span>
-                <span className="text-[10px] font-mono text-zinc-400">({todayCombo.date})</span>
-                <div className="flex gap-1">
-                  {todayCombo.cardIds.map((cid, i) => (
-                    <span
-                      key={i}
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        (cards[cid] || 0) > 0 ? 'bg-emerald-500' : 'bg-neutral-700'
-                      }`}
-                    />
-                  ))}
+                <span className="text-sm font-extrabold text-white tracking-wide">Daily combo</span>
+                <div className="flex items-center gap-1.5 ml-1">
+                  {todayCombo.cardIds.map((cid, i) => {
+                    const isFound = (cards[cid] || 0) > 0;
+                    return (
+                      <span
+                        key={i}
+                        className={`w-2.5 h-2.5 rounded-full transition-all ${
+                          isFound
+                            ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]'
+                            : 'bg-[#2b313d] border border-neutral-700/60'
+                        }`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1 shadow">
-                <span>🪙</span> +{todayCombo.rewardSparks.toLocaleString()} Sparks
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 text-[11px] font-mono text-neutral-400 bg-neutral-900/80 px-2 py-0.5 rounded-lg border border-neutral-800">
+                  <Clock className="w-3 h-3 text-neutral-400" />
+                  <span>{comboCountdownStr}</span>
+                </div>
+                <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500 text-white font-black text-xs px-2.5 sm:px-3 py-1 rounded-xl flex items-center gap-1 shadow-md shadow-purple-950/40">
+                  <span>{CURRENCY_ICONS.SPARKS}</span>
+                  <span>+{formatCompactNumber(todayCombo.rewardSparks)}</span>
+                </div>
               </div>
             </div>
 
-            {/* 3 Mystery Slots */}
+            {/* 3 Mystery Card Slots */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {todayCombo.cardIds.map((cid, slot) => {
                 const isGuessed = (cards[cid] || 0) > 0;
@@ -484,26 +516,31 @@ export default function DreamTapView() {
                 return (
                   <div
                     key={slot}
-                    className={`border rounded-xl p-2.5 sm:p-3 flex flex-col items-center justify-center min-h-[90px] relative overflow-hidden transition ${
+                    className={`rounded-2xl p-2.5 sm:p-3 flex flex-col items-center justify-between aspect-[3/4] relative overflow-hidden transition-all shadow-inner ${
                       isGuessed
-                        ? 'bg-emerald-950/40 border-emerald-500/60'
-                        : 'bg-neutral-950 border-neutral-800'
+                        ? 'bg-gradient-to-b from-emerald-950/70 to-neutral-950 border-2 border-emerald-500/70 shadow-emerald-950/40'
+                        : 'bg-[#1e232d] hover:bg-[#252c38] border-2 border-indigo-500/35 hover:border-indigo-500/60'
                     }`}
                   >
                     {isGuessed ? (
                       <>
-                        <div className="w-8 h-8 flex items-center justify-center">
-                          <DynamicIcon icon={foundCard?.icon} alt={foundCard?.title} imgClassName="w-7 h-7 object-contain rounded" className="text-2xl" fallback="🌱" />
+                        <div className="w-full flex justify-end">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500 text-neutral-950 text-[10px] font-black flex items-center justify-center">✓</span>
                         </div>
-                        <div className="text-[10px] font-bold text-emerald-300 mt-1 text-center line-clamp-1">
+                        <div className="w-12 h-12 flex items-center justify-center my-auto">
+                          <DynamicIcon icon={foundCard?.icon} alt={foundCard?.title} imgClassName="w-10 h-10 object-contain rounded" className="text-3xl" fallback="🌱" />
+                        </div>
+                        <div className="text-[11px] font-bold text-emerald-300 text-center line-clamp-1 w-full">
                           {foundCard?.title || cid}
                         </div>
-                        <span className="absolute top-1 right-1 text-emerald-400 text-xs">✓</span>
                       </>
                     ) : (
                       <>
-                        <span className="text-3xl text-amber-400/80 font-black">?</span>
-                        <div className="text-[10px] text-neutral-400 mt-1">Secret Card</div>
+                        <div className="w-full h-3" />
+                        <div className="my-auto flex flex-col items-center justify-center">
+                          <span className="text-3xl sm:text-4xl text-amber-400 font-black drop-shadow-[0_2px_8px_rgba(251,191,36,0.6)]">?</span>
+                        </div>
+                        <div className="text-base sm:text-lg">✨💰</div>
                       </>
                     )}
                   </div>
@@ -512,17 +549,25 @@ export default function DreamTapView() {
             </div>
           </div>
 
-          {/* Category Tabs (Dynamic from Catalog) */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none no-scrollbar pb-1 text-xs font-mono">
+          {/* Centered Prominent Balance Row (Exact Hamster Kombat Match) */}
+          <div className="flex items-center justify-center gap-2.5 py-1">
+            <span className="text-3xl sm:text-4xl">{CURRENCY_ICONS.SPARKS}</span>
+            <span className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight">
+              {formatCompactNumber(player.dreamPoints || 0)}
+            </span>
+          </div>
+
+          {/* Category Tabs (Dynamic from Catalog - Rounded Horizontal Bar) */}
+          <div className="bg-[#14161b] border border-[#252a33] rounded-2xl p-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none text-xs font-semibold">
             <button
               onClick={() => {
                 SoundEngine.playTick(player.soundEnabled);
                 setSelectedCategory('ALL');
               }}
-              className={`px-3 py-2 rounded-xl font-bold whitespace-nowrap transition ${
+              className={`px-3.5 py-2 rounded-xl whitespace-nowrap transition cursor-pointer ${
                 selectedCategory === 'ALL'
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
+                  ? 'bg-[#252a34] text-white font-bold shadow'
+                  : 'text-neutral-400 hover:text-white'
               }`}
             >
               All Sections
@@ -534,20 +579,20 @@ export default function DreamTapView() {
                   SoundEngine.playTick(player.soundEnabled);
                   setSelectedCategory(cat.id);
                 }}
-                className={`px-3 py-2 rounded-xl font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
+                className={`px-3 py-2 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
                   selectedCategory === cat.id
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
+                    ? 'bg-[#252a34] text-white font-bold shadow'
+                    : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                <DynamicIcon icon={cat.icon} alt={cat.name} imgClassName="w-4 h-4 object-contain rounded" />
+                <DynamicIcon icon={cat.icon} alt={cat.name} imgClassName="w-3.5 h-3.5 object-contain rounded" />
                 <span>{cat.name}</span>
               </button>
             ))}
           </div>
 
-          {/* Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* 2-Column Cards Grid (Hamster Kombat Pattern: Compact, Space-Efficient) */}
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             {catalog.cards
               .filter((card) => selectedCategory === 'ALL' || card.category === selectedCategory)
               .map((card) => {
@@ -564,59 +609,76 @@ export default function DreamTapView() {
                   const currentReqLvl = cards[card.requiredCardId] || 0;
                   if (currentReqLvl < reqLvl) {
                     isLocked = true;
-                    lockMsg = `Requires ${reqCard?.title || card.requiredCardId} lvl ${reqLvl}`;
+                    lockMsg = `${reqCard?.title || card.requiredCardId} lvl ${reqLvl}`;
                   }
                 }
 
                 return (
                   <div
                     key={card.id}
-                    className={`bg-neutral-900 border rounded-2xl p-4 flex flex-col justify-between space-y-3 transition-all relative ${
+                    onClick={() => {
+                      if (!isLocked && canAfford) {
+                        handleCardUpgrade(card.id);
+                      }
+                    }}
+                    className={`bg-[#1a1d24] border rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between transition-all relative overflow-hidden select-none ${
                       isLocked
-                        ? 'border-neutral-800 opacity-60 bg-neutral-950/70'
-                        : 'border-neutral-800 hover:border-emerald-500/40'
+                        ? 'border-neutral-800/80 bg-neutral-950/70 opacity-60 cursor-not-allowed'
+                        : canAfford
+                        ? 'border-[#2d3340] hover:border-amber-400/60 hover:bg-[#20242e] cursor-pointer shadow-md'
+                        : 'border-[#2d3340] opacity-80 cursor-pointer'
                     }`}
                   >
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-11 h-11 p-1 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-center shrink-0 overflow-hidden">
-                            <DynamicIcon icon={card.icon} alt={card.title} imgClassName="w-8 h-8 object-contain rounded" className="text-2xl" fallback="🌱" />
-                          </span>
-                          <div>
-                            <div className="font-bold text-white text-xs sm:text-sm">{card.title}</div>
-                            <div className="text-[10px] text-neutral-400">
-                              Profit: <span className="text-emerald-400 font-bold">+{card.sparksPerSec}/s</span>
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-950 text-neutral-400 border border-neutral-800">
-                          lvl {currentLvl}
-                        </span>
+                    {/* Top Row: Icon on Left, Title + Profit per hour on Right */}
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-neutral-950/80 border border-neutral-800/80 flex items-center justify-center shrink-0 p-1 overflow-hidden shadow-inner">
+                        <DynamicIcon
+                          icon={card.icon}
+                          alt={card.title}
+                          imgClassName="w-full h-full object-contain rounded"
+                          className="text-2xl"
+                          fallback="🌱"
+                        />
                       </div>
-                      <p className="text-[11px] text-neutral-400 mt-2 line-clamp-2">{card.flavor}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-white text-xs sm:text-sm leading-tight truncate">
+                          {card.title}
+                        </div>
+                        <div className="text-[10px] text-neutral-400 mt-1 leading-none">Profit per hour</div>
+                        <div className="text-xs font-bold text-white flex items-center gap-1 mt-0.5 font-mono">
+                          <span className="text-amber-300 text-[11px]">{CURRENCY_ICONS.SPARKS}</span>
+                          <span>+{formatCompactNumber(card.sparksPerSec * 3600 || card.sparksPerSec)}</span>
+                        </div>
+                      </div>
                     </div>
 
+                    {/* Divider */}
+                    <div className="border-t border-neutral-800/80 my-2" />
+
+                    {/* Bottom Row: Lvl on Left, Cost on Right */}
                     {isLocked ? (
-                      <div className="bg-amber-950/50 border border-amber-600/40 rounded-xl p-2 flex items-center justify-center gap-1.5 text-[11px] text-amber-300 font-semibold">
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>{lockMsg}</span>
+                      <div className="flex items-center justify-between text-[11px] font-mono text-amber-400/90 bg-amber-950/40 px-2 py-1 rounded-lg border border-amber-500/20">
+                        <span className="flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-amber-400" />
+                          <span className="truncate text-[10px]">{lockMsg}</span>
+                        </span>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => handleCardUpgrade(card.id)}
-                        disabled={!canAfford}
-                        className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-between transition ${
-                          canAfford
-                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md'
-                            : 'bg-neutral-950 text-neutral-500 border border-neutral-800 cursor-not-allowed'
-                        }`}
-                      >
-                        <span>Upgrade</span>
-                        <span className="font-mono flex items-center gap-1">
-                          <span>🪙</span> {nextCost.toLocaleString()}
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-neutral-400 text-[11px] font-semibold">
+                          lvl {currentLvl}
                         </span>
-                      </button>
+                        <div
+                          className={`flex items-center gap-1 font-bold text-[11px] sm:text-xs px-2 sm:px-2.5 py-1 rounded-lg border transition ${
+                            canAfford
+                              ? 'bg-neutral-900 hover:bg-neutral-800 border-neutral-700 text-white'
+                              : 'bg-neutral-950/80 border-neutral-800/60 text-neutral-500'
+                          }`}
+                        >
+                          <span className="text-amber-300">{CURRENCY_ICONS.SPARKS}</span>
+                          <span>{formatCompactNumber(nextCost)}</span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
@@ -644,8 +706,8 @@ export default function DreamTapView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 flex items-center justify-between">
               <div>
-                <div className="font-bold text-zinc-200 text-xs">🌿 Convert to GREEN Currency</div>
-                <div className="text-[10px] text-zinc-400">500 Sparks &rarr; 🌿 25 GREEN Tokens</div>
+                <div className="font-bold text-zinc-200 text-xs">{CURRENCY_ICONS.GREEN} Convert to GREEN Currency</div>
+                <div className="text-[10px] text-zinc-400">{CURRENCY_ICONS.SPARKS} 500 Sparks &rarr; {CURRENCY_ICONS.GREEN} 25 GREEN Tokens</div>
               </div>
               <button
                 onClick={() => {

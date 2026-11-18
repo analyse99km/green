@@ -21,14 +21,7 @@ function loadNotifications(): AdminNotification[] {
   } catch (err) {
     console.error('Failed to load notifications:', err);
   }
-  return [
-    {
-      id: 'notif_welcome',
-      title: '🌱 Welcome to Neon Metropolis!',
-      message: 'The Botanical Chlorophyll Network is online. Mint sparks and unlock city districts.',
-      timestamp: Date.now() - 3600000,
-    },
-  ];
+  return [];
 }
 
 async function pushNotifsToMaster(notifs: AdminNotification[]) {
@@ -83,7 +76,18 @@ function saveNotifications(notifs: AdminNotification[]) {
 }
 
 export async function GET() {
-  const notifs = loadNotifications();
+  let notifs = loadNotifications();
+  try {
+    const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/notifications.json?t=${Date.now()}`);
+    if (remoteRes.ok) {
+      const remoteNotifs = await remoteRes.json();
+      if (Array.isArray(remoteNotifs)) {
+        notifs = remoteNotifs;
+        saveNotifications(notifs);
+      }
+    }
+  } catch {}
+
   return NextResponse.json({
     success: true,
     notifications: notifs,

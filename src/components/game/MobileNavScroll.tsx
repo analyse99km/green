@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useGame } from './GameContext';
+import { formatCompactNumber } from './formatters';
 import {
   Home,
   Store,
@@ -84,7 +85,7 @@ export default function MobileNavScroll({ currentView, onSelectView }: MobileNav
                 <span>{item.label}</span>
                 {(player.dreamPoints || 0) > 0 && (
                   <span className="text-[10px] px-1.5 py-0.2 bg-cyan-950 text-cyan-300 rounded-full font-bold">
-                    {player.dreamPoints}
+                    {formatCompactNumber(player.dreamPoints)}
                   </span>
                 )}
               </button>
