@@ -439,13 +439,13 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
             </button>
           </div>
 
-          {/* CENTER: THE BIG CIRCULAR GLOWING ARENA (DIRECT PLAY - ENLARGED COIN) */}
-          <div className="relative flex items-center justify-center my-3 sm:my-6 select-none">
+          {/* CENTER: THE BIG CIRCULAR GLOWING ARENA (DIRECT PLAY - EXTRA LARGE COIN) */}
+          <div className="relative flex items-center justify-center my-4 sm:my-8 select-none">
             {/* Ambient Multi-Ring Glow */}
-            <div className="w-72 h-72 sm:w-96 sm:h-96 md:w-[420px] md:h-[420px] rounded-full bg-gradient-to-tr from-emerald-600/35 via-teal-500/30 to-cyan-400/30 blur-3xl absolute pointer-events-none animate-pulse" />
+            <div className="w-[340px] h-[340px] xs:w-[390px] xs:h-[390px] sm:w-[470px] sm:h-[470px] md:w-[530px] md:h-[530px] rounded-full bg-gradient-to-tr from-emerald-600/40 via-teal-500/35 to-cyan-400/35 blur-3xl absolute pointer-events-none animate-pulse" />
 
             {/* Glowing Decorative Outer Orbital Ring */}
-            <div className="w-68 h-68 sm:w-88 sm:h-88 md:w-[370px] md:h-[370px] rounded-full border-2 border-dashed border-emerald-500/25 absolute pointer-events-none animate-spin" style={{ animationDuration: '25s' }} />
+            <div className="w-[320px] h-[320px] xs:w-[365px] xs:h-[365px] sm:w-[435px] sm:h-[435px] md:w-[495px] md:h-[495px] rounded-full border-2 border-dashed border-emerald-400/30 absolute pointer-events-none animate-spin" style={{ animationDuration: '28s' }} />
 
             <button
               onClick={handleTap}
@@ -453,21 +453,21 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
               onTouchEnd={() => setIsPressing(false)}
               onMouseDown={() => setIsPressing(true)}
               onMouseUp={() => setIsPressing(false)}
-              className={`relative z-10 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full p-3 sm:p-4 bg-gradient-to-b from-emerald-300 via-teal-500 to-emerald-950 shadow-[0_0_50px_rgba(16,185,129,0.35)] transition-all duration-75 flex items-center justify-center cursor-pointer outline-none ring-4 sm:ring-8 ring-emerald-500/20 active:ring-emerald-400/50 ${
-                isPressing ? 'scale-92 shadow-inner brightness-110' : 'hover:scale-103 hover:shadow-emerald-500/50'
+              className={`relative z-10 w-[290px] h-[290px] xs:w-[335px] xs:h-[335px] sm:w-[395px] sm:h-[395px] md:w-[455px] md:h-[455px] rounded-full p-3.5 sm:p-5 bg-gradient-to-b from-emerald-300 via-teal-500 to-emerald-950 shadow-[0_0_60px_rgba(16,185,129,0.45)] transition-all duration-75 flex items-center justify-center cursor-pointer outline-none ring-6 sm:ring-10 ring-emerald-500/25 active:ring-emerald-400/60 ${
+                isPressing ? 'scale-93 shadow-inner brightness-115' : 'hover:scale-102 hover:shadow-emerald-500/60'
               }`}
             >
               {/* Inner 3D Coin Disc */}
-              <div className="w-full h-full rounded-full bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border-4 sm:border-[6px] border-emerald-400/50 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl">
-                <span className="text-7xl sm:text-9xl md:text-[115px] filter drop-shadow-[0_0_30px_rgba(52,211,153,0.85)] transform transition-transform duration-75 select-none leading-none">
+              <div className="w-full h-full rounded-full bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border-4 sm:border-[8px] border-emerald-400/60 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl">
+                <span className="text-[105px] xs:text-[125px] sm:text-[155px] md:text-[180px] filter drop-shadow-[0_0_35px_rgba(52,211,153,0.9)] transform transition-transform duration-75 select-none leading-none -mt-3 sm:-mt-5">
                   {currentPlant.icon}
                 </span>
 
-                <div className="absolute bottom-3.5 sm:bottom-6 text-center">
-                  <div className="text-[11px] sm:text-xs font-black uppercase tracking-[0.25em] text-emerald-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]">
+                <div className="absolute bottom-4 sm:bottom-7 text-center">
+                  <div className="text-xs sm:text-sm font-black uppercase tracking-[0.25em] text-emerald-300 drop-shadow-[0_0_10px_rgba(16,185,129,0.9)]">
                     TAP TO MINT
                   </div>
-                  <div className="text-[9px] sm:text-[10px] font-mono text-emerald-400/80 font-bold">
+                  <div className="text-[10px] sm:text-xs font-mono text-emerald-400/90 font-bold mt-0.5">
                     {currentPlant.name} &bull; {currentPlant.bonus}
                   </div>
                 </div>
