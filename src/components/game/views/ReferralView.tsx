@@ -123,12 +123,14 @@ export default function ReferralView() {
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  const handleRedeemInvite = () => {
-    const res = redeemInviteCode(inviteInput);
+  const handleRedeemInvite = async () => {
+    if (!inviteInput.trim()) return;
+    setFeedback('Connecting to Syndicate records...');
+    const res = await redeemInviteCode(inviteInput);
     setFeedback(res.message);
     if (res.success) {
       setInviteInput('');
-      setTimeout(() => { refreshReferralNetwork(); }, 600);
+      refreshReferralNetwork().catch(() => {});
     }
     setTimeout(() => setFeedback(null), 3500);
   };

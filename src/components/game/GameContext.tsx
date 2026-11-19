@@ -158,7 +158,7 @@ interface GameContextType {
   claimDailyRecruitStipend: () => { success: boolean; message: string; amount: number };
   claimDailyRoyaltyDividends: () => { success: boolean; message: string; amount: number; tierBreakdown: NetworkTierStats[] };
   calculateNetworkTiers: () => NetworkTierStats[];
-  redeemInviteCode: (code: string) => { success: boolean; message: string };
+  redeemInviteCode: (code: string) => Promise<{ success: boolean; message: string }>;
   refreshReferralNetwork: () => Promise<void>;
   simulateNewRecruit: (tier?: number) => { success: boolean; recruitName: string; message: string };
   updatePlayerName: (newName: string) => { success: boolean; message: string };
@@ -3735,13 +3735,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  const redeemInviteCode = (code: string) => {
+  const redeemInviteCode = async (code: string): Promise<{ success: boolean; message: string }> => {
     const trimmed = code.trim().toUpperCase();
     const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
 
     if (!trimmed) return { success: false, message: 'Please enter an invite code.' };
-    if (trimmed === refs.referralCode) return { success: false, message: 'You cannot redeem your own referral code.' };
-    if (refs.hasClaimedWelcomeBonus) return { success: false, message: 'You have already claimed a starter invite bonus.' };
+    if (trimmed === refs.referralCode || (refs.referralCode && trimmed.includes(refs.referralCode))) {
+      return { success: false, message: 'You cannot redeem your own referral code.' };
+    }
+    if (refs.referredBy) {
+      return { success: false, message: `You are already affiliated under sponsor "${refs.referredBy}".` };
+    }
 
     // Starter Welcome Gift: +50 GREEN, +10 Energy, +1 Deli Bread
     const welcomeBread: InventoryItem = {
@@ -3760,33 +3764,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       quantity: 1,
     };
 
-    setPlayer((prev) => {
-      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-      return {
-        ...prev,
-        money: prev.money + 50,
-        energy: Math.min(prev.maxEnergy, prev.energy + 10),
-        inventory: [...prev.inventory, welcomeBread],
-        referrals: {
-          ...currentRefs,
-          referredBy: trimmed,
-          hasClaimedWelcomeBonus: true,
-        },
-        hasUnsavedActions: true,
-      };
-    });
-
-    SoundEngine.playVictory(player.soundEnabled);
-    addLog({
-      type: 'CIVILIAN',
-      message: `REDEEM CODE: Activated invite [${trimmed}]! Received +🌿 50 GREEN & Welcome Meal!`,
-    });
-
-    setTimeout(() => {
-      saveGame().catch(() => {});
-    }, 50);
-
-    // Real-time network sync with recruiter so recruiter sees recruit & till commission
+    let recruiterName = '';
     let recruitEmail = '';
     if (typeof localStorage !== 'undefined') {
       const authRaw = localStorage.getItem('metropolis_auth_user');
@@ -3798,8 +3776,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (typeof fetch !== 'undefined') {
-      fetch('/api/referral', {
+    try {
+      const res = await fetch('/api/referral', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3809,34 +3787,70 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           recruitName: player.name,
           recruitUserId: player.id,
         }),
-      }).then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          if (data.recruiterName) {
-            addLog({
-              type: 'CIVILIAN',
-              message: `SYNDICATE NETWORK: Connected under Operative "${data.recruiterName}" [${trimmed}]!`,
-            });
-          }
-        }
-      }).catch(() => {});
+      });
+      const data = await res.json();
+      if (!data.success) {
+        return { success: false, message: data.message || 'Invalid invite code.' };
+      }
+      recruiterName = data.recruiterName || trimmed;
+    } catch {
+      recruiterName = trimmed;
     }
+
+    const finalSponsor = recruiterName || trimmed;
+
+    setPlayer((prev) => {
+      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+      const updatedPlayer: PlayerState = {
+        ...prev,
+        money: prev.money + 50,
+        energy: Math.min(prev.maxEnergy, prev.energy + 10),
+        inventory: [...prev.inventory, welcomeBread],
+        referrals: {
+          ...currentRefs,
+          referredBy: finalSponsor,
+          hasClaimedWelcomeBonus: true,
+        },
+        hasUnsavedActions: true,
+      };
+
+      // Instantly write to local storage so a page reload never loses it
+      let activeKey = LOCAL_STORAGE_KEY;
+      if (recruitEmail) activeKey = `neon_metropolis_user_${recruitEmail.trim().toLowerCase()}`;
+      try {
+        localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      } catch {}
+
+      return updatedPlayer;
+    });
+
+    SoundEngine.playVictory(player.soundEnabled);
+    addLog({
+      type: 'CIVILIAN',
+      message: `REDEEM CODE: Activated invite under Operative "${finalSponsor}" [${trimmed}]! Received +🌿 50 GREEN & Welcome Meal!`,
+    });
+
+    // Save game immediately to server and cloud
+    setTimeout(() => {
+      saveGame().catch(() => {});
+    }, 100);
 
     return {
       success: true,
-      message: `Starter pack unlocked! +🌿 50 GREEN, +10 Energy & Fresh Baguette added to inventory.`,
+      message: `Starter pack unlocked under ${finalSponsor}! +🌿 50 GREEN & Welcome Meal added.`,
     };
   };
 
   const refreshReferralNetwork = async () => {
     let authEmail = '';
     if (typeof localStorage !== 'undefined') {
-      const authRaw = localStorage.getItem('metropolis_auth_user') || localStorage.getItem('green_market_auth_user');
+      const authRaw = localStorage.getItem('metropolis_auth_user');
       if (authRaw) {
         try { authEmail = JSON.parse(authRaw).email; } catch {}
       }
       if (!authEmail) {
-        authEmail = localStorage.getItem('metropolis_user_email') || localStorage.getItem('green_market_user_email') || '';
+        authEmail = localStorage.getItem('metropolis_user_email') || '';
       }
     }
 
@@ -3857,13 +3871,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 mergedRecruits.push(cr);
               }
             }
+
+            const mergedMilestones = Array.from(new Set([
+              ...(prev.referrals?.claimedMilestones || []),
+              ...(serverRefs.claimedMilestones || [])
+            ]));
+
+            const preservedReferredBy = prev.referrals?.referredBy || serverRefs.referredBy || null;
+
             return {
               ...prev,
               referrals: {
                 ...(prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
                 ...serverRefs,
+                referredBy: preservedReferredBy,
+                hasClaimedWelcomeBonus: Boolean(preservedReferredBy),
                 recruits: mergedRecruits,
                 totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), mergedRecruits.length),
+                networkTotalCitizens: Math.max(Number(prev.referrals?.networkTotalCitizens || 0), mergedRecruits.length),
                 unclaimedCommissionGreen: Math.max(
                   Number(prev.referrals?.unclaimedCommissionGreen || 0),
                   Number(serverRefs.unclaimedCommissionGreen || 0)
@@ -3872,6 +3897,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                   Number(prev.referrals?.lifetimeCommissionGreen || 0),
                   Number(serverRefs.lifetimeCommissionGreen || 0)
                 ),
+                claimedMilestones: mergedMilestones,
               },
             };
           });

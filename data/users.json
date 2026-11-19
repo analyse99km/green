@@ -8,7 +8,7 @@
     "userReferralCode": "NEON-44861F74",
     "referredBy": null,
     "createdAt": 1794996362058,
-    "lastLoginAt": 1795072233206,
+    "lastLoginAt": 1795072500893,
     "playerState": {
       "id": "usr_44861f741ad920d4",
       "name": "Dhruv",
@@ -688,7 +688,7 @@
     "money": 9.999999999e+259,
     "sparks": 1e+171,
     "rank": "#1 Neon Operative",
-    "lastSaveAt": 1795072233206
+    "lastSaveAt": 1795072500838
   },
   "dhruv2424@outlook.com": {
     "email": "dhruv2424@outlook.com",
@@ -1356,7 +1356,7 @@
     "userReferralCode": "NEON-71F63E20",
     "referredBy": "NEON-E7CC880D",
     "createdAt": 1794998780043,
-    "lastLoginAt": 1795072236640,
+    "lastLoginAt": 1795072487970,
     "playerState": {
       "id": "usr_71f63e2038a30959",
       "name": "Dhruv11",
@@ -2009,6 +2009,6 @@
     "sparks": 329,
     "level": 1,
     "rank": "#1 Neon Operative",
-    "lastSaveAt": 1795072236640
+    "lastSaveAt": 1795072487935
   }
 }
