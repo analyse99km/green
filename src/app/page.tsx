@@ -85,7 +85,20 @@ export default function GameRootPage() {
     let isCancelled = false;
 
     async function attemptAuth() {
-      // 1. Check for Telegram Mini App SSO (Zero-click instant login & auto-sync)
+      // 0. Instant Check: If already logged in locally, authenticate instantly (0ms)
+      const localUserStr = typeof window !== 'undefined' ? localStorage.getItem('metropolis_auth_user') : null;
+      let hasLocalSession = false;
+      if (localUserStr) {
+        try {
+          const parsed = JSON.parse(localUserStr);
+          if (parsed?.email) {
+            hasLocalSession = true;
+            if (!isCancelled) setIsAuthenticated(true);
+          }
+        } catch {}
+      }
+
+      // 1. Telegram Mini App Environment
       const tg = typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null;
       if (tg) {
         try {
@@ -96,6 +109,11 @@ export default function GameRootPage() {
 
       const tgUser = tg?.initDataUnsafe?.user;
       if (tgUser && tgUser.id) {
+        // In Telegram Mini App, user is ALWAYS authenticated — never kick to login form
+        if (!hasLocalSession && !isCancelled) {
+          setIsAuthenticated(true);
+        }
+
         try {
           const urlParams = new URLSearchParams(window.location.search);
           const refCode = tg.initDataUnsafe?.start_param || urlParams.get('ref') || '';
@@ -131,25 +149,15 @@ export default function GameRootPage() {
             }
           }
         } catch (tgErr) {
-          console.warn('Telegram SSO auto-login error, falling back to local session:', tgErr);
+          console.warn('Telegram SSO sync deferred, continuing with local session:', tgErr);
         }
+        return;
       }
 
-      // 2. Check local session storage for instant zero-latency loading
-      const localUser = localStorage.getItem('metropolis_auth_user');
-      if (localUser) {
-        try {
-          const parsed = JSON.parse(localUser);
-          if (parsed?.email) {
-            if (!isCancelled) setIsAuthenticated(true);
-            return;
-          }
-        } catch {
-          // Fallback to server check
-        }
-      }
+      // 2. If already authenticated via localUser, we are done
+      if (hasLocalSession) return;
 
-      // 3. Verify with server session cookie
+      // 3. Web browser session check (only for outside Telegram)
       try {
         const res = await fetch('/api/auth/email');
         const data = await res.json();
