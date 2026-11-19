@@ -242,11 +242,27 @@ export async function POST(req: NextRequest) {
     }
 
     // Ensure recruit's record is permanently registered with referredBy
-    const userKey = cleanRecruitEmail || `${effectiveId}@neon.city`;
-    if (!users[userKey]) {
-      users[userKey] = {
+    let targetRecruitKey = cleanRecruitEmail;
+    if (!targetRecruitKey || !users[targetRecruitKey]) {
+      for (const [em, u] of Object.entries(users)) {
+        if (
+          (cleanRecruitEmail && em.toLowerCase() === cleanRecruitEmail) ||
+          (effectiveId && (u.userId === effectiveId || u.userId?.replace(/^usr_/, '') === effectiveId.replace(/^usr_/, ''))) ||
+          (cleanRecruitEmail && u.email && u.email.toLowerCase() === cleanRecruitEmail)
+        ) {
+          targetRecruitKey = em;
+          break;
+        }
+      }
+    }
+    if (!targetRecruitKey) {
+      targetRecruitKey = cleanRecruitEmail || `${effectiveId}@neon.city`;
+    }
+
+    if (!users[targetRecruitKey]) {
+      users[targetRecruitKey] = {
         userId: effectiveId,
-        email: userKey,
+        email: targetRecruitKey,
         name: effectiveName,
         userReferralCode: `NEON-${Date.now().toString(36).toUpperCase()}`,
         referredBy: cleanCode,
@@ -259,11 +275,11 @@ export async function POST(req: NextRequest) {
         }
       };
     } else {
-      users[userKey].referredBy = cleanCode;
-      if (!users[userKey].playerState) users[userKey].playerState = {};
-      if (!users[userKey].playerState.referrals) users[userKey].playerState.referrals = {};
-      users[userKey].playerState.referrals.referredBy = cleanCode;
-      users[userKey].playerState.referrals.hasClaimedWelcomeBonus = true;
+      users[targetRecruitKey].referredBy = cleanCode;
+      if (!users[targetRecruitKey].playerState) users[targetRecruitKey].playerState = {};
+      if (!users[targetRecruitKey].playerState.referrals) users[targetRecruitKey].playerState.referrals = {};
+      users[targetRecruitKey].playerState.referrals.referredBy = cleanCode;
+      users[targetRecruitKey].playerState.referrals.hasClaimedWelcomeBonus = true;
     }
 
     users[recruiterEmail] = recruiter;

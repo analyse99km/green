@@ -70,12 +70,21 @@ async function pushUsersToMaster(users: Record<string, any>) {
 }
 
 function buildAuthResponse(user: any, message: string) {
+  const finalReferredBy = user.referredBy || user.playerState?.referrals?.referredBy || null;
+  if (finalReferredBy) {
+    user.referredBy = finalReferredBy;
+    if (!user.playerState) user.playerState = {};
+    if (!user.playerState.referrals) user.playerState.referrals = {};
+    user.playerState.referrals.referredBy = finalReferredBy;
+    user.playerState.referrals.hasClaimedWelcomeBonus = true;
+  }
+
   const tokenPayload = {
     userId: user.userId,
     email: user.email,
     name: user.name,
     userReferralCode: user.userReferralCode,
-    referredBy: user.referredBy || null,
+    referredBy: finalReferredBy,
     telegramId: user.telegramId || null,
     timestamp: Date.now(),
   };
@@ -92,7 +101,7 @@ function buildAuthResponse(user: any, message: string) {
     email: user.email,
     telegramId: user.telegramId || null,
     userReferralCode: user.userReferralCode,
-    referredBy: user.referredBy || null,
+    referredBy: finalReferredBy,
     sessionToken,
     playerState: user.playerState || null,
   });

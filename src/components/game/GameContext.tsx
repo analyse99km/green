@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   PlayerState,
   PlayerRole,
@@ -172,6 +172,10 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [player, setPlayer] = useState<PlayerState>(DEFAULT_METROPOLIS_PLAYER);
+  const playerRef = useRef<PlayerState>(player);
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
   const [insufficientFundsModal, setInsufficientFundsModal] = useState<InsufficientFundsData | null>(null);
   const [bazaarListings, setBazaarListings] = useState<BazaarListing[]>(INITIAL_BAZAAR_LISTINGS);
   const [combatTargets, setCombatTargets] = useState<CombatTarget[]>(COMBAT_TARGETS);
@@ -612,12 +616,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(autoSaveInterval);
   }, [addLog]);
 
-  const saveGame = async () => {
+  const saveGame = async (explicitState?: PlayerState) => {
     setIsSaving(true);
     try {
-      const newHash = await computeStateHash(player, player.stateHash);
+      const currentState = explicitState || playerRef.current || player;
+      const newHash = await computeStateHash(currentState, currentState.stateHash);
       const updatedPlayer: PlayerState = {
-        ...player,
+        ...currentState,
         stateHash: newHash,
         lastSaveTimestamp: Date.now(),
         hasUnsavedActions: false,
@@ -632,6 +637,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           if (authUser?.email) {
             userEmail = authUser.email.trim().toLowerCase();
             activeKey = `neon_metropolis_user_${userEmail}`;
+          }
+          if (authUser?.referredBy && !updatedPlayer.referrals?.referredBy) {
+            if (!updatedPlayer.referrals) updatedPlayer.referrals = { ...DEFAULT_METROPOLIS_PLAYER.referrals };
+            updatedPlayer.referrals.referredBy = authUser.referredBy;
+            updatedPlayer.referrals.hasClaimedWelcomeBonus = true;
           }
         } catch {}
       }
@@ -3831,44 +3841,37 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const welcomeBonus = Number(rewardsCfg?.recruitWelcomeBonus) || 100;
     const stipendAmount = Number(rewardsCfg?.dailyRecruitStipend) || 50;
 
-    setPlayer((prev) => {
-      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-      const updatedPlayer: PlayerState = {
-        ...prev,
-        money: prev.money + welcomeBonus,
-        energy: Math.min(prev.maxEnergy, prev.energy + 10),
-        inventory: [...prev.inventory, welcomeBread],
-        referrals: {
-          ...currentRefs,
-          referredBy: finalSponsor,
-          hasClaimedWelcomeBonus: true,
-        },
-        hasUnsavedActions: true,
-      };
+    const currentBase = playerRef.current || player;
+    const currentRefs = currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    const updatedPlayer: PlayerState = {
+      ...currentBase,
+      money: currentBase.money + welcomeBonus,
+      energy: Math.min(currentBase.maxEnergy, currentBase.energy + 10),
+      inventory: [...currentBase.inventory, welcomeBread],
+      referrals: {
+        ...currentRefs,
+        referredBy: finalSponsor,
+        hasClaimedWelcomeBonus: true,
+      },
+      hasUnsavedActions: true,
+    };
 
-      // Instantly write to local storage so a page reload never loses it
-      let activeKey = LOCAL_STORAGE_KEY;
-      if (recruitEmail) activeKey = `neon_metropolis_user_${recruitEmail.trim().toLowerCase()}`;
-      try {
-        localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+    setPlayer(updatedPlayer);
+    playerRef.current = updatedPlayer;
 
-        const currentAuthRaw = localStorage.getItem('metropolis_auth_user');
-        if (currentAuthRaw) {
-          const authObj = JSON.parse(currentAuthRaw);
-          authObj.referredBy = finalSponsor;
-          localStorage.setItem('metropolis_auth_user', JSON.stringify(authObj));
-        } else {
-          localStorage.setItem('metropolis_auth_user', JSON.stringify({
-            email: recruitEmail || `oper_${player.id || Date.now()}@neon.city`,
-            name: player.name,
-            referredBy: finalSponsor,
-          }));
-        }
-      } catch {}
+    // Instantly write to local storage so a page reload never loses it
+    let activeKey = LOCAL_STORAGE_KEY;
+    if (recruitEmail) activeKey = `neon_metropolis_user_${recruitEmail.trim().toLowerCase()}`;
+    try {
+      localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
 
-      return updatedPlayer;
-    });
+      const currentAuthRaw = localStorage.getItem('metropolis_auth_user');
+      let authObj = currentAuthRaw ? JSON.parse(currentAuthRaw) : {};
+      authObj.referredBy = finalSponsor;
+      if (!authObj.email && recruitEmail) authObj.email = recruitEmail;
+      localStorage.setItem('metropolis_auth_user', JSON.stringify(authObj));
+    } catch {}
 
     SoundEngine.playVictory(player.soundEnabled);
     addLog({
@@ -3876,10 +3879,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       message: `REDEEM CODE: Activated invite under Operative "${finalSponsor}" [${trimmed}]! Received +🌿 ${welcomeBonus} GREEN & Welcome Meal!`,
     });
 
-    // Save game immediately to server and cloud
-    setTimeout(() => {
-      saveGame().catch(() => {});
-    }, 100);
+    // Save game immediately to server and cloud passing explicit updatedPlayer
+    saveGame(updatedPlayer).catch(() => {});
 
     return {
       success: true,
@@ -3889,10 +3890,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const refreshReferralNetwork = async () => {
     let authEmail = '';
+    let authReferredBy: string | null = null;
     if (typeof localStorage !== 'undefined') {
       const authRaw = localStorage.getItem('metropolis_auth_user');
       if (authRaw) {
-        try { authEmail = JSON.parse(authRaw).email; } catch {}
+        try {
+          const parsed = JSON.parse(authRaw);
+          authEmail = parsed.email || '';
+          authReferredBy = parsed.referredBy || null;
+        } catch {}
       }
       if (!authEmail) {
         authEmail = localStorage.getItem('metropolis_user_email') || '';
@@ -3922,7 +3928,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               ...(serverRefs.claimedMilestones || [])
             ]));
 
-            const preservedReferredBy = prev.referrals?.referredBy || serverRefs.referredBy || null;
+            const preservedReferredBy = prev.referrals?.referredBy || serverRefs.referredBy || authReferredBy || null;
 
             return {
               ...prev,

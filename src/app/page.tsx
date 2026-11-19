@@ -170,13 +170,26 @@ export default function GameRootPage() {
           if (res.ok) {
             const data = await res.json();
             if (data.success && data.email && !isCancelled) {
+              // Preserve locally redeemed referredBy so server SSO never wipes active sponsor
+              let existingLocalReferredBy: string | null = null;
+              try {
+                const prevAuth = localStorage.getItem('metropolis_auth_user');
+                if (prevAuth) existingLocalReferredBy = JSON.parse(prevAuth).referredBy || null;
+                if (!existingLocalReferredBy) {
+                  const prevSave = localStorage.getItem('metropolis_player_save_v1');
+                  if (prevSave) existingLocalReferredBy = JSON.parse(prevSave).referrals?.referredBy || null;
+                }
+              } catch {}
+
+              const finalReferredBy = data.referredBy || existingLocalReferredBy || null;
+
               const userObj = {
                 email: data.email,
                 name: data.username,
                 userId: data.userId,
                 userReferralCode: data.userReferralCode,
                 telegramId: data.telegramId,
-                referredBy: data.referredBy || null,
+                referredBy: finalReferredBy,
               };
               localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
 
@@ -185,6 +198,11 @@ export default function GameRootPage() {
               }
 
               if (data.playerState) {
+                if (finalReferredBy) {
+                  if (!data.playerState.referrals) data.playerState.referrals = {};
+                  data.playerState.referrals.referredBy = finalReferredBy;
+                  data.playerState.referrals.hasClaimedWelcomeBonus = true;
+                }
                 const stateStr = JSON.stringify(data.playerState);
                 localStorage.setItem(`neon_metropolis_user_${data.email.trim().toLowerCase()}`, stateStr);
                 localStorage.setItem('metropolis_player_save_v1', stateStr);

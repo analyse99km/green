@@ -128,6 +128,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Player not found' }, { status: 404 });
     }
 
+    // Synchronize referredBy between user and playerState
+    const finalReferredBy = user.referredBy || user.playerState?.referrals?.referredBy || null;
+    if (finalReferredBy) {
+      user.referredBy = finalReferredBy;
+      if (!user.playerState) user.playerState = {};
+      if (!user.playerState.referrals) user.playerState.referrals = {};
+      user.playerState.referrals.referredBy = finalReferredBy;
+      user.playerState.referrals.hasClaimedWelcomeBonus = true;
+    }
+
     // Real-time aggregate referrals
     const myCode = (user.userReferralCode || user.playerState?.referrals?.referralCode || '').toUpperCase();
     if (myCode) {
@@ -135,6 +145,8 @@ export async function GET(req: NextRequest) {
       if (!user.playerState.referrals) {
         user.playerState.referrals = {
           referralCode: myCode,
+          referredBy: finalReferredBy,
+          hasClaimedWelcomeBonus: Boolean(finalReferredBy),
           recruits: [],
           totalRecruits: 0,
           networkTotalCitizens: 0,
@@ -161,7 +173,7 @@ export async function GET(req: NextRequest) {
               joinedAt: other.createdAt || Date.now(),
               level: other.level || other.playerState?.level || 1,
               tier: 1,
-              dailyGameplayEarned: 100,
+              dailyGameplayEarned: 150,
               totalGeneratedGreen: 50,
               lastActive: 'Active Operative'
             });
@@ -187,6 +199,7 @@ export async function GET(req: NextRequest) {
       name: user.name,
       userId: user.userId,
       userReferralCode: user.userReferralCode,
+      referredBy: finalReferredBy,
       playerState: user.playerState || null,
       lastSaveAt: user.lastSaveAt || null
     });

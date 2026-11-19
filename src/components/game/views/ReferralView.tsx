@@ -56,20 +56,43 @@ export default function ReferralView() {
     return () => clearInterval(timer);
   }, []);
 
-  const refs = player.referrals || {
-    referralCode: `NEON-${player.xid || '10001'}`,
-    referredBy: undefined,
-    hasClaimedWelcomeBonus: false,
-    lastDailyStipendClaimTimestamp: 0,
-    lastDailyRoyaltyClaimTimestamp: 0,
-    dailyGameplayContribution: 0,
-    pendingDailyRoyaltyGreen: 0,
-    totalRecruits: 0,
-    networkTotalCitizens: 0,
-    unclaimedCommissionGreen: 0,
-    lifetimeCommissionGreen: 0,
-    recruits: [],
-    claimedMilestones: [],
+  const authUserReferredBy = typeof window !== 'undefined'
+    ? (() => {
+        try {
+          const raw = localStorage.getItem('metropolis_auth_user');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.referredBy) return parsed.referredBy;
+          }
+          const save = localStorage.getItem('metropolis_player_save_v1');
+          if (save) {
+            const parsed = JSON.parse(save);
+            if (parsed.referrals?.referredBy) return parsed.referrals.referredBy;
+          }
+        } catch {}
+        return null;
+      })()
+    : null;
+
+  const effectiveReferredBy = player.referrals?.referredBy || authUserReferredBy || undefined;
+
+  const refs = {
+    ...(player.referrals || {
+      referralCode: `NEON-${player.xid || '10001'}`,
+      referredBy: undefined,
+      hasClaimedWelcomeBonus: false,
+      lastDailyStipendClaimTimestamp: 0,
+      lastDailyRoyaltyClaimTimestamp: 0,
+      dailyGameplayContribution: 0,
+      pendingDailyRoyaltyGreen: 0,
+      totalRecruits: 0,
+      networkTotalCitizens: 0,
+      unclaimedCommissionGreen: 0,
+      lifetimeCommissionGreen: 0,
+      recruits: [],
+      claimedMilestones: [],
+    }),
+    referredBy: effectiveReferredBy,
   };
 
   const effectiveCode = (refs.referralCode || `NEON-${player.xid || '10001'}`).replace(/^GREEN-/, 'NEON-');
