@@ -59,7 +59,7 @@ import {
 } from './gameCrypto';
 import { InsufficientFundsData } from './InsufficientFundsModal';
 import { P2PPurchaseReceipt } from './types';
-import { loadCatalogData, saveCatalogData, syncCatalogFromServer, DynamicCatalogData, BotanicalCardDef } from './gameCatalog';
+import { loadCatalogData, saveCatalogData, syncCatalogFromServer, DynamicCatalogData, BotanicalCardDef, DEFAULT_REFERRAL_REWARDS } from './gameCatalog';
 
 const LOCAL_STORAGE_KEY = 'neon_metropolis_v6_botanical_green';
 
@@ -3667,11 +3667,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const reward = milestoneTable[recruitsRequired];
     if (!reward) return { success: false, message: 'Invalid milestone.' };
 
+    const catalogRewards = loadCatalogData()?.referralRewards || DEFAULT_REFERRAL_REWARDS;
+    const catalogMilestone = (catalogRewards.milestones || []).find((m: any) => m.recruits === recruitsRequired);
+    const finalGreen = catalogMilestone ? catalogMilestone.rewardGreen : reward.green;
+
     setPlayer((prev) => {
       const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
       return {
         ...prev,
-        money: prev.money + reward.green,
+        money: prev.money + finalGreen,
         dreamPoints: (prev.dreamPoints || 0) + reward.sparks,
         referrals: {
           ...currentRefs,
@@ -3799,11 +3803,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const finalSponsor = recruiterName || trimmed;
 
+    const welcomeBonus = loadCatalogData()?.referralRewards?.recruitWelcomeBonus ?? 100;
+
     setPlayer((prev) => {
       const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
       const updatedPlayer: PlayerState = {
         ...prev,
-        money: prev.money + 50,
+        money: prev.money + welcomeBonus,
         energy: Math.min(prev.maxEnergy, prev.energy + 10),
         inventory: [...prev.inventory, welcomeBread],
         referrals: {
@@ -3909,13 +3915,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // MULTI-TIER JUMP ROYALTY COMPUTATION (Divided Once a Day based strictly on Active Gameplay)
   const calculateNetworkTiers = useCallback((): NetworkTierStats[] => {
     const recruits = player.referrals?.recruits || [];
-    const tierConfigs = [
-      { tier: 1, jumpLabel: 'Direct Link (0 Jumps)', percent: 10 },
-      { tier: 2, jumpLabel: '1 Jump (2nd Generation)', percent: 4 },
-      { tier: 3, jumpLabel: '2 Jumps (3rd Generation)', percent: 2 },
-      { tier: 4, jumpLabel: '3 Jumps (4th Generation)', percent: 1 },
-      { tier: 5, jumpLabel: '4+ Jumps (5th Generation)', percent: 0.5 },
-    ];
+    const rewardsCfg = loadCatalogData()?.referralRewards || DEFAULT_REFERRAL_REWARDS;
+    const tierConfigs = (rewardsCfg.tiers && rewardsCfg.tiers.length > 0)
+      ? rewardsCfg.tiers
+      : DEFAULT_REFERRAL_REWARDS.tiers;
 
     return tierConfigs.map((cfg) => {
       const tierMembers = recruits.filter((r) => (r.tier || 1) === cfg.tier);
@@ -4005,13 +4008,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  // RECRUIT DAILY STIPEND: +50 GREEN/day for recruited operatives
+  // RECRUIT DAILY STIPEND: daily GREEN allowance for recruited operatives
   const claimDailyRecruitStipend = () => {
     const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    const stipendAmount = loadCatalogData()?.referralRewards?.dailyRecruitStipend ?? 50;
+
     if (!refs.referredBy) {
       return {
         success: false,
-        message: 'You have not redeemed a sponsor invite code yet. Enter an operative invite code to activate your 50 GREEN/day stipend!',
+        message: `You have not redeemed a sponsor invite code yet. Enter an operative invite code to activate your ${stipendAmount} GREEN/day stipend!`,
         amount: 0,
       };
     }
@@ -4024,7 +4029,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const remainingHours = Math.ceil((cooldownMs - (now - lastClaim)) / (1000 * 60 * 60));
       return {
         success: false,
-        message: `Today's recruit stipend (+50 GREEN) already claimed. Next daily stipend unlocks in ~${remainingHours} hours.`,
+        message: `Today's recruit stipend (+${stipendAmount} GREEN) already claimed. Next daily stipend unlocks in ~${remainingHours} hours.`,
         amount: 0,
       };
     }
@@ -4033,7 +4038,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
       return {
         ...prev,
-        money: prev.money + 50,
+        money: prev.money + stipendAmount,
         referrals: {
           ...currentRefs,
           lastDailyStipendClaimTimestamp: now,

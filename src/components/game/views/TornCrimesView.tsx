@@ -1103,9 +1103,9 @@ export default function TornCrimesView() {
         </div>
       )}
 
-      {/* Global Floating Action Notification Toast (Zero scrolling required!) */}
+      {/* Global Floating Action Notification Toast (Top positioned to eliminate any mobile dock collision) */}
       {feedback && (
-        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92vw] sm:w-auto px-4 py-3 rounded-2xl bg-neutral-900/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-slideUp">
+        <div className="fixed top-20 sm:top-24 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[92vw] sm:w-auto px-4 py-3 rounded-2xl bg-neutral-900/95 border border-emerald-500/60 text-emerald-300 font-mono text-xs shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-fadeIn">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
             <span className="font-medium text-white">{feedback}</span>

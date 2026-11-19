@@ -3,8 +3,23 @@ import fs from 'fs';
 import path from 'path';
 
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
+const CATALOG_FILE = path.join(process.cwd(), 'data', 'catalog.json');
 const MASTER_STORAGE_REPO = 'pocomon9/green-status';
 const MASTER_PAT = process.env.GH_PAT || process.env.MASTER_PAT || '';
+
+function getReferralRewardsConfig() {
+  try {
+    if (fs.existsSync(CATALOG_FILE)) {
+      const cat = JSON.parse(fs.readFileSync(CATALOG_FILE, 'utf-8'));
+      if (cat.referralRewards) return cat.referralRewards;
+    }
+  } catch {}
+  return {
+    recruiterInstantBounty: 100,
+    recruitWelcomeBonus: 100,
+    dailyRecruitStipend: 50
+  };
+}
 
 function loadUsers(): Record<string, any> {
   try {
@@ -171,6 +186,9 @@ export async function POST(req: NextRequest) {
         r.name === effectiveName
     );
 
+    const rewardsCfg = getReferralRewardsConfig();
+    const bounty = Number(rewardsCfg.recruiterInstantBounty) || 100;
+
     if (existingIndex === -1) {
       recruiter.playerState.referrals.recruits.unshift({
         id: effectiveId,
@@ -185,8 +203,8 @@ export async function POST(req: NextRequest) {
       });
       recruiter.playerState.referrals.totalRecruits = recruiter.playerState.referrals.recruits.length;
       recruiter.playerState.referrals.networkTotalCitizens = recruiter.playerState.referrals.recruits.length;
-      recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
-      recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
+      recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + bounty;
+      recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + bounty;
     }
 
     // Update recruit's record if they have an email profile

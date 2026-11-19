@@ -1,5 +1,46 @@
 'use client';
 
+export interface ReferralTierConfig {
+  tier: number;
+  jumpLabel: string;
+  percent: number;
+}
+
+export interface ReferralMilestoneConfig {
+  recruits: number;
+  rewardGreen: number;
+  label: string;
+}
+
+export interface ReferralRewardsConfig {
+  recruiterInstantBounty: number;
+  recruitWelcomeBonus: number;
+  dailyRecruitStipend: number;
+  tiers: ReferralTierConfig[];
+  milestones: ReferralMilestoneConfig[];
+}
+
+export const DEFAULT_REFERRAL_REWARDS: ReferralRewardsConfig = {
+  recruiterInstantBounty: 100,
+  recruitWelcomeBonus: 100,
+  dailyRecruitStipend: 50,
+  tiers: [
+    { tier: 1, jumpLabel: 'Direct Link (0 Jumps)', percent: 10 },
+    { tier: 2, jumpLabel: '1 Jump (2nd Generation)', percent: 4 },
+    { tier: 3, jumpLabel: '2 Jumps (3rd Generation)', percent: 2 },
+    { tier: 4, jumpLabel: '3 Jumps (4th Generation)', percent: 1 },
+    { tier: 5, jumpLabel: '4+ Jumps (5th Generation)', percent: 0.5 },
+  ],
+  milestones: [
+    { recruits: 3, rewardGreen: 500, label: 'Street Crew' },
+    { recruits: 5, rewardGreen: 1200, label: 'District Cell' },
+    { recruits: 10, rewardGreen: 3000, label: 'Underworld Syndicate' },
+    { recruits: 25, rewardGreen: 10000, label: 'City Cartel' },
+    { recruits: 50, rewardGreen: 25000, label: 'Metropolis Mafia' },
+    { recruits: 100, rewardGreen: 60000, label: 'Underworld Kingpin' },
+  ],
+};
+
 export interface BotanicalCategoryDef {
   id: string;
   name: string;
@@ -390,6 +431,7 @@ export interface DynamicCatalogData {
   dreamMarketItems?: DreamMarketItemDef[];
   dailyComboOverride?: DailyComboDef;
   customDailyStreakRewards?: DailyStreakRewardItem[];
+  referralRewards?: ReferralRewardsConfig;
 }
 
 export function getTodayDateString(): string {
@@ -453,6 +495,7 @@ export function loadCatalogData(): DynamicCatalogData {
         dreamMarketItems: parsed.dreamMarketItems && parsed.dreamMarketItems.length > 0 ? parsed.dreamMarketItems : INITIAL_DREAM_MARKET_ITEMS,
         dailyComboOverride: parsed.dailyComboOverride,
         customDailyStreakRewards: parsed.customDailyStreakRewards,
+        referralRewards: parsed.referralRewards || DEFAULT_REFERRAL_REWARDS,
       };
     }
   } catch (err) {
@@ -464,6 +507,7 @@ export function loadCatalogData(): DynamicCatalogData {
     cards: INITIAL_BOTANICAL_CARDS,
     customItems: [],
     dreamMarketItems: INITIAL_DREAM_MARKET_ITEMS,
+    referralRewards: DEFAULT_REFERRAL_REWARDS,
   };
 }
 
@@ -496,6 +540,7 @@ export async function syncCatalogFromServer(onUpdated?: (catalog: DynamicCatalog
         dreamMarketItems: json.catalog.dreamMarketItems && json.catalog.dreamMarketItems.length > 0 ? json.catalog.dreamMarketItems : INITIAL_DREAM_MARKET_ITEMS,
         dailyComboOverride: json.catalog.dailyComboOverride,
         customDailyStreakRewards: json.catalog.customDailyStreakRewards,
+        referralRewards: json.catalog.referralRewards || DEFAULT_REFERRAL_REWARDS,
       };
       localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(merged));
       if (onUpdated) onUpdated(merged);

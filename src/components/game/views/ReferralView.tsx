@@ -25,8 +25,13 @@ import {
   Coins,
 } from 'lucide-react';
 import { formatCompactNumber, CURRENCY_ICONS } from '../formatters';
+import { loadCatalogData, DEFAULT_REFERRAL_REWARDS } from '../gameCatalog';
 
 export default function ReferralView() {
+  const rewardsCfg = loadCatalogData()?.referralRewards || DEFAULT_REFERRAL_REWARDS;
+  const dailyStipendAmount = rewardsCfg.dailyRecruitStipend ?? 50;
+  const recruiterBounty = rewardsCfg.recruiterInstantBounty ?? 100;
+  const recruitWelcomeBonus = rewardsCfg.recruitWelcomeBonus ?? 100;
   const {
     player,
     claimReferralMilestone,
@@ -137,12 +142,12 @@ export default function ReferralView() {
 
   const milestoneLadder = [
     { recruits: 1, title: 'Neon Scout Initiation', green: 100, sparks: 50, perk: '+🌿 100 GREEN & +50 Sparks' },
-    { recruits: 3, title: 'Underworld Enforcer', green: 350, sparks: 200, perk: '+🌿 350 GREEN & +200 Sparks' },
-    { recruits: 5, title: 'Syndicate Lieutenant', green: 750, sparks: 500, perk: '+🌿 750 GREEN & +1 Stat Point' },
-    { recruits: 10, title: 'Cartel Captain', green: 2000, sparks: 1500, perk: '+🌿 2,000 GREEN & +5 Max Energy Cap' },
-    { recruits: 25, title: 'Metropolis Kingpin', green: 6000, sparks: 5000, perk: '+🌿 6,000 GREEN & +5 Max Nerve Cap' },
-    { recruits: 50, title: 'Godfather of Neon Metropolis', green: 15000, sparks: 15000, perk: '+🌿 15,000 GREEN & +50 Max Happy' },
-    { recruits: 100, title: 'Supreme Sovereign & Syndicate Overlord', green: 35000, sparks: 30000, perk: '+🌿 35,000 GREEN, +30k Sparks, +10 Energy, +10 Nerve, +100 Happy & +3 Stat Pts' },
+    { recruits: 3, title: 'Street Crew', green: (rewardsCfg.milestones?.find((m: any) => m.recruits === 3)?.rewardGreen ?? 500), sparks: 200, perk: `+🌿 ${(rewardsCfg.milestones?.find((m: any) => m.recruits === 3)?.rewardGreen ?? 500).toLocaleString()} GREEN & +200 Sparks` },
+    { recruits: 5, title: 'District Cell', green: (rewardsCfg.milestones?.find((m: any) => m.recruits === 5)?.rewardGreen ?? 1200), sparks: 500, perk: `+🌿 ${(rewardsCfg.milestones?.find((m: any) => m.recruits === 5)?.rewardGreen ?? 1200).toLocaleString()} GREEN & +1 Stat Point` },
+    { recruits: 10, title: 'Underworld Syndicate', green: (rewardsCfg.milestones?.find((m: any) => m.recruits === 10)?.rewardGreen ?? 3000), sparks: 1500, perk: `+🌿 ${(rewardsCfg.milestones?.find((m: any) => m.recruits === 10)?.rewardGreen ?? 3000).toLocaleString()} GREEN & +5 Max Energy Cap` },
+    { recruits: 25, title: 'City Cartel', green: (rewardsCfg.milestones?.find((m: any) => m.recruits === 25)?.rewardGreen ?? 10000), sparks: 5000, perk: `+🌿 ${(rewardsCfg.milestones?.find((m: any) => m.recruits === 25)?.rewardGreen ?? 10000).toLocaleString()} GREEN & +5 Max Nerve Cap` },
+    { recruits: 50, title: 'Metropolis Mafia', green: (rewardsCfg.milestones?.find((m: any) => m.recruits === 50)?.rewardGreen ?? 25000), sparks: 15000, perk: `+🌿 ${(rewardsCfg.milestones?.find((m: any) => m.recruits === 50)?.rewardGreen ?? 25000).toLocaleString()} GREEN & +50 Max Happy` },
+    { recruits: 100, title: 'Underworld Kingpin', green: (rewardsCfg.milestones?.find((m: any) => m.recruits === 100)?.rewardGreen ?? 60000), sparks: 30000, perk: `+🌿 ${(rewardsCfg.milestones?.find((m: any) => m.recruits === 100)?.rewardGreen ?? 60000).toLocaleString()} GREEN, +30k Sparks, +10 Energy, +10 Nerve, +100 Happy & +3 Stat Pts` },
   ];
 
   return (
@@ -218,18 +223,18 @@ export default function ReferralView() {
                 </h3>
                 {refs.referredBy && (
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    +🌿 50 GREEN / Day Active
+                    +🌿 {dailyStipendAmount} GREEN / Day Active
                   </span>
                 )}
               </div>
               <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
                 {refs.referredBy ? (
                   <span>
-                    Your operative profile is sponsored by <strong className="text-white font-mono">{refs.referredBy}</strong>. You are entitled to a daily recruit stipend of <strong>+🌿 50 GREEN/day</strong> every 24 hours!
+                    Your operative profile is sponsored by <strong className="text-white font-mono">{refs.referredBy}</strong>. You are entitled to a daily recruit stipend of <strong>+🌿 {dailyStipendAmount} GREEN/day</strong> every 24 hours!
                   </span>
                 ) : (
                   <span>
-                    Enter your recruiter’s code to receive your <strong>Welcome Starter Kit</strong> AND unlock your daily <strong>+🌿 50 GREEN / Day</strong> recruit stipend!
+                    Enter your recruiter’s code to receive your <strong>Welcome Starter Kit</strong> (+🌿 {recruitWelcomeBonus} GREEN) AND unlock your daily <strong>+🌿 {dailyStipendAmount} GREEN / Day</strong> recruit stipend!
                   </span>
                 )}
               </p>
@@ -248,7 +253,7 @@ export default function ReferralView() {
                 }`}
               >
                 <Coins className="w-4 h-4" />
-                <span>{isStipendReady ? 'Claim Today’s 50 GREEN Allowance!' : `Next Allowance in ~${stipendRemainingHours}h`}</span>
+                <span>{isStipendReady ? `Claim Today’s ${dailyStipendAmount} GREEN Allowance!` : `Next Allowance in ~${stipendRemainingHours}h`}</span>
               </button>
             </div>
           ) : (
