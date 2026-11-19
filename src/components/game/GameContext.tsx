@@ -247,11 +247,45 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           if (data.success && data.playerState) {
             setPlayer((prev) => {
               const cloudState = data.playerState;
-              // Deep merge preserving highest progress and non-empty arrays
+              // Deep merge preserving highest progress, non-empty arrays, and full referral network
+              const localRecruits = prev.referrals?.recruits || [];
+              const cloudRecruits = cloudState.referrals?.recruits || [];
+              const allRecruits = [...cloudRecruits];
+              for (const lr of localRecruits) {
+                if (!allRecruits.some((r: any) => r.id === lr.id || (r.email && lr.email && r.email.toLowerCase() === lr.email.toLowerCase()))) {
+                  allRecruits.push(lr);
+                }
+              }
+
+              const mergedMilestones = Array.from(new Set([
+                ...(prev.referrals?.claimedMilestones || []),
+                ...(cloudState.referrals?.claimedMilestones || [])
+              ]));
+
+              const mergedReferrals = {
+                ...(DEFAULT_METROPOLIS_PLAYER.referrals),
+                ...(cloudState.referrals || {}),
+                ...(prev.referrals || {}),
+                recruits: allRecruits,
+                totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), Number(cloudState.referrals?.totalRecruits || 0), allRecruits.length),
+                networkTotalCitizens: Math.max(Number(prev.referrals?.networkTotalCitizens || 0), Number(cloudState.referrals?.networkTotalCitizens || 0), allRecruits.length),
+                unclaimedCommissionGreen: Math.max(
+                  Number(prev.referrals?.unclaimedCommissionGreen || 0),
+                  Number(cloudState.referrals?.unclaimedCommissionGreen || 0)
+                ),
+                lifetimeCommissionGreen: Math.max(
+                  Number(prev.referrals?.lifetimeCommissionGreen || 0),
+                  Number(cloudState.referrals?.lifetimeCommissionGreen || 0)
+                ),
+                claimedMilestones: mergedMilestones,
+                referralCode: authUser?.userReferralCode || cloudState.referrals?.referralCode || prev.referrals?.referralCode || `NEON-TG-${authUser?.telegramId || prev.id}`,
+              };
+
               const merged: PlayerState = {
                 ...DEFAULT_METROPOLIS_PLAYER,
                 ...prev,
                 ...cloudState,
+                referrals: mergedReferrals,
                 name: authUser?.name || cloudState.name || prev.name,
                 money: Math.max(Number(prev.money || 0), Number(cloudState.money || 0)),
                 bankMoney: Math.max(Number(prev.bankMoney || 0), Number(cloudState.bankMoney || 0)),
@@ -3654,6 +3688,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       message: `REFERRAL MILESTONE: Claimed ${recruitsRequired}-Recruit reward! +🌿 ${reward.green.toLocaleString()} GREEN & +${reward.sparks} Sparks!`,
     });
 
+    setTimeout(() => {
+      saveGame().catch(() => {});
+    }, 50);
+
     return {
       success: true,
       message: `Claimed +🌿 ${reward.green.toLocaleString()} GREEN and +${reward.sparks} Dream Sparks!`,
@@ -3685,6 +3723,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       type: 'SHOP',
       message: `Collected +🌿 ${amount.toLocaleString()} GREEN from Syndicate Referral Till!`,
     });
+
+    setTimeout(() => {
+      saveGame().catch(() => {});
+    }, 50);
 
     return {
       success: true,
@@ -3740,8 +3782,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       message: `REDEEM CODE: Activated invite [${trimmed}]! Received +🌿 50 GREEN & Welcome Meal!`,
     });
 
+    setTimeout(() => {
+      saveGame().catch(() => {});
+    }, 50);
+
     // Real-time network sync with recruiter so recruiter sees recruit & till commission
-    const recruitEmail = (typeof localStorage !== 'undefined' ? localStorage.getItem('metropolis_user_email') || localStorage.getItem('green_market_user_email') : '') || '';
+    let recruitEmail = '';
+    if (typeof localStorage !== 'undefined') {
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        try { recruitEmail = JSON.parse(authRaw).email || ''; } catch {}
+      }
+      if (!recruitEmail) {
+        recruitEmail = localStorage.getItem('metropolis_user_email') || '';
+      }
+    }
+
     if (typeof fetch !== 'undefined') {
       fetch('/api/referral', {
         method: 'POST',

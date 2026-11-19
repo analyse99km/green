@@ -108,6 +108,34 @@ function buildAuthResponse(user: any, message: string) {
   return response;
 }
 
+// Universal recruiter finder across all referral formats (telegramId, raw ID, ref_ID, NEON-TG-ID, NEON-CODE, email)
+function findRecruiterEmail(users: Record<string, any>, rawRef: string): string | null {
+  if (!rawRef) return null;
+  const clean = String(rawRef).trim().toUpperCase();
+  const stripped = clean.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
+  const tgCandidate = stripped.replace(/[^0-9]/g, '');
+
+  for (const [em, u] of Object.entries(users)) {
+    const userRef = (u.userReferralCode || '').toUpperCase();
+    const stateRef = (u.playerState?.referrals?.referralCode || '').toUpperCase();
+    const tgId = String(u.telegramId || '').toUpperCase();
+    const userId = (u.userId || '').toUpperCase();
+
+    if (
+      userRef === clean ||
+      stateRef === clean ||
+      (stripped && userRef.includes(stripped)) ||
+      (stripped && stateRef.includes(stripped)) ||
+      (tgId && (tgId === clean || tgId === stripped || tgId === tgCandidate)) ||
+      (userId && userId === clean) ||
+      em.toUpperCase() === clean
+    ) {
+      return em;
+    }
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { user, referralCode } = await req.json();
@@ -121,7 +149,18 @@ export async function POST(req: NextRequest) {
 
     const tgId = String(user.id);
     const tgEmail = `tg_${tgId}@telegram.neon`;
-    const users = loadUsers();
+    let users = loadUsers();
+
+    // Check master remote storage if empty
+    if (Object.keys(users).length === 0) {
+      try {
+        const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
+        if (remoteRes.ok) {
+          users = await remoteRes.json();
+          saveUsers(users);
+        }
+      } catch {}
+    }
 
     // Find if user already exists by telegramId or email
     let targetUser = Object.values(users).find(
@@ -172,14 +211,11 @@ export async function POST(req: NextRequest) {
       playerState: null,
     };
 
-    // Attribute recruiter if referral code provided
+    // Attribute recruiter with universal resolution
     if (newUser.referredBy) {
-      const targetRefCode = newUser.referredBy;
-      let recruiterEmail = Object.keys(users).find(
-        em => (users[em].userReferralCode && users[em].userReferralCode.toUpperCase() === targetRefCode) ||
-              (users[em].playerState?.referrals?.referralCode && users[em].playerState.referrals.referralCode.toUpperCase() === targetRefCode)
-      );
+      let recruiterEmail = findRecruiterEmail(users, newUser.referredBy);
 
+      // If recruiter not in local disk, query master storage
       if (!recruiterEmail) {
         try {
           const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
@@ -187,21 +223,20 @@ export async function POST(req: NextRequest) {
             const remoteUsers = await remoteRes.json();
             for (const [rEm, rUser] of Object.entries(remoteUsers as Record<string, any>)) {
               if (!users[rEm]) users[rEm] = rUser;
-              if ((rUser.userReferralCode && rUser.userReferralCode.toUpperCase() === targetRefCode) ||
-                  (rUser.playerState?.referrals?.referralCode && rUser.playerState.referrals.referralCode.toUpperCase() === targetRefCode)) {
-                recruiterEmail = rEm;
-              }
             }
+            recruiterEmail = findRecruiterEmail(users, newUser.referredBy);
           }
         } catch {}
       }
 
       if (recruiterEmail && users[recruiterEmail]) {
         const recruiter = users[recruiterEmail];
+        newUser.referredBy = recruiter.userReferralCode || newUser.referredBy;
+
         if (!recruiter.playerState) recruiter.playerState = {};
         if (!recruiter.playerState.referrals) {
           recruiter.playerState.referrals = {
-            referralCode: recruiter.userReferralCode || targetRefCode,
+            referralCode: recruiter.userReferralCode || `NEON-TG-${recruiter.telegramId || recruiter.userId}`,
             recruits: [],
             totalRecruits: 0,
             networkTotalCitizens: 0,
@@ -227,16 +262,47 @@ export async function POST(req: NextRequest) {
             level: 1,
             tier: 1,
             dailyGameplayEarned: 100,
-            totalGeneratedGreen: 10,
+            totalGeneratedGreen: 50,
             lastActive: 'Active today (Telegram SSO)'
           });
           recruiter.playerState.referrals.totalRecruits = recruiter.playerState.referrals.recruits.length;
           recruiter.playerState.referrals.networkTotalCitizens = recruiter.playerState.referrals.recruits.length;
-          recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + 10;
-          recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + 10;
+          // Guaranteed instant recruit bounty: +100 GREEN!
+          recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
+          recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
         }
+
+        users[recruiterEmail] = recruiter;
       }
     }
+
+    // Provision starter pack for recruit
+    newUser.playerState = {
+      name: newUser.name,
+      money: 100, // +100 starter GREEN!
+      dreamPoints: 500, // +500 starter Sparks!
+      energy: 100,
+      maxEnergy: 100,
+      nerve: 15,
+      maxNerve: 15,
+      happy: 100,
+      maxHappy: 100,
+      life: 100,
+      maxLife: 100,
+      food: 100,
+      level: 1,
+      referrals: {
+        referralCode: userReferralCode,
+        referredBy: newUser.referredBy || null,
+        hasClaimedWelcomeBonus: true,
+        recruits: [],
+        totalRecruits: 0,
+        networkTotalCitizens: 0,
+        unclaimedCommissionGreen: 0,
+        lifetimeCommissionGreen: 0,
+        claimedMilestones: []
+      }
+    };
 
     users[tgEmail] = newUser;
     saveUsers(users);

@@ -6,6 +6,78 @@ import { TornCityContent } from '@/app/city/page';
 import { LoginContent } from '@/app/login/page';
 import { RefreshCw } from 'lucide-react';
 
+function MetropolisLoadingScreen({ status = 'Verifying encrypted syndicate session...' }: { status?: string }) {
+  const [progress, setProgress] = useState(15);
+  const [currentStatus, setCurrentStatus] = useState(status);
+
+  useEffect(() => {
+    const steps = [
+      { at: 35, text: 'Establishing encrypted quantum uplink...' },
+      { at: 65, text: 'Authenticating Telegram syndicate identity...' },
+      { at: 85, text: 'Synchronizing botanical district networks...' },
+      { at: 98, text: 'Entering Neon Metropolis underworld...' }
+    ];
+
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 98) {
+          clearInterval(interval);
+          return 98;
+        }
+        const next = Math.min(98, prev + Math.floor(Math.random() * 15) + 8);
+        if (currentStep < steps.length && next >= steps[currentStep].at) {
+          setCurrentStatus(steps[currentStep].text);
+          currentStep++;
+        }
+        return next;
+      });
+    }, 180);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[#030705] flex flex-col items-center justify-center font-sans text-neutral-300 p-6 overflow-hidden select-none">
+      {/* Ambient background glow */}
+      <div className="absolute w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none animate-pulse" />
+
+      {/* Glowing Core Orb */}
+      <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 border-t-emerald-400 animate-spin" style={{ animationDuration: '0.9s' }} />
+        <span className="text-4xl animate-bounce filter drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]">🌿</span>
+      </div>
+
+      {/* Branding */}
+      <div className="flex items-center gap-2 mb-1">
+        <span className="font-mono font-black text-xl uppercase tracking-[0.25em] text-white drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]">
+          NEON METROPOLIS
+        </span>
+      </div>
+      <div className="text-[10px] font-mono tracking-[0.3em] uppercase text-emerald-400/80 mb-6 font-bold">
+        Underworld RPG Mesh
+      </div>
+
+      {/* Progress Bar Container */}
+      <div className="w-full max-w-[280px] bg-neutral-900/80 border border-emerald-500/30 rounded-xl p-1 mb-3.5 shadow-2xl backdrop-blur-sm">
+        <div
+          className="h-2 rounded-lg bg-gradient-to-r from-emerald-600 via-emerald-400 to-teal-300 transition-all duration-200 ease-out shadow-[0_0_12px_rgba(16,185,129,0.8)]"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {/* Terminal Readout */}
+      <div className="text-[11px] font-mono text-emerald-300 tracking-wide min-h-[20px] text-center">
+        &gt; {currentStatus}
+      </div>
+
+      <div className="mt-6 text-[9px] font-mono tracking-widest text-emerald-900 uppercase">
+        ⚡ Cluster Protocol v2.2 | Multi-Node Mesh
+      </div>
+    </div>
+  );
+}
+
 export default function GameRootPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
@@ -99,44 +171,19 @@ export default function GameRootPage() {
   }, []);
 
   if (isAuthenticated === null) {
-    return (
-      <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center font-sans text-neutral-300">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-2xl animate-pulse">🌿</span>
-          <span className="font-mono font-bold text-xs uppercase tracking-widest text-emerald-400">
-            NEON METROPOLIS
-          </span>
-        </div>
-        <RefreshCw className="w-5 h-5 text-emerald-400 animate-spin" />
-        <span className="text-[11px] font-mono text-neutral-500 mt-3">
-          Verifying encrypted syndicate session...
-        </span>
-      </div>
-    );
+    return <MetropolisLoadingScreen status="Verifying encrypted syndicate session..." />;
   }
 
   if (!isAuthenticated) {
     return (
-      <Suspense
-        fallback={
-          <div className="min-h-screen bg-neutral-950 flex items-center justify-center font-mono text-xs text-neutral-500">
-            Loading authentication portal...
-          </div>
-        }
-      >
+      <Suspense fallback={<MetropolisLoadingScreen status="Loading authentication portal..." />}>
         <LoginContent onSuccess={() => setIsAuthenticated(true)} />
       </Suspense>
     );
   }
 
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-neutral-950 flex items-center justify-center font-mono text-xs text-neutral-500">
-          Entering Neon Metropolis Underworld...
-        </div>
-      }
-    >
+    <Suspense fallback={<MetropolisLoadingScreen status="Entering Neon Metropolis underworld..." />}>
       <GameProvider>
         <TornCityContent />
       </GameProvider>

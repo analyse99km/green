@@ -66,6 +66,33 @@ async function pushToMaster(users: Record<string, any>) {
   }
 }
 
+function findRecruiterEmail(users: Record<string, any>, rawRef: string): string | null {
+  if (!rawRef) return null;
+  const clean = String(rawRef).trim().toUpperCase();
+  const stripped = clean.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
+  const tgCandidate = stripped.replace(/[^0-9]/g, '');
+
+  for (const [em, u] of Object.entries(users)) {
+    const userRef = (u.userReferralCode || '').toUpperCase();
+    const stateRef = (u.playerState?.referrals?.referralCode || '').toUpperCase();
+    const tgId = String(u.telegramId || '').toUpperCase();
+    const userId = (u.userId || '').toUpperCase();
+
+    if (
+      userRef === clean ||
+      stateRef === clean ||
+      (stripped.length > 3 && userRef.includes(stripped)) ||
+      (stripped.length > 3 && stateRef.includes(stripped)) ||
+      (tgId && (tgId === clean || tgId === stripped || (tgCandidate && tgId === tgCandidate))) ||
+      (userId && userId === clean) ||
+      em.toUpperCase() === clean
+    ) {
+      return em;
+    }
+  }
+  return null;
+}
+
 // POST /api/referral - Redeem code & affiliate recruit
 export async function POST(req: NextRequest) {
   try {
@@ -92,30 +119,18 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    // Find recruiter
-    let recruiterEmail = Object.keys(users).find(
-      (em) =>
-        (users[em].userReferralCode && users[em].userReferralCode.toUpperCase() === cleanCode) ||
-        (users[em].playerState?.referrals?.referralCode &&
-          users[em].playerState.referrals.referralCode.toUpperCase() === cleanCode)
-    );
+    // Find recruiter with universal matcher
+    let recruiterEmail = findRecruiterEmail(users, cleanCode);
 
     if (!recruiterEmail) {
-      // Pull remote master users.json again in case recruiter registered on another node
       try {
         const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
         if (remoteRes.ok) {
           const remoteUsers = await remoteRes.json();
           for (const [em, rUser] of Object.entries(remoteUsers as Record<string, any>)) {
             if (!users[em]) users[em] = rUser;
-            if (
-              (rUser.userReferralCode && rUser.userReferralCode.toUpperCase() === cleanCode) ||
-              (rUser.playerState?.referrals?.referralCode &&
-                rUser.playerState.referrals.referralCode.toUpperCase() === cleanCode)
-            ) {
-              recruiterEmail = em;
-            }
           }
+          recruiterEmail = findRecruiterEmail(users, cleanCode);
         }
       } catch {}
     }
@@ -160,17 +175,16 @@ export async function POST(req: NextRequest) {
       recruiter.playerState.referrals.recruits.unshift({
         id: effectiveId,
         name: effectiveName,
-        email: cleanRecruitEmail,
+        email: cleanRecruitEmail || `${effectiveId}@neon.city`,
         joinedAt: Date.now(),
         level: 1,
         tier: 1,
         dailyGameplayEarned: 150,
-        totalGeneratedGreen: 15,
-        lastActive: 'Active today (Redeemed invite code)',
+        totalGeneratedGreen: 50,
+        lastActive: 'Active today (Code Redeem)'
       });
       recruiter.playerState.referrals.totalRecruits = recruiter.playerState.referrals.recruits.length;
       recruiter.playerState.referrals.networkTotalCitizens = recruiter.playerState.referrals.recruits.length;
-      // Instant +100 GREEN bounty added to recruiter till!
       recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
       recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
     }
