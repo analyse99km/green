@@ -38,18 +38,20 @@ function matchesReferral(referredBy: string, user: any, userEmail: string): bool
   const tgCandidate = stripped.replace(/[^0-9]/g, '');
 
   const myCode = (user.userReferralCode || user.playerState?.referrals?.referralCode || '').toUpperCase();
+  const myCodeStripped = myCode.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
   const myTgId = String(user.telegramId || '').toUpperCase();
-  const myUserId = (user.userId || '').toUpperCase();
-  const myEmail = userEmail.toUpperCase();
-  const myName = (user.name || '').toUpperCase();
-  const myUsername = (user.username || '').toUpperCase();
+  const myUserId = String(user.userId || user.playerState?.id || '').toUpperCase();
+  const myEmail = String(userEmail || user.email || '').toUpperCase();
+  const myName = String(user.name || user.playerState?.name || '').toUpperCase();
+  const myUsername = String(user.username || '').toUpperCase();
 
   return (
     myCode === ref ||
     myCode === stripped ||
+    (myCodeStripped && myCodeStripped === stripped) ||
     (stripped.length >= 3 && myCode.includes(stripped)) ||
     (myTgId && (myTgId === ref || myTgId === stripped || (tgCandidate && myTgId === tgCandidate))) ||
-    (myUserId && (myUserId === ref || myUserId.includes(ref))) ||
+    (myUserId && (myUserId === ref || myUserId === stripped || myUserId.includes(ref))) ||
     myEmail === ref ||
     (myUsername && (myUsername === ref || `@${myUsername}` === ref)) ||
     (myName && myName === ref)
@@ -96,18 +98,38 @@ async function pushToMaster(users: Record<string, any>) {
   }
 }
 
-// GET /api/player/sync?email=user@example.com
+// GET /api/player/sync?email=user@example.com&userId=...&telegramId=...&code=...
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+    const userId = (url.searchParams.get('userId') || '').trim();
+    const tgId = (url.searchParams.get('telegramId') || url.searchParams.get('tgId') || '').trim();
+    const code = (url.searchParams.get('code') || '').trim().toUpperCase();
 
-    if (!email) {
-      return NextResponse.json({ success: false, message: 'Email required' }, { status: 400 });
+    if (!email && !userId && !tgId && !code) {
+      return NextResponse.json({ success: false, message: 'Identifier required (email, userId, telegramId, or code)' }, { status: 400 });
     }
 
     let users = loadUsers();
-    let user = users[email];
+    let userKey = email;
+    let user = email ? users[email] : null;
+
+    if (!user) {
+      for (const [k, u] of Object.entries(users)) {
+        if (
+          (email && k.toLowerCase() === email) ||
+          (email && u.email && u.email.toLowerCase() === email) ||
+          (userId && (u.userId === userId || u.playerState?.id === userId)) ||
+          (tgId && String(u.telegramId) === String(tgId)) ||
+          (code && ((u.userReferralCode || '').toUpperCase() === code || (u.playerState?.referrals?.referralCode || '').toUpperCase() === code))
+        ) {
+          userKey = k;
+          user = u;
+          break;
+        }
+      }
+    }
 
     // If not found in local runner disk, fetch from master storage
     if (!user) {
@@ -115,10 +137,20 @@ export async function GET(req: NextRequest) {
         const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
         if (remoteRes.ok) {
           const remoteUsers = await remoteRes.json();
-          if (remoteUsers[email]) {
-            users = { ...users, ...remoteUsers };
-            saveUsers(users);
-            user = users[email];
+          users = { ...users, ...remoteUsers };
+          saveUsers(users);
+          for (const [k, u] of Object.entries(users)) {
+            if (
+              (email && k.toLowerCase() === email) ||
+              (email && u.email && u.email.toLowerCase() === email) ||
+              (userId && (u.userId === userId || u.playerState?.id === userId)) ||
+              (tgId && String(u.telegramId) === String(tgId)) ||
+              (code && ((u.userReferralCode || '').toUpperCase() === code || (u.playerState?.referrals?.referralCode || '').toUpperCase() === code))
+            ) {
+              userKey = k;
+              user = u;
+              break;
+            }
           }
         }
       } catch {}
@@ -161,25 +193,28 @@ export async function GET(req: NextRequest) {
 
       let modified = false;
       for (const [em, other] of Object.entries(users)) {
-        if (em.toLowerCase() !== email && other.referredBy && matchesReferral(other.referredBy, user, email)) {
-          const exists = user.playerState.referrals.recruits.some(
-            (r: any) => r.id === other.userId || r.name === other.name || (r.email && r.email.toLowerCase() === em.toLowerCase())
-          );
-          if (!exists) {
-            user.playerState.referrals.recruits.unshift({
-              id: other.userId,
-              name: other.name || em.split('@')[0],
-              email: em,
-              joinedAt: other.createdAt || Date.now(),
-              level: other.level || other.playerState?.level || 1,
-              tier: 1,
-              dailyGameplayEarned: 150,
-              totalGeneratedGreen: 50,
-              lastActive: 'Active Operative'
-            });
-            user.playerState.referrals.unclaimedCommissionGreen = (user.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
-            user.playerState.referrals.lifetimeCommissionGreen = (user.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
-            modified = true;
+        if (em.toLowerCase() !== userKey.toLowerCase()) {
+          const otherRef = other.referredBy || other.playerState?.referrals?.referredBy;
+          if (otherRef && matchesReferral(otherRef, user, userKey)) {
+            const exists = user.playerState.referrals.recruits.some(
+              (r: any) => r.id === other.userId || r.name === other.name || (r.email && r.email.toLowerCase() === em.toLowerCase())
+            );
+            if (!exists) {
+              user.playerState.referrals.recruits.unshift({
+                id: other.userId,
+                name: other.name || em.split('@')[0],
+                email: em,
+                joinedAt: other.createdAt || Date.now(),
+                level: other.level || other.playerState?.level || 1,
+                tier: 1,
+                dailyGameplayEarned: 150,
+                totalGeneratedGreen: 50,
+                lastActive: 'Active Operative'
+              });
+              user.playerState.referrals.unclaimedCommissionGreen = (user.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
+              user.playerState.referrals.lifetimeCommissionGreen = (user.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
+              modified = true;
+            }
           }
         }
       }
@@ -187,7 +222,7 @@ export async function GET(req: NextRequest) {
       if (modified) {
         user.playerState.referrals.totalRecruits = user.playerState.referrals.recruits.length;
         user.playerState.referrals.networkTotalCitizens = user.playerState.referrals.recruits.length;
-        users[email] = user;
+        users[userKey] = user;
         saveUsers(users);
         pushToMaster(users).catch(() => {});
       }
@@ -195,10 +230,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      email,
+      email: user.email || userKey,
       name: user.name,
       userId: user.userId,
-      userReferralCode: user.userReferralCode,
+      userReferralCode: user.userReferralCode || user.playerState?.referrals?.referralCode,
       referredBy: finalReferredBy,
       playerState: user.playerState || null,
       lastSaveAt: user.lastSaveAt || null
@@ -266,7 +301,9 @@ export async function POST(req: NextRequest) {
     // Auto-discover any new recruits from the users database who registered using my code
     let bonusCommissions = 0;
     for (const [em, other] of Object.entries(users)) {
-      if (em.toLowerCase() !== cleanEmail && other.referredBy && matchesReferral(other.referredBy, user, cleanEmail)) {
+      if (em.toLowerCase() !== cleanEmail) {
+        const otherRef = other.referredBy || other.playerState?.referrals?.referredBy;
+        if (otherRef && matchesReferral(otherRef, user, cleanEmail)) {
         if (!mergedRecruits.some((r: any) => r.id === other.userId || (r.email && r.email.toLowerCase() === em.toLowerCase()))) {
           mergedRecruits.unshift({
             id: other.userId,
@@ -282,6 +319,7 @@ export async function POST(req: NextRequest) {
           bonusCommissions += 100;
         }
       }
+    }
     }
 
     const myRefCode = (user.userReferralCode || playerState.referrals?.referralCode || '').toUpperCase();

@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import ReferralView from './ReferralView';
 import { SoundEngine } from '../gameAudio';
-import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef, INITIAL_DREAM_MARKET_ITEMS, DreamMarketItemDef } from '../gameCatalog';
+import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef, INITIAL_DREAM_MARKET_ITEMS, DreamMarketItemDef, INITIAL_TREE_STAGES, TreeStageDef } from '../gameCatalog';
 import DynamicIcon from '../DynamicIcon';
 import { formatCompactNumber, CURRENCY_ICONS } from '../formatters';
 
@@ -116,14 +116,10 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
     return acc + lvl * (card.sparksPerSec || 1);
   }, 0);
 
-  // Plant stage definitions
-  const plantStages = [
-    { id: 'tree_sprout', name: 'Chlorophyll Sprout', icon: '🌱', bonus: '+1/tap', sparksPerTap: 1 },
-    { id: 'tree_mint', name: 'Peppermint Shrub', icon: '🌿', bonus: '+3/tap', sparksPerTap: 3 },
-    { id: 'tree_bonsai', name: 'Ancient Zen Bonsai', icon: '🪴', bonus: '+8/tap', sparksPerTap: 8 },
-    { id: 'tree_bamboo', name: 'Cybernetic Bamboo', icon: '🎋', bonus: '+20/tap', sparksPerTap: 20 },
-    { id: 'tree_oak', name: 'Sacred Banyan Canopy', icon: '🌳', bonus: '+50/tap', sparksPerTap: 50 },
-  ];
+  // Dynamic Tree Evolution stage definitions from cluster catalog
+  const plantStages: TreeStageDef[] = catalog.treeStages && catalog.treeStages.length > 0
+    ? catalog.treeStages
+    : INITIAL_TREE_STAGES;
 
   const currentPlant = plantStages.find((p) => p.id === activePlant) || plantStages[0];
 
@@ -338,7 +334,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
             </div>
 
             <div className="bg-neutral-900/90 border border-neutral-800 rounded-2xl p-2.5 text-center">
-              <div className="text-[10px] text-cyan-400 font-mono uppercase">Coins to lvl up</div>
+              <div className="text-[10px] text-cyan-400 font-mono uppercase">Sparks to lvl up</div>
               <div className="flex items-center justify-center gap-1 text-cyan-300 font-black text-sm sm:text-base mt-0.5 font-mono">
                 <span>{formatCompactNumber(5000 * (player.level || 1))}</span>
               </div>
@@ -750,7 +746,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                   <span>⚡</span> Botanical Dream Market & Vitals Store
                 </h2>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  Convert your minted Sparks into physical Energy, Food Satiety, Nerve, Happiness, Life, and liquid GREEN coins.
+                  Convert your minted Sparks into physical Energy, Food Satiety, Nerve, Happiness, Life, and liquid GREEN 🌿.
                 </p>
               </div>
               <div className="flex items-center gap-2 self-start sm:self-auto bg-neutral-950 px-3 py-1.5 rounded-xl border border-neutral-800">

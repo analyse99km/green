@@ -12,6 +12,8 @@ import {
   ReferralTierConfig,
   ReferralMilestoneConfig,
   ReferralRewardsConfig,
+  TreeStageDef,
+  INITIAL_TREE_STAGES,
 } from '../gameCatalog';
 import { SoundEngine } from '../gameAudio';
 import { useGame } from '../GameContext';
@@ -33,7 +35,7 @@ interface AdminPlayer {
 
 export const AdminDashboardView: React.FC = () => {
   const { player } = useGame();
-  const [activeTab, setActiveTab] = useState<'PLAYERS' | 'CARDS' | 'ITEMS' | 'REFERRAL'>('PLAYERS');
+  const [activeTab, setActiveTab] = useState<'PLAYERS' | 'CARDS' | 'ITEMS' | 'REFERRAL' | 'TREE'>('PLAYERS');
   const [players, setPlayers] = useState<AdminPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -44,7 +46,22 @@ export const AdminDashboardView: React.FC = () => {
     categories: [],
     cards: [],
     customItems: [],
+    treeStages: INITIAL_TREE_STAGES,
   });
+
+  // Tree Evolution Stages State
+  const [treeStages, setTreeStages] = useState<TreeStageDef[]>(INITIAL_TREE_STAGES);
+  const [showTreeModal, setShowTreeModal] = useState(false);
+  const [editingTreeStage, setEditingTreeStage] = useState<TreeStageDef | null>(null);
+  const [treeId, setTreeId] = useState('');
+  const [treeName, setTreeName] = useState('');
+  const [treeIcon, setTreeIcon] = useState('🌱');
+  const [treeBonus, setTreeBonus] = useState('+1/tap');
+  const [treeSparksPerTap, setTreeSparksPerTap] = useState(1);
+  const [treeMultiplier, setTreeMultiplier] = useState(1.0);
+  const [treeUnlockSparks, setTreeUnlockSparks] = useState(0);
+  const [treeUnlockGreen, setTreeUnlockGreen] = useState(0);
+  const [treeDescription, setTreeDescription] = useState('');
 
   // Referral Rewards Configuration State
   const [refRecruiterBounty, setRefRecruiterBounty] = useState<number>(100);
@@ -135,7 +152,103 @@ export const AdminDashboardView: React.FC = () => {
         setRefMilestones(catalog.referralRewards.milestones);
       }
     }
+    if (catalog.treeStages && catalog.treeStages.length > 0) {
+      setTreeStages(catalog.treeStages);
+    }
   }, [catalog]);
+
+  const handleOpenAddTreeStage = () => {
+    const nextIdx = treeStages.length + 1;
+    setEditingTreeStage(null);
+    setTreeId(`tree_stage_${Date.now()}`);
+    setTreeName(`Evolution Stage #${nextIdx}`);
+    setTreeIcon('🌿');
+    setTreeBonus(`+${nextIdx * 5}/tap`);
+    setTreeSparksPerTap(nextIdx * 5);
+    setTreeMultiplier(nextIdx * 2);
+    setTreeUnlockSparks(nextIdx * 500);
+    setTreeUnlockGreen(0);
+    setTreeDescription('');
+    setShowTreeModal(true);
+  };
+
+  const handleOpenEditTreeStage = (stage: TreeStageDef) => {
+    setEditingTreeStage(stage);
+    setTreeId(stage.id);
+    setTreeName(stage.name);
+    setTreeIcon(stage.icon);
+    setTreeBonus(stage.bonus);
+    setTreeSparksPerTap(stage.sparksPerTap);
+    setTreeMultiplier(stage.multiplier);
+    setTreeUnlockSparks(stage.unlockCostSparks);
+    setTreeUnlockGreen(stage.unlockCostGreen || 0);
+    setTreeDescription(stage.description || '');
+    setShowTreeModal(true);
+  };
+
+  const handleSaveTreeStage = (e: React.FormEvent) => {
+    e.preventDefault();
+    const stageDef: TreeStageDef = {
+      id: treeId.trim(),
+      name: treeName.trim(),
+      icon: treeIcon.trim() || '🌿',
+      bonus: treeBonus.trim() || `+${treeSparksPerTap}/tap`,
+      sparksPerTap: Number(treeSparksPerTap) || 1,
+      multiplier: Number(treeMultiplier) || 1.0,
+      unlockCostSparks: Number(treeUnlockSparks) || 0,
+      unlockCostGreen: Number(treeUnlockGreen) || 0,
+      description: treeDescription.trim(),
+    };
+
+    let updatedStages: TreeStageDef[];
+    if (editingTreeStage) {
+      updatedStages = treeStages.map((s) => (s.id === editingTreeStage.id ? stageDef : s));
+    } else {
+      updatedStages = [...treeStages, stageDef];
+    }
+
+    setTreeStages(updatedStages);
+    saveCatalogChanges({
+      ...catalog,
+      treeStages: updatedStages,
+    });
+    setShowTreeModal(false);
+  };
+
+  const handleDeleteTreeStage = (id: string) => {
+    if (treeStages.length <= 1) {
+      setErrorMsg('Cannot delete the last remaining tree evolution stage.');
+      setTimeout(() => setErrorMsg(''), 3000);
+      return;
+    }
+    const updatedStages = treeStages.filter((s) => s.id !== id);
+    setTreeStages(updatedStages);
+    saveCatalogChanges({
+      ...catalog,
+      treeStages: updatedStages,
+    });
+  };
+
+  const handleMoveTreeStage = (idx: number, dir: 'UP' | 'DOWN') => {
+    const targetIdx = dir === 'UP' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= treeStages.length) return;
+    const reordered = [...treeStages];
+    const [moved] = reordered.splice(idx, 1);
+    reordered.splice(targetIdx, 0, moved);
+    setTreeStages(reordered);
+    saveCatalogChanges({
+      ...catalog,
+      treeStages: reordered,
+    });
+  };
+
+  const handleResetDefaultTreeStages = () => {
+    setTreeStages(INITIAL_TREE_STAGES);
+    saveCatalogChanges({
+      ...catalog,
+      treeStages: INITIAL_TREE_STAGES,
+    });
+  };
 
   const handleSaveReferralRewards = (e: React.FormEvent) => {
     e.preventDefault();
@@ -482,6 +595,19 @@ export const AdminDashboardView: React.FC = () => {
           }`}
         >
           <span>🎁</span> Edit Referral & Jump Rewards
+        </button>
+        <button
+          onClick={() => {
+            SoundEngine.playTick(player.soundEnabled);
+            setActiveTab('TREE');
+          }}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition border-b-2 flex items-center gap-2 ${
+            activeTab === 'TREE'
+              ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
+              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <span>🌳</span> Tree Evolution Stages ({treeStages.length})
         </button>
       </div>
 
@@ -1017,6 +1143,142 @@ export const AdminDashboardView: React.FC = () => {
         </form>
       )}
 
+      {/* TAB 5: TREE EVOLUTION STAGES MANAGER */}
+      {activeTab === 'TREE' && (
+        <div className="space-y-5">
+          {/* Header Banner */}
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-zinc-200 uppercase tracking-wide flex items-center gap-2">
+                  <span>🌳</span> Chlorophyll Tree Evolution Stages ({treeStages.length})
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Configure the primary tapper plant organism evolution ladder. Edit multipliers, sparks per tap, unlock costs (Sparks & GREEN), and icons across all cluster nodes.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetDefaultTreeStages}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🔄</span> Reset Defaults
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenAddTreeStage}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-4 py-1.5 rounded transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40 cursor-pointer"
+                >
+                  <span>➕</span> Add Tree Stage
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Tree Stages Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {treeStages.map((stage, idx) => (
+              <div
+                key={stage.id}
+                className="bg-zinc-950 border border-zinc-800 hover:border-emerald-500/50 rounded-xl p-4 space-y-3 transition group relative"
+              >
+                {/* Stage Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl p-2.5 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center select-none shadow-md">
+                      {stage.icon}
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          STAGE #{idx + 1}
+                        </span>
+                        <span className="text-[10px] font-mono text-zinc-500">
+                          {stage.id}
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-zinc-100 text-sm mt-0.5">{stage.name}</h3>
+                      <div className="text-xs text-emerald-400 font-mono font-bold mt-0.5">
+                        {stage.bonus} &bull; {stage.multiplier}x Multiplier
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Specs Box */}
+                <div className="grid grid-cols-2 gap-2 bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800/80 text-[11px] font-mono">
+                  <div>
+                    <span className="text-zinc-500 block text-[10px] uppercase">Sparks / Tap</span>
+                    <span className="font-bold text-cyan-400">+{stage.sparksPerTap} Sparks</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block text-[10px] uppercase">Multiplier</span>
+                    <span className="font-bold text-amber-400">{stage.multiplier}x</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block text-[10px] uppercase">Unlock (Sparks)</span>
+                    <span className="font-bold text-zinc-200">⚡ {stage.unlockCostSparks.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block text-[10px] uppercase">Unlock (GREEN)</span>
+                    <span className="font-bold text-emerald-400">🌿 {stage.unlockCostGreen || 0} GREEN</span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {stage.description && (
+                  <p className="text-[11px] text-zinc-400 italic bg-black/30 p-2 rounded border border-zinc-800/40">
+                    &ldquo;{stage.description}&rdquo;
+                  </p>
+                )}
+
+                {/* Card Controls */}
+                <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => handleMoveTreeStage(idx, 'UP')}
+                      className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 cursor-pointer text-xs"
+                      title="Move Up"
+                    >
+                      ⬆️
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === treeStages.length - 1}
+                      onClick={() => handleMoveTreeStage(idx, 'DOWN')}
+                      className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-20 cursor-pointer text-xs"
+                      title="Move Down"
+                    >
+                      ⬇️
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditTreeStage(stage)}
+                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>✏️</span> Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={treeStages.length <= 1}
+                      onClick={() => handleDeleteTreeStage(stage.id)}
+                      className="bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 disabled:opacity-30 cursor-pointer"
+                    >
+                      <span>🗑️</span> Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* MODAL: ADD / EDIT BOTANICAL CARD */}
       {showCardModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1390,6 +1652,153 @@ export const AdminDashboardView: React.FC = () => {
                   className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2 rounded font-bold transition"
                 >
                   Save Item
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD / EDIT TREE EVOLUTION STAGE */}
+      {showTreeModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-950 border border-emerald-500/50 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                <span>🌳</span> {editingTreeStage ? 'Edit Tree Evolution Stage' : 'Create New Evolution Stage'}
+              </h3>
+              <button
+                onClick={() => setShowTreeModal(false)}
+                className="text-zinc-500 hover:text-zinc-200 text-sm font-mono cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTreeStage} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-zinc-400 mb-1">Stage ID (Unique)</label>
+                  <input
+                    type="text"
+                    required
+                    value={treeId}
+                    onChange={(e) => setTreeId(e.target.value)}
+                    placeholder="e.g. tree_sakura"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Stage Icon / Emoji</label>
+                  <input
+                    type="text"
+                    required
+                    value={treeIcon}
+                    onChange={(e) => setTreeIcon(e.target.value)}
+                    placeholder="e.g. 🌸"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100 text-center text-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 mb-1">Stage Name</label>
+                <input
+                  type="text"
+                  required
+                  value={treeName}
+                  onChange={(e) => setTreeName(e.target.value)}
+                  placeholder="e.g. Luminescent Sakura Canopy"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-zinc-400 mb-1">Bonus Label</label>
+                  <input
+                    type="text"
+                    required
+                    value={treeBonus}
+                    onChange={(e) => setTreeBonus(e.target.value)}
+                    placeholder="e.g. +75/tap"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-emerald-400 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Base Sparks Per Tap</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000000"
+                    required
+                    value={treeSparksPerTap}
+                    onChange={(e) => setTreeSparksPerTap(Number(e.target.value))}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-cyan-400 font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-zinc-400 mb-1">Multiplier (x)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    max="1000"
+                    required
+                    value={treeMultiplier}
+                    onChange={(e) => setTreeMultiplier(Number(e.target.value))}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-amber-400 font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Unlock Cost (Sparks)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={treeUnlockSparks}
+                    onChange={(e) => setTreeUnlockSparks(Number(e.target.value))}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Unlock Cost (GREEN)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={treeUnlockGreen}
+                    onChange={(e) => setTreeUnlockGreen(Number(e.target.value))}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-emerald-400 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-zinc-400 mb-1">Botanical Lore & Description</label>
+                <textarea
+                  rows={2}
+                  value={treeDescription}
+                  onChange={(e) => setTreeDescription(e.target.value)}
+                  placeholder="Atmospheric botanical description of this evolution tier..."
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-300 resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setShowTreeModal(false)}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2 rounded font-bold transition shadow-lg shadow-emerald-950/40 cursor-pointer"
+                >
+                  {editingTreeStage ? 'Update Stage' : 'Save Stage'}
                 </button>
               </div>
             </form>

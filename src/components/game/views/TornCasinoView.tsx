@@ -118,7 +118,7 @@ function calculateBlackjackTotal(cards: Card[]): number {
 }
 
 export default function TornCasinoView() {
-  const { player, deductMoney, awardMoney } = useGame();
+  const { player, deductMoney, awardMoney, saveGame } = useGame();
   const [selectedGame, setSelectedGame] = useState<CasinoGameId>('SLOTS');
   const [selectedChip, setSelectedChip] = useState<number>(10);
   const [showPayTable, setShowPayTable] = useState(false);

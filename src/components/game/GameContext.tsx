@@ -1097,17 +1097,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const fromBank = Math.min(player.bankMoney, scaledFine - fromPocket);
       const totalConfiscated = fromPocket + fromBank;
 
-      setPlayer((prev) => ({
-        ...prev,
-        energy: prev.energy - 10,
-        money: prev.money - fromPocket,
-        bankMoney: prev.bankMoney - fromBank,
-        totalFinesPaid: (prev.totalFinesPaid || 0) + totalConfiscated,
+      const updatedBusted: PlayerState = {
+        ...player,
+        energy: player.energy - 10,
+        money: player.money - fromPocket,
+        bankMoney: player.bankMoney - fromBank,
+        totalFinesPaid: (player.totalFinesPaid || 0) + totalConfiscated,
         jailTimeRemainingSeconds: 120,
         currentBailAmount: scaledFine,
         lastCrimeReason: `Attempted Shoplift: ${item.name} (Value: 🌿 ${item.price.toLocaleString()})`,
         hasUnsavedActions: true,
-      }));
+      };
+      setPlayer(updatedBusted);
+      saveGame(updatedBusted).catch(() => {});
 
       SoundEngine.playHit(player.soundEnabled);
       addLog({
@@ -1178,17 +1180,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const fromBank = Math.min(player.bankMoney, scaledFine - fromPocket);
       const totalConfiscated = fromPocket + fromBank;
 
-      setPlayer((prev) => ({
-        ...prev,
-        nerve: prev.nerve - crime.nerveCost,
-        money: prev.money - fromPocket,
-        bankMoney: prev.bankMoney - fromBank,
-        totalFinesPaid: (prev.totalFinesPaid || 0) + totalConfiscated,
+      const updatedBustedCrime: PlayerState = {
+        ...player,
+        nerve: player.nerve - crime.nerveCost,
+        money: player.money - fromPocket,
+        bankMoney: player.bankMoney - fromBank,
+        totalFinesPaid: (player.totalFinesPaid || 0) + totalConfiscated,
         jailTimeRemainingSeconds: jailSecs,
         currentBailAmount: scaledFine,
         lastCrimeReason: `Failed Crime: ${crime.name}`,
         hasUnsavedActions: true,
-      }));
+      };
+      setPlayer(updatedBustedCrime);
+      saveGame(updatedBustedCrime).catch(() => {});
       SoundEngine.playHit(player.soundEnabled);
       addLog({
         type: 'POLICE',
@@ -2131,56 +2135,67 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     if (won) {
       const winPayout = Math.round(bet * mult);
-      setPlayer((prev) => ({
-        ...prev,
-        money: prev.money + (winPayout - bet),
+      const updated: PlayerState = {
+        ...player,
+        money: player.money + (winPayout - bet),
         hasUnsavedActions: true,
-      }));
+      };
+      setPlayer(updated);
       SoundEngine.playCash(player.soundEnabled);
       addLog({
         type: 'CIVILIAN',
         message: `🎰 CASINO WIN: Won +🌿 ${winPayout.toLocaleString()} GREEN on ${game}!`,
       });
+      saveGame(updated).catch(() => {});
       return { won: true, payout: winPayout, message: `🎉 WIN! You won +🌿 ${winPayout.toLocaleString()} GREEN on ${game}!` };
     } else {
-      setPlayer((prev) => ({
-        ...prev,
-        money: prev.money - bet,
+      const updated: PlayerState = {
+        ...player,
+        money: player.money - bet,
         hasUnsavedActions: true,
-      }));
+      };
+      setPlayer(updated);
       addLog({
         type: 'CIVILIAN',
         message: `❌ CASINO LOSS: Lost 🌿 ${bet.toLocaleString()} GREEN on ${game}.`,
       });
+      // Immediately commit loss to disk and cloud so reload exploits cannot recover money
+      saveGame(updated).catch(() => {});
       return { won: false, payout: 0, message: `The house won. Lost 🌿 ${bet.toLocaleString()} GREEN on ${game}.` };
     }
   };
 
   const deductMoney = (amount: number, reason: string): boolean => {
     if (amount <= 0 || player.money < amount) return false;
-    setPlayer((prev) => ({
-      ...prev,
-      money: Math.max(0, prev.money - amount),
+    const nextMoney = Math.max(0, player.money - amount);
+    const updated: PlayerState = {
+      ...player,
+      money: nextMoney,
       hasUnsavedActions: true,
-    }));
+    };
+    setPlayer(updated);
     addLog({
       type: 'CIVILIAN',
       message: `💸 ${reason}: -🌿 ${amount.toLocaleString()} GREEN`,
     });
+    // Instant synchronous localStorage commit + background cloud save to block reload exploits
+    saveGame(updated).catch(() => {});
     return true;
   };
 
   const awardMoney = (amount: number, reason: string): void => {
     if (amount <= 0) return;
-    setPlayer((prev) => ({
-      ...prev,
-      money: prev.money + amount,
+    const updated: PlayerState = {
+      ...player,
+      money: player.money + amount,
       hasUnsavedActions: true,
-    }));
+    };
+    setPlayer(updated);
     addLog({
       type: 'CIVILIAN',
       message: `💰 ${reason}: +🌿 ${amount.toLocaleString()} GREEN`,
     });
+    saveGame(updated).catch(() => {});
   };
 
   const healInHospital = () => {
@@ -3319,7 +3334,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         });
         return {
           success: false,
-          message: `Need 🪙 ${formatCompactNumber(catalogItem.price)} GREEN to purchase ${catalogItem.name}.`,
+          message: `Need 🌿 ${formatCompactNumber(catalogItem.price)} GREEN to purchase ${catalogItem.name}.`,
         };
       }
 
@@ -3377,11 +3392,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       SoundEngine.playCash(player.soundEnabled);
       addLog({
         type: 'SHOP',
-        message: `Purchased ${catalogItem.name} for 🪙 ${formatCompactNumber(catalogItem.price)} GREEN.`,
+        message: `Purchased ${catalogItem.name} for 🌿 ${formatCompactNumber(catalogItem.price)} GREEN.`,
       });
       return {
         success: true,
-        message: `Successfully purchased ${catalogItem.name} for 🪙 ${catalogItem.price.toLocaleString()} GREEN!`,
+        message: `Successfully purchased ${catalogItem.name} for 🌿 ${catalogItem.price.toLocaleString()} GREEN!`,
       };
     }
 
@@ -3929,6 +3944,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const refreshReferralNetwork = async () => {
     let authEmail = '';
     let authReferredBy: string | null = null;
+    let authUserId = player.id || '';
+    let authCode = player.referrals?.referralCode || '';
+    let authTgId = '';
+
     if (typeof localStorage !== 'undefined') {
       const authRaw = localStorage.getItem('metropolis_auth_user');
       if (authRaw) {
@@ -3936,6 +3955,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           const parsed = JSON.parse(authRaw);
           authEmail = parsed.email || '';
           authReferredBy = parsed.referredBy || null;
+          if (parsed.userId) authUserId = parsed.userId;
+          if (parsed.telegramId) authTgId = String(parsed.telegramId);
         } catch {}
       }
       if (!authEmail) {
@@ -3943,10 +3964,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (!authEmail) return;
+    const query = new URLSearchParams();
+    if (authEmail) query.set('email', authEmail.trim().toLowerCase());
+    if (authUserId) query.set('userId', authUserId);
+    if (authTgId) query.set('telegramId', authTgId);
+    if (authCode) query.set('code', authCode);
+
+    if (!authEmail && !authUserId && !authTgId && !authCode) return;
 
     try {
-      const res = await fetch(`/api/player/sync?email=${encodeURIComponent(authEmail.trim().toLowerCase())}`);
+      const res = await fetch(`/api/player/sync?${query.toString()}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.playerState?.referrals) {
@@ -3976,8 +4003,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 referredBy: preservedReferredBy,
                 hasClaimedWelcomeBonus: Boolean(preservedReferredBy),
                 recruits: mergedRecruits,
-                totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), mergedRecruits.length),
-                networkTotalCitizens: Math.max(Number(prev.referrals?.networkTotalCitizens || 0), mergedRecruits.length),
+                totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), Number(serverRefs.totalRecruits || 0), mergedRecruits.length),
+                networkTotalCitizens: Math.max(Number(prev.referrals?.networkTotalCitizens || 0), Number(serverRefs.networkTotalCitizens || 0), mergedRecruits.length),
                 unclaimedCommissionGreen: Math.max(
                   Number(prev.referrals?.unclaimedCommissionGreen || 0),
                   Number(serverRefs.unclaimedCommissionGreen || 0)

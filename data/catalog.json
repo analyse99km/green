@@ -3,43 +3,43 @@
     {
       "id": "SPORES",
       "name": "Mini Spores & Fungi Network",
-      "icon": "🍄",
+      "icon": "\ud83c\udf44",
       "badge": "Tier 1"
     },
     {
       "id": "FLORA",
       "name": "Luminescent Flora",
-      "icon": "🌸",
+      "icon": "\ud83c\udf38",
       "badge": "Tier 2 - Energy & Synergies"
     },
     {
       "id": "BIG_TREES",
       "name": "Ancient Trees",
-      "icon": "🌳",
+      "icon": "\ud83c\udf33",
       "badge": "Tier 3 - Anchors & Defense"
     },
     {
       "id": "COSMIC",
       "name": "Cosmic Bio-Engines",
-      "icon": "✨",
+      "icon": "\u2728",
       "badge": "Tier 4 - Sci-Fi Planetary Scaling"
     },
     {
       "id": "SPECIAL",
       "name": "Special Events & Boosters",
-      "icon": "⚡",
+      "icon": "\u26a1",
       "badge": "Tier 5 - Wildcards & Events"
     },
     {
       "id": "FAUNA",
       "name": "Pollinators & Fauna",
-      "icon": "🐝",
+      "icon": "\ud83d\udc1d",
       "badge": "Tier 6 - Living Symbionts"
     },
     {
       "id": "SUBTERRANEAN",
       "name": "Roots & Subterranean",
-      "icon": "⛏️",
+      "icon": "\u26cf\ufe0f",
       "badge": "Tier 7 - Deep Earth Aquifers"
     }
   ],
@@ -50,7 +50,7 @@
       "flavor": "Connects adjacent plant systems, sharing resource generation. Grants +10% Symbiosis link and 25% Spores in the Wind propagation.",
       "baseCost": 75,
       "sparksPerSec": 2,
-      "icon": "🕸️",
+      "icon": "\ud83d\udd78\ufe0f",
       "category": "SPORES",
       "badge": "Tier 2 Uncommon"
     },
@@ -60,7 +60,7 @@
       "flavor": "Generates a steady trickle of bio-luminescent energy every turn, with boosted yield when adjacent to decaying soil.",
       "baseCost": 160,
       "sparksPerSec": 4,
-      "icon": "🍄",
+      "icon": "\ud83c\udf44",
       "category": "SPORES",
       "badge": "Bio-Trickle",
       "requiredCardId": "card_mycelial_network",
@@ -72,7 +72,7 @@
       "flavor": "Pressurized spore emitter that rapidly multiplies organic sprouts across adjacent open slots.",
       "baseCost": 450,
       "sparksPerSec": 10,
-      "icon": "🫧",
+      "icon": "\ud83e\udee7",
       "category": "SPORES",
       "badge": "Burst Multiplier",
       "requiredCardId": "card_ghost_fungus",
@@ -84,7 +84,7 @@
       "flavor": "Deep mycorrhizal fungi boosting the soil health and spark output of towering tree canopy systems above.",
       "baseCost": 1200,
       "sparksPerSec": 25,
-      "icon": "🥔",
+      "icon": "\ud83e\udd54",
       "category": "SPORES",
       "badge": "Soil Enricher",
       "requiredCardId": "card_spore_burst",
@@ -96,7 +96,7 @@
       "flavor": "Consumes dead organic matter and spent card nodes to permanently multiply global spore synthesis rates.",
       "baseCost": 3500,
       "sparksPerSec": 65,
-      "icon": "🧬",
+      "icon": "\ud83e\uddec",
       "category": "SPORES",
       "badge": "Fungal Overlord",
       "requiredCardId": "card_truffle_symbiont",
@@ -108,7 +108,7 @@
       "flavor": "Absorbs ambient radiation during the day phase and releases concentrated bursts of bio-light sparks at night.",
       "baseCost": 8500,
       "sparksPerSec": 140,
-      "icon": "🌿",
+      "icon": "\ud83c\udf3f",
       "category": "FLORA",
       "badge": "Bio-Light Battery",
       "requiredCardId": "card_cordyceps_converter",
@@ -120,7 +120,7 @@
       "flavor": "Luminescent ground cover that illuminates adjacent slots, unlocking hidden deep bio-reserves.",
       "baseCost": 22000,
       "sparksPerSec": 320,
-      "icon": "🏮",
+      "icon": "\ud83c\udfee",
       "category": "FLORA",
       "badge": "Lumen Ground",
       "requiredCardId": "card_moonpetal_fern",
@@ -132,7 +132,7 @@
       "flavor": "Vibrant beacon flower reducing the upgrade spark cost of all neighboring flora cards.",
       "baseCost": 65000,
       "sparksPerSec": 750,
-      "icon": "🌸",
+      "icon": "\ud83c\udf38",
       "category": "FLORA",
       "badge": "Synergy Beacon",
       "requiredCardId": "card_lantern_moss",
@@ -144,7 +144,7 @@
       "flavor": "Thrives in deep cyber-aqueducts, transmuting excess moisture and runoff directly into raw dream sparks.",
       "baseCost": 180000,
       "sparksPerSec": 1800,
-      "icon": "🌊",
+      "icon": "\ud83c\udf0a",
       "category": "FLORA",
       "badge": "Hydra Engine",
       "requiredCardId": "card_neon_foxglove",
@@ -156,7 +156,7 @@
       "flavor": "Rare hyper-luminescent orchid yielding massive spark surges when surrounded by fungal networks.",
       "baseCost": 480000,
       "sparksPerSec": 4200,
-      "icon": "🌺",
+      "icon": "\ud83c\udf3a",
       "category": "FLORA",
       "badge": "Apex Luminescence",
       "requiredCardId": "card_abyssal_kelp",
@@ -168,7 +168,7 @@
       "flavor": "Colossal pre-war redwood capturing tons of carbon and anchoring the entire regional ecosystem.",
       "baseCost": 1500000,
       "sparksPerSec": 11000,
-      "icon": "🌲",
+      "icon": "\ud83c\udf32",
       "category": "BIG_TREES",
       "badge": "Forest Colossus",
       "requiredCardId": "card_starlight_orchid",
@@ -180,7 +180,7 @@
       "flavor": "Spreads massive aerial roots across adjacent zones, claiming empty space as auxiliary bio-generators.",
       "baseCost": 4200000,
       "sparksPerSec": 28000,
-      "icon": "🌳",
+      "icon": "\ud83c\udf33",
       "category": "BIG_TREES",
       "badge": "Aerial Root Network",
       "requiredCardId": "card_hyperion_redwood",
@@ -192,7 +192,7 @@
       "flavor": "Dense petrified core that shields all nearby cards from blights, grid overloads, and weather crises.",
       "baseCost": 12000000,
       "sparksPerSec": 68000,
-      "icon": "🛡️",
+      "icon": "\ud83d\udee1\ufe0f",
       "category": "BIG_TREES",
       "badge": "Blight Shield",
       "requiredCardId": "card_whispering_banyan",
@@ -204,7 +204,7 @@
       "flavor": "Ancient immortal tree immune to debuffs, granting compounding bonus yield for every tree in play.",
       "baseCost": 35000000,
       "sparksPerSec": 175000,
-      "icon": "🍂",
+      "icon": "\ud83c\udf42",
       "category": "BIG_TREES",
       "badge": "Immortal Elder",
       "requiredCardId": "card_ironwood_sentinel",
@@ -216,7 +216,7 @@
       "flavor": "Single massive subterranean superorganism connected by one root system; grows exponentially with each tier.",
       "baseCost": 95000000,
       "sparksPerSec": 420000,
-      "icon": "🏕️",
+      "icon": "\ud83c\udfd5\ufe0f",
       "category": "BIG_TREES",
       "badge": "Colony Superorganism",
       "requiredCardId": "card_ginkgo_elder",
@@ -228,7 +228,7 @@
       "flavor": "Planetary-scale photosynthetic solar array capturing full spectrum radiation, multiplying global spark generation.",
       "baseCost": 280000000,
       "sparksPerSec": 1100000,
-      "icon": "☀️",
+      "icon": "\u2600\ufe0f",
       "category": "COSMIC",
       "badge": "Orbital Megastructure",
       "requiredCardId": "card_pando_aspen",
@@ -240,7 +240,7 @@
       "flavor": "Quantum bio-reactor transmuting raw organic biomass directly into ultra-dense Cosmic Green energy.",
       "baseCost": 750000000,
       "sparksPerSec": 2800000,
-      "icon": "⚛️",
+      "icon": "\u269b\ufe0f",
       "category": "COSMIC",
       "badge": "Core Fusion",
       "requiredCardId": "card_dyson_canopy",
@@ -252,7 +252,7 @@
       "flavor": "Orbital centrifugal cultivating chambers providing continuous spark yield immune to planetary weather penalties.",
       "baseCost": 1900000000,
       "sparksPerSec": 6500000,
-      "icon": "🧪",
+      "icon": "\ud83e\uddea",
       "category": "COSMIC",
       "badge": "Orbital Farm",
       "requiredCardId": "card_chloro_reactor",
@@ -264,7 +264,7 @@
       "flavor": "Interstellar launch cannons dispersing living spores across local orbital rings.",
       "baseCost": 4800000000,
       "sparksPerSec": 15000000,
-      "icon": "🌌",
+      "icon": "\ud83c\udf0c",
       "category": "COSMIC",
       "badge": "Interstellar Seeder",
       "requiredCardId": "card_zerog_algae",
@@ -276,7 +276,7 @@
       "flavor": "Apex planetary biosphere engine transmuting scorched wastes into thriving cosmic super-forests.",
       "baseCost": 12000000000,
       "sparksPerSec": 38000000,
-      "icon": "🪐",
+      "icon": "\ud83e\ude90",
       "category": "COSMIC",
       "badge": "Apex Planetary Engine",
       "requiredCardId": "card_nebula_spore_seeder",
@@ -288,7 +288,7 @@
       "flavor": "Seasonal tropical superstorm drenching the biosphere, supercharging output of all Fungi and Flora cards.",
       "baseCost": 250000,
       "sparksPerSec": 2500,
-      "icon": "🌧️",
+      "icon": "\ud83c\udf27\ufe0f",
       "category": "SPECIAL",
       "badge": "Global Weather Event"
     },
@@ -298,7 +298,7 @@
       "flavor": "Allows DNA splicing between flora species, granting permanent passive efficiency boosts to baseline plants.",
       "baseCost": 650000,
       "sparksPerSec": 5800,
-      "icon": "🧬",
+      "icon": "\ud83e\uddec",
       "category": "SPECIAL",
       "badge": "Gene Enhancer"
     },
@@ -308,7 +308,7 @@
       "flavor": "Millions of bioluminescent honey-seekers multiplying floral yield and triggering chain-reaction pollination.",
       "baseCost": 1800000,
       "sparksPerSec": 15000,
-      "icon": "🐝",
+      "icon": "\ud83d\udc1d",
       "category": "SPECIAL",
       "badge": "Permanent Booster"
     },
@@ -318,7 +318,7 @@
       "flavor": "Sub-zero bio-archive safeguarding endangered botanical species and locking rare market offers.",
       "baseCost": 5500000,
       "sparksPerSec": 42000,
-      "icon": "🏦",
+      "icon": "\ud83c\udfe6",
       "category": "SPECIAL",
       "badge": "Bio-Storage Utility"
     },
@@ -328,7 +328,7 @@
       "flavor": "Instant solar flashover triggering massive immediate resource production across all active cards.",
       "baseCost": 15000000,
       "sparksPerSec": 110000,
-      "icon": "⚡",
+      "icon": "\u26a1",
       "category": "SPECIAL",
       "badge": "Instant Catalyst"
     },
@@ -338,7 +338,7 @@
       "flavor": "Nocturnal pollinator species navigating by starlight, boosting Night-Phase flora cards.",
       "baseCost": 850000,
       "sparksPerSec": 7200,
-      "icon": "🦋",
+      "icon": "\ud83e\udd8b",
       "category": "FAUNA",
       "badge": "Nocturnal Pollinator"
     },
@@ -348,7 +348,7 @@
       "flavor": "Slow-moving moss-backed ancient wanderer fertilizing soil tiles wherever it roams.",
       "baseCost": 3200000,
       "sparksPerSec": 24000,
-      "icon": "🐢",
+      "icon": "\ud83d\udc22",
       "category": "FAUNA",
       "badge": "Living Sanctuary"
     },
@@ -358,7 +358,7 @@
       "flavor": "Vast pressurized freshwater reservoir feeding underground taproots with mineral-rich steam.",
       "baseCost": 950000,
       "sparksPerSec": 8500,
-      "icon": "💧",
+      "icon": "\ud83d\udca7",
       "category": "SUBTERRANEAN",
       "badge": "Aquifer Reservoir"
     },
@@ -368,7 +368,7 @@
       "flavor": "Subterranean quartz cavern echoing with harmonic resonant frequencies that stimulate root growth.",
       "baseCost": 4500000,
       "sparksPerSec": 35000,
-      "icon": "💎",
+      "icon": "\ud83d\udc8e",
       "category": "SUBTERRANEAN",
       "badge": "Geode Harmonic"
     },
@@ -378,7 +378,7 @@
       "flavor": "Absorbs residual dreamlight to convert into organic spark energy.",
       "baseCost": 25,
       "sparksPerSec": 1,
-      "icon": "🌱",
+      "icon": "\ud83c\udf31",
       "category": "SPORES",
       "badge": "Mini Spore"
     },
@@ -388,7 +388,7 @@
       "flavor": "Underground fungal threads transmitting subterranean bio-nutrients.",
       "baseCost": 110,
       "sparksPerSec": 3,
-      "icon": "🍄",
+      "icon": "\ud83c\udf44",
       "category": "SPORES",
       "badge": "Fungi Web",
       "requiredCardId": "card_photosynthesis",
@@ -400,7 +400,7 @@
       "flavor": "Pressurized pod releasing millions of luminous bio-spores.",
       "baseCost": 450,
       "sparksPerSec": 10,
-      "icon": "🌰",
+      "icon": "\ud83c\udf30",
       "category": "SPORES",
       "badge": "Spore Ejector",
       "requiredCardId": "card_mycelium",
@@ -412,7 +412,7 @@
       "flavor": "Cultivated in cyber-aqueducts, glowing with high-yield bio-luminescence.",
       "baseCost": 1600,
       "sparksPerSec": 32,
-      "icon": "🧪",
+      "icon": "\ud83e\uddea",
       "category": "FLORA",
       "badge": "Glow Culture",
       "requiredCardId": "card_spore_chamber",
@@ -438,7 +438,7 @@
       "forgeSparksPrice": 40,
       "forgeDamageBonus": 6.5,
       "forgeAccuracyBonus": 2.5,
-      "icon": "🗡️"
+      "icon": "\ud83d\udde1\ufe0f"
     },
     {
       "id": "item_pistol",
@@ -458,7 +458,7 @@
       "forgeSparksPrice": 60,
       "forgeDamageBonus": 8.5,
       "forgeAccuracyBonus": 3,
-      "icon": "🔫"
+      "icon": "\ud83d\udd2b"
     },
     {
       "id": "item_kevlar",
@@ -475,7 +475,7 @@
       "forgePrice": 350,
       "forgeSparksPrice": 50,
       "forgeDefenseBonus": 5,
-      "icon": "🦺"
+      "icon": "\ud83e\uddba"
     },
     {
       "id": "item_glasses",
@@ -486,7 +486,7 @@
       "marketValue": 17500,
       "shopliftDifficulty": 40,
       "perkDescription": "+5% Search for cash crime exp & skill gain",
-      "icon": "🕶️"
+      "icon": "\ud83d\udd76\ufe0f"
     },
     {
       "id": "item_megaphone",
@@ -497,7 +497,7 @@
       "marketValue": 29741,
       "shopliftDifficulty": 45,
       "perkDescription": "+5% Hustling crime exp & skill gain",
-      "icon": "📢"
+      "icon": "\ud83d\udce2"
     },
     {
       "id": "item_ramen",
@@ -517,7 +517,7 @@
         "HOME",
         "RESTAURANT"
       ],
-      "icon": "🍜"
+      "icon": "\ud83c\udf5c"
     },
     {
       "id": "item_shake",
@@ -536,7 +536,7 @@
         "HOME",
         "RESTAURANT"
       ],
-      "icon": "🥤"
+      "icon": "\ud83e\udd64"
     },
     {
       "id": "item_medkit",
@@ -554,7 +554,7 @@
         "HOME",
         "RESTAURANT"
       ],
-      "icon": "🩹"
+      "icon": "\ud83e\ude79"
     },
     {
       "id": "item_steak",
@@ -573,7 +573,7 @@
         "HOME",
         "RESTAURANT"
       ],
-      "icon": "🥩"
+      "icon": "\ud83e\udd69"
     },
     {
       "id": "item_sandwich",
@@ -592,7 +592,7 @@
         "HOME",
         "RESTAURANT"
       ],
-      "icon": "🥪"
+      "icon": "\ud83e\udd6a"
     },
     {
       "id": "item_energy_drink",
@@ -611,7 +611,7 @@
         "HOME",
         "RESTAURANT"
       ],
-      "icon": "⚡"
+      "icon": "\u26a1"
     },
     {
       "id": "item_gold_ring",
@@ -622,7 +622,7 @@
       "marketValue": 1800,
       "shopliftDifficulty": 50,
       "perkDescription": "High liquidity luxury asset",
-      "icon": "💍"
+      "icon": "\ud83d\udc8d"
     },
     {
       "id": "item_lockpick",
@@ -633,7 +633,7 @@
       "marketValue": 650,
       "shopliftDifficulty": 45,
       "perkDescription": "+15% Burglary success rate",
-      "icon": "🗝️"
+      "icon": "\ud83d\udddd\ufe0f"
     },
     {
       "id": "item_spray_can",
@@ -644,7 +644,7 @@
       "marketValue": 85,
       "shopliftDifficulty": 25,
       "perkDescription": "Required for Graffiti tagging",
-      "icon": "🎨"
+      "icon": "\ud83c\udfa8"
     },
     {
       "id": "item_blank_dvd",
@@ -655,7 +655,7 @@
       "marketValue": 120,
       "shopliftDifficulty": 30,
       "perkDescription": "Used in Bootlegging burner units",
-      "icon": "💿"
+      "icon": "\ud83d\udcbf"
     },
     {
       "id": "item_pruning_machete",
@@ -675,7 +675,7 @@
       "forgeDamageBonus": 7.5,
       "forgeAccuracyBonus": 2.8,
       "shopliftDifficulty": 42,
-      "icon": "🗡️"
+      "icon": "\ud83d\udde1\ufe0f"
     },
     {
       "id": "item_bark_exosuit",
@@ -692,7 +692,7 @@
       "forgeSparksPrice": 55,
       "forgeDefenseBonus": 6.5,
       "shopliftDifficulty": 60,
-      "icon": "🦺"
+      "icon": "\ud83e\uddba"
     },
     {
       "id": "item_spore_vial",
@@ -705,7 +705,7 @@
       "energyRestore": 30,
       "happyRestore": 20,
       "shopliftDifficulty": 30,
-      "icon": "🧪"
+      "icon": "\ud83e\uddea"
     },
     {
       "id": "item_compost_ration",
@@ -724,7 +724,7 @@
         "RESTAURANT"
       ],
       "shopliftDifficulty": 20,
-      "icon": "🥗"
+      "icon": "\ud83e\udd57"
     },
     {
       "id": "item_soil_enricher",
@@ -735,7 +735,7 @@
       "marketValue": 800,
       "perkDescription": "+12% Burglary success & +5% crime XP",
       "shopliftDifficulty": 38,
-      "icon": "💉"
+      "icon": "\ud83d\udc89"
     },
     {
       "id": "item_queen_cage",
@@ -746,7 +746,7 @@
       "marketValue": 5500,
       "perkDescription": "High-yield luxury asset with premium pawn value",
       "shopliftDifficulty": 68,
-      "icon": "👑"
+      "icon": "\ud83d\udc51"
     },
     {
       "id": "wpn_ghost_pistol",
@@ -765,7 +765,7 @@
       "forgeSparksPrice": 150,
       "forgeDamageBonus": 6,
       "forgeAccuracyBonus": 2,
-      "icon": "🔫"
+      "icon": "\ud83d\udd2b"
     },
     {
       "id": "wpn_rusty_switchblade",
@@ -784,7 +784,7 @@
       "forgeSparksPrice": 30,
       "forgeDamageBonus": 3,
       "forgeAccuracyBonus": 2,
-      "icon": "🔪"
+      "icon": "\ud83d\udd2a"
     },
     {
       "id": "wpn_sawed_off_shotgun",
@@ -803,7 +803,7 @@
       "forgeSparksPrice": 350,
       "forgeDamageBonus": 12,
       "forgeAccuracyBonus": 1,
-      "icon": "💥"
+      "icon": "\ud83d\udca5"
     },
     {
       "id": "wpn_gold_plated_smg",
@@ -822,7 +822,7 @@
       "forgeSparksPrice": 1000,
       "forgeDamageBonus": 5,
       "forgeAccuracyBonus": 3,
-      "icon": "⚡"
+      "icon": "\u26a1"
     },
     {
       "id": "wpn_heavy_duty_taser",
@@ -839,7 +839,7 @@
       "forgeSparksPrice": 100,
       "forgeDamageBonus": 2,
       "forgeAccuracyBonus": 3,
-      "icon": "⚡"
+      "icon": "\u26a1"
     },
     {
       "id": "wpn_expandable_baton",
@@ -857,7 +857,7 @@
       "forgeSparksPrice": 40,
       "forgeDamageBonus": 3,
       "forgeAccuracyBonus": 2,
-      "icon": "🦯"
+      "icon": "\ud83e\uddaf"
     },
     {
       "id": "wpn_beanbag_shotgun",
@@ -875,7 +875,7 @@
       "forgeSparksPrice": 250,
       "forgeDamageBonus": 2,
       "forgeAccuracyBonus": 3,
-      "icon": "🛡️"
+      "icon": "\ud83d\udee1\ufe0f"
     },
     {
       "id": "wpn_tactical_marksman_rifle",
@@ -894,7 +894,7 @@
       "forgeSparksPrice": 900,
       "forgeDamageBonus": 15,
       "forgeAccuracyBonus": 2,
-      "icon": "🎯"
+      "icon": "\ud83c\udfaf"
     },
     {
       "id": "arm_heavy_leather_concealed_plate",
@@ -910,7 +910,7 @@
       "forgePrice": 500,
       "forgeSparksPrice": 200,
       "forgeDefenseBonus": 5,
-      "icon": "🧥"
+      "icon": "\ud83e\udde5"
     },
     {
       "id": "arm_padded_hoodie",
@@ -926,7 +926,7 @@
       "forgePrice": 100,
       "forgeSparksPrice": 50,
       "forgeDefenseBonus": 2,
-      "icon": "🥋"
+      "icon": "\ud83e\udd4b"
     },
     {
       "id": "arm_biker_kevlar_vest",
@@ -942,7 +942,7 @@
       "forgePrice": 1100,
       "forgeSparksPrice": 400,
       "forgeDefenseBonus": 7,
-      "icon": "🦺"
+      "icon": "\ud83e\uddba"
     },
     {
       "id": "arm_juggernaut_heist_suit",
@@ -958,7 +958,7 @@
       "forgePrice": 3800,
       "forgeSparksPrice": 1500,
       "forgeDefenseBonus": 12,
-      "icon": "🦾"
+      "icon": "\ud83e\uddbe"
     },
     {
       "id": "arm_tactical_riot_vest",
@@ -973,7 +973,7 @@
       "forgePrice": 850,
       "forgeSparksPrice": 300,
       "forgeDefenseBonus": 9,
-      "icon": "🛡️"
+      "icon": "\ud83d\udee1\ufe0f"
     },
     {
       "id": "arm_undercover_concealed_vest",
@@ -989,7 +989,7 @@
       "forgePrice": 200,
       "forgeSparksPrice": 80,
       "forgeDefenseBonus": 3,
-      "icon": "👔"
+      "icon": "\ud83d\udc54"
     },
     {
       "id": "arm_kevlar_patrol_vest",
@@ -1004,7 +1004,7 @@
       "forgePrice": 480,
       "forgeSparksPrice": 180,
       "forgeDefenseBonus": 6,
-      "icon": "🦺"
+      "icon": "\ud83e\uddba"
     },
     {
       "id": "arm_bomb_disposal_eod_suit",
@@ -1019,7 +1019,7 @@
       "forgePrice": 3500,
       "forgeSparksPrice": 1400,
       "forgeDefenseBonus": 14,
-      "icon": "💣"
+      "icon": "\ud83d\udca3"
     },
     {
       "id": "food_vending_machine_junk",
@@ -1034,7 +1034,7 @@
       "lifeRestore": 0,
       "description": "Energy Restore: +20 Stamina. Quick stamina boost mid-activity or before a robbery.",
       "synergy": "Fight or Flight: +10% Running speed for 60 seconds if consumed while Wanted.",
-      "icon": "🥤"
+      "icon": "\ud83e\udd64"
     },
     {
       "id": "food_gas_station_burrito",
@@ -1048,7 +1048,7 @@
       "lifeRestore": 5,
       "description": "Low-tier street fuel. Energy Restore: +15 Stamina, HP Restore: +5 HP. 10% risk of stomach ache.",
       "synergy": "Iron Gut: No negative effects if consumed alongside Cheap Liquor.",
-      "icon": "🌯"
+      "icon": "\ud83c\udf2f"
     },
     {
       "id": "food_smuggled_espresso_shot",
@@ -1063,7 +1063,7 @@
       "lifeRestore": 0,
       "description": "Mid-tier stimulant. Energy Restore: +50 Stamina, Reaction Speed: +15% (2 mins).",
       "synergy": "Twitchy: Speeds up lockpicking and hacking minigames by 20%.",
-      "icon": "☕"
+      "icon": "\u2615"
     },
     {
       "id": "food_black_market_steak_dinner",
@@ -1078,7 +1078,7 @@
       "lifeRestore": 20,
       "description": "High-tier feast. Energy Restore: +100 Stamina, Max HP Buff: +20 HP (10 mins).",
       "synergy": "Made Man: Increases respect gain from completed criminal jobs by +10%.",
-      "icon": "🥩"
+      "icon": "\ud83e\udd69"
     },
     {
       "id": "food_high_calorie_nutri_meal",
@@ -1093,7 +1093,7 @@
       "lifeRestore": 15,
       "description": "Energy Restore: +45 Stamina, Health over Time: +5 HP (3 mins). Robust recovery for patrols.",
       "synergy": "Well-Rested: Increases passive stamina regeneration by +15% if consumed in a designated safe house.",
-      "icon": "🍱"
+      "icon": "\ud83c\udf71"
     },
     {
       "id": "food_coffee_donut_combo",
@@ -1108,7 +1108,7 @@
       "lifeRestore": 0,
       "description": "Low-tier patrol staple. Energy Restore: +25 Stamina, Alertness: +10% (Reveals nearby hidden items).",
       "synergy": "Night Shift: Doubles stamina regen during nighttime hours.",
-      "icon": "🍩"
+      "icon": "\ud83c\udf69"
     },
     {
       "id": "food_electrolyte_sports_pack",
@@ -1123,7 +1123,7 @@
       "lifeRestore": 10,
       "description": "Mid-tier hydration formula. Energy Restore: +60 Stamina, Sprint Drain Reduction: 25% (3 mins).",
       "synergy": "Foot Pursuit: Gain +15% sprint speed when chasing a Wanted player.",
-      "icon": "🧃"
+      "icon": "\ud83e\uddc3"
     },
     {
       "id": "food_organic_meal_prep_box",
@@ -1138,7 +1138,7 @@
       "lifeRestore": 10,
       "description": "High-tier clean nutrition. Energy Restore: +100 Stamina, Passive Regen: +2 HP/sec (5 mins).",
       "synergy": "Peak Condition: Increases carrying capacity by +2 inventory slots while active.",
-      "icon": "🥗"
+      "icon": "\ud83e\udd57"
     },
     {
       "id": "med_backalley_trauma_kit",
@@ -1151,7 +1151,7 @@
       "energyRestore": 10,
       "description": "Emergency healing. Heal: +40 HP, Bleed Stop: Yes. Risky hospital alternative.",
       "synergy": "Under the Radar: Using this item does not trigger any alert, even if your Wanted Level is active. Pair with Contraband Painkillers for +15 extra HP.",
-      "icon": "🩹"
+      "icon": "\ud83e\ude79"
     },
     {
       "id": "med_dirty_bandages",
@@ -1163,7 +1163,7 @@
       "lifeRestore": 15,
       "description": "Low-tier patch. Heal: +15 HP, Bleed Stop: Yes, Side Effect: 5% Infection risk.",
       "synergy": "Desperate Measures: Can be applied while sprinting.",
-      "icon": "🩹"
+      "icon": "\ud83e\ude79"
     },
     {
       "id": "med_adrenaline_syringe",
@@ -1176,7 +1176,7 @@
       "energyRestore": 100,
       "description": "Mid-tier emergency stimulant. Heal: +25 Temp HP, Stamina: Instant 100%, Crashes after 60s (-20 Stamina).",
       "synergy": "Last Stand: Automatically triggers if your HP drops below 10% while holding a Weapon.",
-      "icon": "💉"
+      "icon": "\ud83d\udc89"
     },
     {
       "id": "med_underground_surgeon_voucher",
@@ -1189,7 +1189,7 @@
       "energyRestore": 50,
       "description": "High-tier underground surgery. Heal: Full 100% HP, Clears Wanted Level: Removes 1 Star.",
       "synergy": "Clean Slate: Resets NPC witness memory of your current outfit.",
-      "icon": "🏥"
+      "icon": "\ud83c\udfe5"
     },
     {
       "id": "med_first_responder_med_kit",
@@ -1201,8 +1201,8 @@
       "lifeRestore": 65,
       "energyRestore": 20,
       "description": "Official paramedic kit. Heal: +65 HP (Ally or Self), Infection Stop: Yes, Defibrillator Charge: 1.",
-      "synergy": "Heroism: Restoring an ally’s health to 100% awards Good Player karma/bounty points.",
-      "icon": "🚑"
+      "synergy": "Heroism: Restoring an ally\u2019s health to 100% awards Good Player karma/bounty points.",
+      "icon": "\ud83d\ude91"
     },
     {
       "id": "med_antiseptic_wipes_gauze",
@@ -1214,7 +1214,7 @@
       "lifeRestore": 20,
       "description": "Low-tier sterile treatment. Heal: +20 HP, Infection Cure: Yes.",
       "synergy": "Good Samaritan: Using this on an injured civilian awards +15 Good Karma.",
-      "icon": "🧼"
+      "icon": "\ud83e\uddfc"
     },
     {
       "id": "med_splint_painkillers",
@@ -1226,7 +1226,7 @@
       "lifeRestore": 45,
       "description": "Mid-tier field orthopedic pack. Heal: +45 HP, Cures Limp/Slow debuffs: Yes.",
       "synergy": "Field Medic: Reviving a downed teammate restores them with 50% HP instead of 20%.",
-      "icon": "💊"
+      "icon": "\ud83d\udc8a"
     },
     {
       "id": "med_trauma_evacuation_beacon",
@@ -1238,7 +1238,7 @@
       "lifeRestore": 125,
       "description": "High-tier medevac beacon. Heal: Full 100% HP + Overheal (+25 HP), Teleports to nearest Hospital safely.",
       "synergy": "VIP Protection: Protects any escort NPC from taking damage for 10 seconds upon activation.",
-      "icon": "🚨"
+      "icon": "\ud83d\udea8"
     },
     {
       "id": "cb_stolen_cargo_uncut_gems",
@@ -1250,7 +1250,7 @@
       "shopliftDifficulty": 85,
       "description": "Weight: 15kg, Heat Generation: High, Resale Margin: 40-70% depending on fences.",
       "synergy": "Money Laundering: Worth 25% more when sold to a contact while holding Counterfeit ID (Luxurys/Tools).",
-      "icon": "💎"
+      "icon": "\ud83d\udc8e"
     },
     {
       "id": "cb_burner_phones",
@@ -1262,7 +1262,7 @@
       "shopliftDifficulty": 30,
       "description": "Risk: Low, Sale Value: $350 Cash, Utility: 1 Untraceable Call.",
       "synergy": "Ghost Protocol: Prevents police from tracking your location during heists.",
-      "icon": "📱"
+      "icon": "\ud83d\udcf1"
     },
     {
       "id": "cb_forged_passports",
@@ -1274,7 +1274,7 @@
       "shopliftDifficulty": 60,
       "description": "Risk: Medium, Sale Value: $3,200 Cash, Utility: Bypasses Border/Zone Checkpoints.",
       "synergy": "Smuggler: Doubles the payout of Stolen Cargo missions across district lines.",
-      "icon": "🛂"
+      "icon": "\ud83d\udec2"
     },
     {
       "id": "cb_military_data_drive",
@@ -1286,7 +1286,7 @@
       "shopliftDifficulty": 95,
       "description": "Risk: Extreme (Triggers SWAT pursuit), Sale Value: $16,000 Cash.",
       "synergy": "Cyber War: Can be used with an Electronic Lock Scrambler to shut down city cameras for 5 minutes.",
-      "icon": "💾"
+      "icon": "\ud83d\udcbe"
     },
     {
       "id": "cb_confiscated_evidence_bag",
@@ -1298,7 +1298,7 @@
       "shopliftDifficulty": 40,
       "description": "Chain of Custody: Intact. Karma Award: +150 Good Points. Turn in at Police Dept for rewards.",
       "synergy": "Law Bringer: Turning in 3 evidence bags concurrently grants a temporary Combat Shield Buff or Bonus Salary.",
-      "icon": "💼"
+      "icon": "\ud83d\udcbc"
     },
     {
       "id": "cb_suspect_fingerprints",
@@ -1310,7 +1310,7 @@
       "shopliftDifficulty": 20,
       "description": "Collected at crime scenes. Karma Award: +40 Good Points, Cash Bonus: $150.",
       "synergy": "Case Closed: Turning in 3 sets reveals the hideout location of a random Wanted player.",
-      "icon": "🔍"
+      "icon": "\ud83d\udd0d"
     },
     {
       "id": "cb_marked_ransom_cash",
@@ -1322,7 +1322,7 @@
       "shopliftDifficulty": 50,
       "description": "Recovered from robberies. Karma Award: +200 Good Points, Cash Bonus: $1,000.",
       "synergy": "Sting Operation: Planting this on a criminal automatically places a GPS tracker on them.",
-      "icon": "💵"
+      "icon": "\ud83d\udcb5"
     },
     {
       "id": "cb_cartel_ledger",
@@ -1334,7 +1334,7 @@
       "shopliftDifficulty": 80,
       "description": "Boss Raid Drop. Karma Award: +1,000 Good Points, Cash Bonus: $7,500.",
       "synergy": "RICO Act: Freezes the bank accounts of nearby Wanted players for 3 minutes upon turn-in.",
-      "icon": "📒"
+      "icon": "\ud83d\udcd2"
     },
     {
       "id": "tool_electronic_lock_scrambler",
@@ -1346,7 +1346,7 @@
       "shopliftDifficulty": 65,
       "description": "Hack Success: 85%, Lock Tier: Up to Hard, Sound level: Silent. Breaches safes and bypasses security gates.",
       "synergy": "The Heist: Speeds up safe cracking times by 40% when paired with the Crowbar tool.",
-      "icon": "🎛️"
+      "icon": "\ud83c\udf9b\ufe0f"
     },
     {
       "id": "tool_slim_jim_wire_hanger",
@@ -1358,7 +1358,7 @@
       "shopliftDifficulty": 25,
       "description": "Hack/Lock Success: 60% (Basic Cars/Doors only), Sound: Quiet, Uses: 3.",
       "synergy": "Joyride: Hotwires vehicles 30% faster.",
-      "icon": "🗝️"
+      "icon": "\ud83d\udddd\ufe0f"
     },
     {
       "id": "tool_thermal_torch",
@@ -1370,7 +1370,7 @@
       "shopliftDifficulty": 70,
       "description": "Cut Success: 100% (Metal bars/Vault hinges), Sound: Loud + Sparks, Uses: 2.",
       "synergy": "Vault Cracker: Pairs with Sawed-Off Shotgun to intimidate bank tellers twice as fast.",
-      "icon": "🔥"
+      "icon": "\ud83d\udd25"
     },
     {
       "id": "tool_police_radio_interceptor",
@@ -1382,7 +1382,7 @@
       "shopliftDifficulty": 85,
       "description": "Passive Utility: Shows all Good Players/Cops on minimap within 200m.",
       "synergy": "Always Ahead: Gives a 15-second early warning before a police raid begins on your property.",
-      "icon": "📻"
+      "icon": "\ud83d\udcfb"
     },
     {
       "id": "tool_authorized_breaching_ram",
@@ -1394,7 +1394,7 @@
       "shopliftDifficulty": 30,
       "description": "Break Success: 100%, Noise level: Very Loud, Durability: 3 Uses. Instantly smashes locked doors.",
       "synergy": "Element of Surprise: When used to smash a door, criminals on the other side are suppressed/stunned for 2 seconds.",
-      "icon": "🔨"
+      "icon": "\ud83d\udd28"
     },
     {
       "id": "tool_heavy_duty_zip_ties",
@@ -1406,7 +1406,7 @@
       "shopliftDifficulty": 15,
       "description": "Restraint Speed: 1.5 Seconds, Escape Difficulty: Medium, Uses: 5.",
       "synergy": "Quick Cuff: Instant arrest if used on a criminal hit by a Beanbag Shotgun.",
-      "icon": "🔗"
+      "icon": "\ud83d\udd17"
     },
     {
       "id": "tool_spike_strip",
@@ -1418,7 +1418,7 @@
       "shopliftDifficulty": 40,
       "description": "Effect: Instantly pops tires of vehicles driving over it, Uses: 1.",
       "synergy": "Roadblock: Deploying this near a patrol car boosts surrounding cops defense by +10%.",
-      "icon": "🚧"
+      "icon": "\ud83d\udea7"
     },
     {
       "id": "tool_thermal_drone",
@@ -1430,7 +1430,7 @@
       "shopliftDifficulty": 80,
       "description": "Duration: 3 Minutes, Range: 300m, Highlights hidden criminals through walls.",
       "synergy": "Eye in the Sky: Marks targets for Tactical Marksman Rifles, increasing critical hit chance by +25%.",
-      "icon": "🛸"
+      "icon": "\ud83d\udef8"
     },
     {
       "id": "lux_heavy_gold_chain_ring_set",
@@ -1441,7 +1441,7 @@
       "marketValue": 6000,
       "description": "Respect Level: +20% Threat/Fear, Bribe Power: +15% (makes cops/guards easier to pay off).",
       "synergy": "Underworld Royalty: Increases maximum crew recruitment size by +1 when worn alongside Ghost Pistol.",
-      "icon": "💍"
+      "icon": "\ud83d\udc8d"
     },
     {
       "id": "lux_designer_sunglasses",
@@ -1452,7 +1452,7 @@
       "marketValue": 800,
       "description": "Respect: +5%, Flashbang/Glare Resistance: 50%.",
       "synergy": "Cool Under Pressure: Reduces witness identification accuracy by 15%.",
-      "icon": "🕶️"
+      "icon": "\ud83d\udd76\ufe0f"
     },
     {
       "id": "lux_exotic_pet_panther_python",
@@ -1463,7 +1463,7 @@
       "marketValue": 8500,
       "description": "Respect: +35%, Safehouse Defense: Attacks intruders for 25 DMG.",
       "synergy": "Intimidating Aura: Low-level NPCs will automatically hand over cash without needing a weapon drawn.",
-      "icon": "🐆"
+      "icon": "\ud83d\udc06"
     },
     {
       "id": "lux_bulletproof_luxury_sedan",
@@ -1474,7 +1474,7 @@
       "marketValue": 45000,
       "description": "Respect: +60%, Vehicle Armor: High, Speed: Fast.",
       "synergy": "Getaway Driver: Reduces Wanted Level cooldown timer by 25% while driving.",
-      "icon": "🚗"
+      "icon": "\ud83d\ude97"
     },
     {
       "id": "lux_tailored_designer_watch",
@@ -1485,7 +1485,7 @@
       "marketValue": 5500,
       "description": "Influence Level: +25% Charisma, Passive Salary: +5% (Increases passive game income).",
       "synergy": "Civic Duty: Reduces the duration of hostile crowd-control (intimidate) effects by 30% due to Authority status.",
-      "icon": "⌚"
+      "icon": "\u231a"
     },
     {
       "id": "lux_silver_medal_of_valor",
@@ -1496,7 +1496,7 @@
       "marketValue": 1000,
       "description": "Influence: +10%, Civilian Trust: NPCs share rumors/tips freely.",
       "synergy": "Local Hero: 10% discount on all Food and Medical items city-wide.",
-      "icon": "🏅"
+      "icon": "\ud83c\udfc5"
     },
     {
       "id": "lux_penthouse_apartment_deed",
@@ -1507,7 +1507,7 @@
       "marketValue": 25000,
       "description": "Influence: +40%, Passive Income: +$500 Cash per in-game day.",
       "synergy": "Safe Haven: Fully restores HP and Stamina instantly upon entering; immune to criminal lockpicks.",
-      "icon": "🏙️"
+      "icon": "\ud83c\udfd9\ufe0f"
     },
     {
       "id": "lux_mayoral_key_to_city",
@@ -1518,7 +1518,7 @@
       "marketValue": 50000,
       "description": "Influence: +100%, Authority: Can deputize neutral NPCs to help fight crime.",
       "synergy": "Untouchable: Criminals receive an automatic 3-Star Wanted Level if they attack you in public.",
-      "icon": "🗝️"
+      "icon": "\ud83d\udddd\ufe0f"
     }
   ],
   "dailyComboOverride": {
@@ -1534,9 +1534,9 @@
   "dreamMarketItems": [
     {
       "id": "dream_surge_battery",
-      "title": "⚡ Overclocked Surge Battery",
+      "title": "\u26a1 Overclocked Surge Battery",
       "description": "Overcharged electrolytic cell providing an immediate injection of operational energy.",
-      "icon": "⚡",
+      "icon": "\u26a1",
       "sparkCost": 280,
       "givesEnergy": 55,
       "givesFood": 0,
@@ -1549,7 +1549,7 @@
       "id": "dream_hydro_sourdough",
       "title": "Hydro-Nutrient Sourdough",
       "description": "Dense bio-fermented loaf restoring food satiety and baseline happiness.",
-      "icon": "🍞",
+      "icon": "\ud83c\udf5e",
       "sparkCost": 250,
       "givesEnergy": 0,
       "givesFood": 45,
@@ -1562,7 +1562,7 @@
       "id": "dream_lucid_nectar",
       "title": "Lucid Nerve Nectar",
       "description": "Concentrated neuro-botanical extract restoring nerve capacity and mental focus.",
-      "icon": "🧪",
+      "icon": "\ud83e\uddea",
       "sparkCost": 350,
       "givesEnergy": 0,
       "givesFood": 0,
@@ -1575,7 +1575,7 @@
       "id": "dream_euphoria_spores",
       "title": "Euphoria Spore Vial",
       "description": "Therapeutic bio-spores soothing stress and restoring player morale & happiness.",
-      "icon": "🌸",
+      "icon": "\ud83c\udf38",
       "sparkCost": 200,
       "givesEnergy": 0,
       "givesFood": 0,
@@ -1588,7 +1588,7 @@
       "id": "dream_cellular_salve",
       "title": "Cellular Regeneration Salve",
       "description": "Advanced organic stem-gel sealing lacerations and restoring health/life points.",
-      "icon": "💊",
+      "icon": "\ud83d\udc8a",
       "sparkCost": 350,
       "givesEnergy": 0,
       "givesFood": 0,
@@ -1601,7 +1601,7 @@
       "id": "dream_mint_green_tokens",
       "title": "Mint 25 GREEN Coins",
       "description": "Crystallize pure dream sparks into minted liquid GREEN economic currency.",
-      "icon": "🪙",
+      "icon": "\ud83e\ude99",
       "sparkCost": 500,
       "givesEnergy": 0,
       "givesFood": 0,
@@ -1614,7 +1614,7 @@
       "id": "dream_grand_restoration",
       "title": "Grand All-Vitals Tonic",
       "description": "Master bio-brew revitalizing Energy, Satiety, Nerve, Happy, and Life simultaneously.",
-      "icon": "✨",
+      "icon": "\u2728",
       "sparkCost": 950,
       "givesEnergy": 40,
       "givesFood": 40,
@@ -1687,5 +1687,73 @@
         "label": "Underworld Kingpin"
       }
     ]
-  }
+  },
+  "treeStages": [
+    {
+      "id": "tree_sprout",
+      "name": "Chlorophyll Sprout",
+      "icon": "\ud83c\udf31",
+      "bonus": "+1/tap",
+      "sparksPerTap": 1,
+      "multiplier": 1.0,
+      "unlockCostSparks": 0,
+      "unlockCostGreen": 0,
+      "description": "Primary seedling organism with natural chlorophyll minting."
+    },
+    {
+      "id": "tree_mint",
+      "name": "Peppermint Shrub",
+      "icon": "\ud83c\udf3f",
+      "bonus": "+3/tap",
+      "sparksPerTap": 3,
+      "multiplier": 2.0,
+      "unlockCostSparks": 200,
+      "unlockCostGreen": 0,
+      "description": "Mint leaf botanical shrub producing cool synthetic energy."
+    },
+    {
+      "id": "tree_bonsai",
+      "name": "Ancient Zen Bonsai",
+      "icon": "\ud83e\udeb4",
+      "bonus": "+8/tap",
+      "sparksPerTap": 8,
+      "multiplier": 4.0,
+      "unlockCostSparks": 500,
+      "unlockCostGreen": 0,
+      "description": "Century-old meditative bonsai channeling calm underworld frequencies."
+    },
+    {
+      "id": "tree_bamboo",
+      "name": "Cybernetic Bamboo",
+      "icon": "\ud83c\udf8b",
+      "bonus": "+20/tap",
+      "sparksPerTap": 20,
+      "multiplier": 8.0,
+      "unlockCostSparks": 1000,
+      "unlockCostGreen": 0,
+      "description": "High-tensile bamboo fibers reinforced with carbon nanotubes."
+    },
+    {
+      "id": "tree_oak",
+      "name": "Sacred Banyan Canopy",
+      "icon": "\ud83c\udf33",
+      "bonus": "+50/tap",
+      "sparksPerTap": 50,
+      "multiplier": 16.0,
+      "unlockCostSparks": 2500,
+      "unlockCostGreen": 0,
+      "description": "Colossal banyan roots tapping deep geothermal subterranean power."
+    },
+    {
+      "id": "tree_cyberpalm",
+      "name": "Quantum Cyberpalm",
+      "icon": "\ud83c\udf34",
+      "bonus": "+120/tap",
+      "sparksPerTap": 120,
+      "multiplier": 32.0,
+      "unlockCostSparks": 6000,
+      "unlockCostGreen": 50,
+      "description": "Transcendent cybernetic palm tree projecting digital foliage across the skyline."
+    }
+  ]
 }

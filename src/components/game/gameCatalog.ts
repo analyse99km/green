@@ -41,6 +41,27 @@ export const DEFAULT_REFERRAL_REWARDS: ReferralRewardsConfig = {
   ],
 };
 
+export interface TreeStageDef {
+  id: string;
+  name: string;
+  icon: string;
+  bonus: string;
+  sparksPerTap: number;
+  multiplier: number;
+  unlockCostSparks: number;
+  unlockCostGreen?: number;
+  description?: string;
+}
+
+export const INITIAL_TREE_STAGES: TreeStageDef[] = [
+  { id: 'tree_sprout', name: 'Chlorophyll Sprout', icon: '🌱', bonus: '+1/tap', sparksPerTap: 1, multiplier: 1.0, unlockCostSparks: 0, unlockCostGreen: 0, description: 'Primary seedling organism with natural chlorophyll minting.' },
+  { id: 'tree_mint', name: 'Peppermint Shrub', icon: '🌿', bonus: '+3/tap', sparksPerTap: 3, multiplier: 2.0, unlockCostSparks: 200, unlockCostGreen: 0, description: 'Mint leaf botanical shrub producing cool synthetic energy.' },
+  { id: 'tree_bonsai', name: 'Ancient Zen Bonsai', icon: '🪴', bonus: '+8/tap', sparksPerTap: 8, multiplier: 4.0, unlockCostSparks: 500, unlockCostGreen: 0, description: 'Century-old meditative bonsai channeling calm underworld frequencies.' },
+  { id: 'tree_bamboo', name: 'Cybernetic Bamboo', icon: '🎋', bonus: '+20/tap', sparksPerTap: 20, multiplier: 8.0, unlockCostSparks: 1000, unlockCostGreen: 0, description: 'High-tensile bamboo fibers reinforced with carbon nanotubes.' },
+  { id: 'tree_oak', name: 'Sacred Banyan Canopy', icon: '🌳', bonus: '+50/tap', sparksPerTap: 50, multiplier: 16.0, unlockCostSparks: 2500, unlockCostGreen: 0, description: 'Colossal banyan roots tapping deep geothermal subterranean power.' },
+  { id: 'tree_cyberpalm', name: 'Quantum Cyberpalm', icon: '🌴', bonus: '+120/tap', sparksPerTap: 120, multiplier: 32.0, unlockCostSparks: 6000, unlockCostGreen: 50, description: 'Transcendent cybernetic palm tree projecting digital foliage across the skyline.' },
+];
+
 export interface BotanicalCategoryDef {
   id: string;
   name: string;
@@ -158,9 +179,9 @@ export const INITIAL_DREAM_MARKET_ITEMS: DreamMarketItemDef[] = [
   },
   {
     id: 'dream_mint_green_tokens',
-    title: 'Mint 25 GREEN Coins',
+    title: 'Mint 25 GREEN Leaves',
     description: 'Crystallize pure dream sparks into minted liquid GREEN economic currency.',
-    icon: '🪙',
+    icon: '🌿',
     sparkCost: 500,
     givesGreen: 25,
   },
@@ -415,11 +436,11 @@ export interface DailyStreakRewardItem {
 }
 
 export const DEFAULT_DAILY_STREAK_REWARDS: DailyStreakRewardItem[] = [
-  { day: 1, label: 'Day 1', reward: '$10,000 Cash + 25 Energy', icon: '🪙', cash: 10000, energy: 25 },
+  { day: 1, label: 'Day 1', reward: '$10,000 Cash + 25 Energy', icon: '🌿', cash: 10000, energy: 25 },
   { day: 2, label: 'Day 2', reward: '50 Sparks + 10 Nerve', icon: '🔑', sparks: 50, nerve: 10 },
-  { day: 3, label: 'Day 3', reward: 'Titanium Lockpick + $25,000', icon: '🪙', cash: 25000, item: 'Titanium Tension Lockpick' },
+  { day: 3, label: 'Day 3', reward: 'Titanium Lockpick + $25,000', icon: '🌿', cash: 25000, item: 'Titanium Tension Lockpick' },
   { day: 4, label: 'Day 4', reward: '🌿 50 GREEN + 50 Energy Surge', icon: '🔑', green: 50, energy: 50 },
-  { day: 5, label: 'Day 5', reward: 'Tactical Wagyu Ribeye + 15 Nerve', icon: '🪙', nerve: 15, item: 'Tactical Wagyu Ribeye' },
+  { day: 5, label: 'Day 5', reward: 'Tactical Wagyu Ribeye + 15 Nerve', icon: '🥩', nerve: 15, item: 'Tactical Wagyu Ribeye' },
   { day: 6, label: 'Day 6', reward: '18k Gold Ring + 100 Sparks', icon: '🔑', sparks: 100, item: '18k Gold Signet Ring' },
   { day: 7, label: 'Day 7', reward: '👑 Syndicate Grand Crate: 🌿 150 GREEN + $100K', icon: '🌿', cash: 100000, energy: 100, nerve: 20, green: 150 },
 ];
@@ -432,6 +453,7 @@ export interface DynamicCatalogData {
   dailyComboOverride?: DailyComboDef;
   customDailyStreakRewards?: DailyStreakRewardItem[];
   referralRewards?: ReferralRewardsConfig;
+  treeStages?: TreeStageDef[];
 }
 
 export function getTodayDateString(): string {
@@ -496,6 +518,7 @@ export function loadCatalogData(): DynamicCatalogData {
         dailyComboOverride: parsed.dailyComboOverride,
         customDailyStreakRewards: parsed.customDailyStreakRewards,
         referralRewards: parsed.referralRewards || DEFAULT_REFERRAL_REWARDS,
+        treeStages: parsed.treeStages && parsed.treeStages.length > 0 ? parsed.treeStages : INITIAL_TREE_STAGES,
       };
     }
   } catch (err) {
@@ -508,6 +531,7 @@ export function loadCatalogData(): DynamicCatalogData {
     customItems: [],
     dreamMarketItems: INITIAL_DREAM_MARKET_ITEMS,
     referralRewards: DEFAULT_REFERRAL_REWARDS,
+    treeStages: INITIAL_TREE_STAGES,
   };
 }
 
@@ -541,6 +565,7 @@ export async function syncCatalogFromServer(onUpdated?: (catalog: DynamicCatalog
         dailyComboOverride: json.catalog.dailyComboOverride,
         customDailyStreakRewards: json.catalog.customDailyStreakRewards,
         referralRewards: json.catalog.referralRewards || DEFAULT_REFERRAL_REWARDS,
+        treeStages: json.catalog.treeStages && json.catalog.treeStages.length > 0 ? json.catalog.treeStages : INITIAL_TREE_STAGES,
       };
       localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(merged));
       if (onUpdated) onUpdated(merged);
