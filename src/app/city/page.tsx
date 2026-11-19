@@ -78,8 +78,8 @@ export function TornCityContent() {
           onOpenPhone={() => setIsPhoneOpen(true)}
         />
 
-        {/* Center Main Stage */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 bg-neutral-950 overflow-y-auto">
+        {/* Center Main Stage (pb-36 ensures complete clearance above mobile bottom dock and phone button) */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-36 sm:pb-32 lg:pb-12 bg-neutral-950 overflow-y-auto">
           {!isAwakened && currentView !== 'DREAM_TAP' && currentView !== 'REFERRAL' && currentView !== 'ADMIN' ? (
             <div className="max-w-2xl mx-auto p-6 bg-gradient-to-br from-neutral-900 via-indigo-950/40 to-neutral-900 border border-emerald-500/50 rounded-2xl text-center space-y-4 shadow-2xl animate-fadeIn">
               <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-3xl mx-auto shadow-inner">

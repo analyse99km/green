@@ -215,9 +215,9 @@ export default function TornHeader({ onOpenWheel, onOpenMobileDrawer, onOpenPhon
         </div>
       </div>
 
-      {/* FLOATING SAVE REMINDER POPUP / TOAST */}
+      {/* FLOATING SAVE REMINDER POPUP / TOAST (Placed at Top so it never collides with Bottom Navigation) */}
       {showReminderToast && toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 max-w-sm bg-neutral-900/95 backdrop-blur border border-emerald-500/50 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between gap-3 animate-fadeIn">
+        <div className="fixed top-20 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-[100] bg-neutral-900/95 backdrop-blur-md border border-emerald-500/50 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between gap-3 animate-fadeIn">
           <div className="flex items-center gap-2.5 text-xs text-neutral-200">
             {toastMessage.includes('⚠️') ? (
               <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 animate-bounce" />
