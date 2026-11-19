@@ -287,7 +287,7 @@ def background_url_watcher():
                                     'menu_button': {
                                         'type': 'web_app',
                                         'text': 'Play Neon 🌿',
-                                        'web_app': {'url': get_live_game_url()}
+                                        'web_app': {'url': GATEWAY_URL}
                                     }
                                 })
                             break
@@ -298,7 +298,7 @@ def background_url_watcher():
         time.sleep(25)
 
 def get_live_game_url(ref_code=''):
-    base = _fastest_live_url if (_fastest_live_url and _fastest_live_url.startswith('https://')) else GATEWAY_URL
+    base = GATEWAY_URL
     if ref_code:
         sep = '&' if '?' in base else '?'
         return f"{base}{sep}ref={urllib.parse.quote(str(ref_code))}"

@@ -60,6 +60,7 @@ import {
 import { InsufficientFundsData } from './InsufficientFundsModal';
 import { P2PPurchaseReceipt } from './types';
 import { loadCatalogData, saveCatalogData, syncCatalogFromServer, DynamicCatalogData, BotanicalCardDef, DEFAULT_REFERRAL_REWARDS } from './gameCatalog';
+import { isTelegramEnv, tgCloudGet, tgCloudSet, getCompactCloudSave } from '@/lib/telegramStorage';
 
 const LOCAL_STORAGE_KEY = 'neon_metropolis_v6_botanical_green';
 
@@ -251,6 +252,34 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // ignore
       }
+    } else if (isTelegramEnv()) {
+      // Cross-Domain Recovery: Query Telegram CloudStorage if local storage was empty
+      tgCloudGet('metropolis_player_save_v1').then((cloudSaveRaw) => {
+        if (cloudSaveRaw) {
+          try {
+            const parsed = JSON.parse(cloudSaveRaw);
+            setPlayer((prev) => ({ ...prev, ...parsed }));
+          } catch {}
+        }
+      }).catch(() => {});
+
+      tgCloudGet('metropolis_auth_user').then((cloudAuthRaw) => {
+        if (cloudAuthRaw) {
+          try {
+            const parsedAuth = JSON.parse(cloudAuthRaw);
+            if (parsedAuth?.email) {
+              localStorage.setItem('metropolis_auth_user', cloudAuthRaw);
+              fetch(`/api/player/sync?email=${encodeURIComponent(parsedAuth.email.trim().toLowerCase())}`)
+                .then((r) => r.json())
+                .then((data) => {
+                  if (data.success && data.playerState) {
+                    setPlayer((prev) => ({ ...prev, ...data.playerState }));
+                  }
+                }).catch(() => {});
+            }
+          } catch {}
+        }
+      }).catch(() => {});
     }
 
     // Cloud Cluster State Sync: Fetch authoritative progress from cluster if user is signed in
@@ -574,6 +603,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         try {
           localStorage.setItem(activeKey, JSON.stringify(autoSaved));
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(autoSaved));
+          if (isTelegramEnv()) {
+            tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(autoSaved)).catch(() => {});
+          }
         } catch (err) {
           console.warn('Auto-save error:', err);
         }
@@ -648,6 +680,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      if (isTelegramEnv()) {
+        tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(updatedPlayer)).catch(() => {});
+      }
 
       // Asynchronously sync player state to cluster cloud server for cross-machine access
       if (userEmail) {
@@ -3865,6 +3900,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      if (isTelegramEnv()) {
+        tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(updatedPlayer)).catch(() => {});
+      }
 
       const currentAuthRaw = localStorage.getItem('metropolis_auth_user');
       let authObj = currentAuthRaw ? JSON.parse(currentAuthRaw) : {};

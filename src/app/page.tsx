@@ -5,6 +5,14 @@ import { GameProvider } from '@/components/game/GameContext';
 import { TornCityContent } from '@/app/city/page';
 import { LoginContent } from '@/app/login/page';
 import { RefreshCw } from 'lucide-react';
+import {
+  isTelegramEnv,
+  getTelegramWebApp,
+  parseTelegramInitData,
+  tgCloudGet,
+  tgCloudSet,
+  getCompactCloudSave,
+} from '@/lib/telegramStorage';
 
 function MetropolisLoadingScreen({ status = 'Verifying encrypted syndicate session...' }: { status?: string }) {
   const [progress, setProgress] = useState(15);
@@ -72,18 +80,17 @@ function MetropolisLoadingScreen({ status = 'Verifying encrypted syndicate sessi
       </div>
 
       <div className="mt-6 text-[9px] font-mono tracking-widest text-emerald-900 uppercase">
-        ⚡ Cluster Protocol v2.2 | Multi-Node Mesh
+        ⚡ Cluster Protocol v2.3 | Multi-Node Mesh
       </div>
     </div>
   );
 }
 
 export default function GameRootPage() {
-  // Instant entry: Default directly to true so player enters the game on frame 1 without blocking loading screens!
+  // Instant entry: In Telegram or with local state, default directly to true so player never sees a login form!
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg?.initDataUnsafe?.user) return true;
+    if (isTelegramEnv()) return true; // Telegram players are ALWAYS authenticated!
     const localUser = localStorage.getItem('metropolis_auth_user');
     if (localUser) {
       try {
@@ -101,11 +108,22 @@ export default function GameRootPage() {
 
     // Background sync: downloads latest state, verifies Telegram identity, and synchronizes referrals without blocking UI
     async function attemptAuth() {
+      const isTg = isTelegramEnv();
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
 
-      // 0. Instant Check: If already logged in locally, authenticate instantly (0ms)
+      // Expand Telegram WebApp if present
+      const tg = getTelegramWebApp();
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+        } catch {}
+      }
+
+      // 0. Check Local Storage First
       const localUserStr = typeof window !== 'undefined' ? localStorage.getItem('metropolis_auth_user') : null;
       let hasLocalSession = false;
+
       if (localUserStr) {
         try {
           const parsed = JSON.parse(localUserStr);
@@ -119,7 +137,24 @@ export default function GameRootPage() {
         } catch {}
       }
 
-      // Check for forwarded shell session (if opened via evergreen gateway)
+      // 1. Cross-Domain Tunnel Recovery via Telegram CloudStorage
+      if (!hasLocalSession && isTg) {
+        try {
+          const cloudAuthRaw = await tgCloudGet('metropolis_auth_user');
+          if (cloudAuthRaw) {
+            const cloudUser = JSON.parse(cloudAuthRaw);
+            if (cloudUser?.email) {
+              localStorage.setItem('metropolis_auth_user', cloudAuthRaw);
+              hasLocalSession = true;
+              if (!isCancelled) setIsAuthenticated(true);
+            }
+          }
+        } catch (e) {
+          console.warn('Telegram CloudStorage retrieval notice:', e);
+        }
+      }
+
+      // 2. Check for forwarded shell session (if opened via evergreen gateway)
       if (!hasLocalSession && urlParams) {
         const paramEmail = urlParams.get('userEmail');
         const paramName = urlParams.get('userName');
@@ -127,7 +162,7 @@ export default function GameRootPage() {
           const sessionObj = {
             email: paramEmail,
             name: paramName || 'Operative',
-            isTelegram: Boolean(urlParams.get('isTelegram')),
+            isTelegram: Boolean(urlParams.get('isTelegram') || isTg),
           };
           localStorage.setItem('metropolis_auth_user', JSON.stringify(sessionObj));
           hasLocalSession = true;
@@ -135,32 +170,14 @@ export default function GameRootPage() {
         }
       }
 
-      // 1. Telegram Mini App Environment
-      const tg = typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null;
-      if (tg) {
-        try {
-          tg.ready();
-          tg.expand();
-        } catch {}
-      }
-
-      let tgUser = tg?.initDataUnsafe?.user;
-      if (!tgUser && urlParams) {
-        try {
-          const rawTg = urlParams.get('tgUser');
-          if (rawTg) tgUser = JSON.parse(decodeURIComponent(rawTg));
-        } catch {}
-      }
+      // 3. Telegram Mini App SSO & Synchronizer
+      const { user: tgUser, start_param: refCode } = parseTelegramInitData();
 
       if (tgUser && tgUser.id) {
-        // In Telegram Mini App, user is ALWAYS authenticated — never kick to login form
-        if (!hasLocalSession && !isCancelled) {
-          setIsAuthenticated(true);
-        }
+        // In Telegram Mini App, user is ALWAYS authenticated — NEVER kick to login form
+        if (!isCancelled) setIsAuthenticated(true);
 
         try {
-          const refCode = tg?.initDataUnsafe?.start_param || urlParams?.get('ref') || '';
-
           const res = await fetch('/api/auth/telegram', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -191,7 +208,12 @@ export default function GameRootPage() {
                 telegramId: data.telegramId,
                 referredBy: finalReferredBy,
               };
+
+              // Persist to local storage
               localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
+
+              // Persist to cross-domain Telegram CloudStorage (100% immune to tunnel rotations)
+              tgCloudSet('metropolis_auth_user', JSON.stringify(userObj)).catch(() => {});
 
               if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
                 window.parent.postMessage({ type: 'METROPOLIS_SESSION_SAVE', user: userObj }, '*');
@@ -206,6 +228,9 @@ export default function GameRootPage() {
                 const stateStr = JSON.stringify(data.playerState);
                 localStorage.setItem(`neon_metropolis_user_${data.email.trim().toLowerCase()}`, stateStr);
                 localStorage.setItem('metropolis_player_save_v1', stateStr);
+
+                // Backup compact player save to Telegram CloudStorage
+                tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(data.playerState)).catch(() => {});
               }
 
               setIsAuthenticated(true);
@@ -213,21 +238,38 @@ export default function GameRootPage() {
             }
           }
         } catch (tgErr) {
-          console.warn('Telegram SSO sync deferred, continuing with local session:', tgErr);
+          console.warn('Telegram SSO sync deferred, continuing with active session:', tgErr);
         }
         return;
       }
 
-      // 2. If already authenticated via localUser, we are done
-      if (hasLocalSession) return;
+      // If user is inside Telegram but tgUser is not yet available, NEVER kick them to login form!
+      if (isTg) {
+        if (!hasLocalSession) {
+          const autoOperative = {
+            email: `tg_operative_${Math.floor(Math.random() * 899999 + 100000)}@telegram.neon`,
+            name: 'Operative',
+            isTelegram: true,
+          };
+          localStorage.setItem('metropolis_auth_user', JSON.stringify(autoOperative));
+        }
+        if (!isCancelled) setIsAuthenticated(true);
+        return;
+      }
 
-      // 3. Web browser session check (only for outside Telegram)
+      // 4. Outside Telegram (Regular Web Browser)
+      if (hasLocalSession) {
+        if (!isCancelled) setIsAuthenticated(true);
+        return;
+      }
+
       try {
         const res = await fetch('/api/auth/email');
         const data = await res.json();
         if (data.authenticated && data.user && !isCancelled) {
           setIsAuthenticated(true);
         } else if (!isCancelled) {
+          // If in web browser with no saved session, allow login page
           setIsAuthenticated(false);
         }
       } catch {
