@@ -10,36 +10,92 @@ export default function GameRootPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // 1. Check local session storage first for instant zero-latency loading
-    const localUser = localStorage.getItem('metropolis_auth_user');
-    if (localUser) {
-      try {
-        const parsed = JSON.parse(localUser);
-        if (parsed?.email) {
-          setIsAuthenticated(true);
-          return;
-        }
-      } catch {
-        // Fallback to server check
-      }
-    }
+    let isCancelled = false;
 
-    // 2. Verify with server session cookie
-    async function checkServerSession() {
+    async function attemptAuth() {
+      // 1. Check for Telegram Mini App SSO (Zero-click instant login & auto-sync)
+      const tg = typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null;
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+        } catch {}
+      }
+
+      const tgUser = tg?.initDataUnsafe?.user;
+      if (tgUser && tgUser.id) {
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const refCode = tg.initDataUnsafe?.start_param || urlParams.get('ref') || '';
+
+          const res = await fetch('/api/auth/telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user: tgUser, referralCode: refCode }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.email && !isCancelled) {
+              localStorage.setItem(
+                'metropolis_auth_user',
+                JSON.stringify({
+                  email: data.email,
+                  name: data.username,
+                  userId: data.userId,
+                  userReferralCode: data.userReferralCode,
+                  telegramId: data.telegramId,
+                })
+              );
+
+              if (data.playerState) {
+                const stateStr = JSON.stringify(data.playerState);
+                localStorage.setItem(`neon_metropolis_user_${data.email.trim().toLowerCase()}`, stateStr);
+                localStorage.setItem('metropolis_player_save_v1', stateStr);
+              }
+
+              setIsAuthenticated(true);
+              return;
+            }
+          }
+        } catch (tgErr) {
+          console.warn('Telegram SSO auto-login error, falling back to local session:', tgErr);
+        }
+      }
+
+      // 2. Check local session storage for instant zero-latency loading
+      const localUser = localStorage.getItem('metropolis_auth_user');
+      if (localUser) {
+        try {
+          const parsed = JSON.parse(localUser);
+          if (parsed?.email) {
+            if (!isCancelled) setIsAuthenticated(true);
+            return;
+          }
+        } catch {
+          // Fallback to server check
+        }
+      }
+
+      // 3. Verify with server session cookie
       try {
         const res = await fetch('/api/auth/email');
         const data = await res.json();
-        if (data.authenticated && data.user) {
+        if (data.authenticated && data.user && !isCancelled) {
           setIsAuthenticated(true);
-        } else {
+        } else if (!isCancelled) {
           setIsAuthenticated(false);
         }
       } catch {
-        setIsAuthenticated(false);
+        if (!isCancelled) setIsAuthenticated(false);
       }
     }
 
-    checkServerSession();
+    attemptAuth();
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   if (isAuthenticated === null) {

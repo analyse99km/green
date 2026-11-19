@@ -24,6 +24,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full dark bg-neutral-950">
+      <head>
+        <script src="https://telegram.org/js/telegram-web-app.js" async={false}></script>
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full flex flex-col bg-neutral-950 text-neutral-100 overflow-x-hidden w-full max-w-full`}>
         <main className="flex-1 min-h-screen">{children}</main>
       </body>
