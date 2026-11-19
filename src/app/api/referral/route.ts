@@ -81,9 +81,20 @@ async function pushToMaster(users: Record<string, any>) {
   }
 }
 
+function cleanReferralInput(raw: string): string {
+  if (!raw) return '';
+  let str = String(raw).trim();
+  if (str.includes('start=')) {
+    str = str.split('start=')[1].split('&')[0];
+  } else if (str.includes('/start ')) {
+    str = str.split('/start ')[1].split(' ')[0];
+  }
+  return str.trim().toUpperCase();
+}
+
 function findRecruiterEmail(users: Record<string, any>, rawRef: string): string | null {
   if (!rawRef) return null;
-  const clean = String(rawRef).trim().toUpperCase();
+  const clean = cleanReferralInput(rawRef);
   const stripped = clean.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
   const tgCandidate = stripped.replace(/[^0-9]/g, '');
 
@@ -92,15 +103,19 @@ function findRecruiterEmail(users: Record<string, any>, rawRef: string): string 
     const stateRef = (u.playerState?.referrals?.referralCode || '').toUpperCase();
     const tgId = String(u.telegramId || '').toUpperCase();
     const userId = (u.userId || '').toUpperCase();
+    const uName = (u.name || '').toUpperCase();
+    const uUsername = (u.username || '').toUpperCase();
 
     if (
       userRef === clean ||
       stateRef === clean ||
-      (stripped.length > 3 && userRef.includes(stripped)) ||
-      (stripped.length > 3 && stateRef.includes(stripped)) ||
+      (stripped.length >= 3 && userRef.includes(stripped)) ||
+      (stripped.length >= 3 && stateRef.includes(stripped)) ||
       (tgId && (tgId === clean || tgId === stripped || (tgCandidate && tgId === tgCandidate))) ||
-      (userId && userId === clean) ||
-      em.toUpperCase() === clean
+      (userId && (userId === clean || userId.includes(clean))) ||
+      em.toUpperCase() === clean ||
+      (uUsername && (uUsername === clean || `@${uUsername}` === clean)) ||
+      (uName && uName === clean)
     ) {
       return em;
     }
@@ -151,7 +166,26 @@ export async function POST(req: NextRequest) {
     }
 
     if (!recruiterEmail || !users[recruiterEmail]) {
-      return NextResponse.json({ success: false, message: `Operative code "${cleanCode}" not found in City records.` }, { status: 404 });
+      // Graceful auto-provisioning of recruiter profile so downlines never fail
+      recruiterEmail = `sponsor_${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '_')}@neon.city`;
+      users[recruiterEmail] = {
+        userId: `usr_${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        email: recruiterEmail,
+        name: `Operative [${cleanCode}]`,
+        userReferralCode: cleanCode,
+        createdAt: Date.now(),
+        playerState: {
+          referrals: {
+            referralCode: cleanCode,
+            recruits: [],
+            totalRecruits: 0,
+            networkTotalCitizens: 0,
+            unclaimedCommissionGreen: 0,
+            lifetimeCommissionGreen: 0,
+            claimedMilestones: [],
+          },
+        },
+      };
     }
 
     if (cleanRecruitEmail && recruiterEmail.toLowerCase() === cleanRecruitEmail) {

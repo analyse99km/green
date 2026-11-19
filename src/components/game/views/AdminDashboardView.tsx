@@ -8,6 +8,10 @@ import {
   BotanicalCardDef,
   BotanicalCategoryDef,
   DynamicItemDef,
+  DEFAULT_REFERRAL_REWARDS,
+  ReferralTierConfig,
+  ReferralMilestoneConfig,
+  ReferralRewardsConfig,
 } from '../gameCatalog';
 import { SoundEngine } from '../gameAudio';
 import { useGame } from '../GameContext';
@@ -29,7 +33,7 @@ interface AdminPlayer {
 
 export const AdminDashboardView: React.FC = () => {
   const { player } = useGame();
-  const [activeTab, setActiveTab] = useState<'PLAYERS' | 'CARDS' | 'ITEMS'>('PLAYERS');
+  const [activeTab, setActiveTab] = useState<'PLAYERS' | 'CARDS' | 'ITEMS' | 'REFERRAL'>('PLAYERS');
   const [players, setPlayers] = useState<AdminPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -41,6 +45,13 @@ export const AdminDashboardView: React.FC = () => {
     cards: [],
     customItems: [],
   });
+
+  // Referral Rewards Configuration State
+  const [refRecruiterBounty, setRefRecruiterBounty] = useState<number>(100);
+  const [refRecruitWelcome, setRefRecruitWelcome] = useState<number>(100);
+  const [refDailyStipend, setRefDailyStipend] = useState<number>(50);
+  const [refTiers, setRefTiers] = useState<ReferralTierConfig[]>(DEFAULT_REFERRAL_REWARDS.tiers);
+  const [refMilestones, setRefMilestones] = useState<ReferralMilestoneConfig[]>(DEFAULT_REFERRAL_REWARDS.milestones);
 
   // Modal / Form States
   const [editingPlayer, setEditingPlayer] = useState<AdminPlayer | null>(null);
@@ -110,6 +121,56 @@ export const AdminDashboardView: React.FC = () => {
     saveCatalogData(updated);
     setSuccessMsg('Catalog successfully updated & synced across all clusters!');
     setTimeout(() => setSuccessMsg(''), 4000);
+  };
+
+  useEffect(() => {
+    if (catalog.referralRewards) {
+      setRefRecruiterBounty(catalog.referralRewards.recruiterInstantBounty ?? 100);
+      setRefRecruitWelcome(catalog.referralRewards.recruitWelcomeBonus ?? 100);
+      setRefDailyStipend(catalog.referralRewards.dailyRecruitStipend ?? 50);
+      if (catalog.referralRewards.tiers && catalog.referralRewards.tiers.length > 0) {
+        setRefTiers(catalog.referralRewards.tiers);
+      }
+      if (catalog.referralRewards.milestones && catalog.referralRewards.milestones.length > 0) {
+        setRefMilestones(catalog.referralRewards.milestones);
+      }
+    }
+  }, [catalog]);
+
+  const handleSaveReferralRewards = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedReferralRewards: ReferralRewardsConfig = {
+      recruiterInstantBounty: Number(refRecruiterBounty) || 100,
+      recruitWelcomeBonus: Number(refRecruitWelcome) || 100,
+      dailyRecruitStipend: Number(refDailyStipend) || 50,
+      tiers: refTiers.map((t) => ({
+        tier: t.tier,
+        jumpLabel: t.jumpLabel,
+        percent: Number(t.percent) || 0,
+      })),
+      milestones: refMilestones.map((m) => ({
+        recruits: m.recruits,
+        label: m.label,
+        rewardGreen: Number(m.rewardGreen) || 0,
+      })),
+    };
+
+    saveCatalogChanges({
+      ...catalog,
+      referralRewards: updatedReferralRewards,
+    });
+    SoundEngine.playVictory(player.soundEnabled);
+    setSuccessMsg('Referral & Royalty Jump Rewards updated & synced across cluster!');
+    setTimeout(() => setSuccessMsg(''), 4000);
+  };
+
+  const handleResetReferralDefaults = () => {
+    if (!confirm('Reset referral and royalty rewards to system defaults?')) return;
+    setRefRecruiterBounty(DEFAULT_REFERRAL_REWARDS.recruiterInstantBounty);
+    setRefRecruitWelcome(DEFAULT_REFERRAL_REWARDS.recruitWelcomeBonus);
+    setRefDailyStipend(DEFAULT_REFERRAL_REWARDS.dailyRecruitStipend);
+    setRefTiers(DEFAULT_REFERRAL_REWARDS.tiers);
+    setRefMilestones(DEFAULT_REFERRAL_REWARDS.milestones);
   };
 
   // Add or Edit Card
@@ -408,6 +469,19 @@ export const AdminDashboardView: React.FC = () => {
           }`}
         >
           <span>🛒</span> Bazaar & Items Manager ({catalog.customItems.length})
+        </button>
+        <button
+          onClick={() => {
+            SoundEngine.playTick(player.soundEnabled);
+            setActiveTab('REFERRAL');
+          }}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition border-b-2 flex items-center gap-2 ${
+            activeTab === 'REFERRAL'
+              ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
+              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <span>🎁</span> Edit Referral & Jump Rewards
         </button>
       </div>
 
@@ -708,6 +782,239 @@ export const AdminDashboardView: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* TAB 4: REFERRAL & JUMP REWARDS EDITOR */}
+      {activeTab === 'REFERRAL' && (
+        <form onSubmit={handleSaveReferralRewards} className="space-y-5">
+          {/* Header Banner */}
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-zinc-200 uppercase tracking-wide flex items-center gap-2">
+                  <span>🎁</span> Syndicate Referral & Generational Jump Royalty Rules
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Configure instant recruitment kickbacks, welcome bonuses, 24-hour operative allowances, cascading generational jump royalties (5 Tiers), and milestone progression bounties.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetReferralDefaults}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🔄</span> Reset Defaults
+                </button>
+                <button
+                  type="submit"
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-4 py-1.5 rounded transition flex items-center gap-1.5 shadow-md shadow-emerald-950/40 cursor-pointer"
+                >
+                  <span>💾</span> Save & Deploy Rules
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 1: Base Incentives & Welcome Allowances */}
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-3">
+            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+              <span>⚡</span> Base Recruitment Economics & Allowances
+            </h3>
+            <p className="text-[11px] text-zinc-400">
+              Immediate payouts and daily stipends awarded to recruiters and recruits across the entire metropolis.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+              <div className="bg-zinc-900/80 border border-zinc-800 p-3.5 rounded-lg space-y-1.5">
+                <label className="block text-[11px] font-bold text-amber-400 uppercase">
+                  Recruiter Instant Bounty (+🌿 GREEN)
+                </label>
+                <p className="text-[10px] text-zinc-500">
+                  Instant till bounty awarded to sponsor the moment a new recruit redeems code or joins via Telegram.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-amber-400 font-mono text-sm">🌿</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={refRecruiterBounty}
+                    onChange={(e) => setRefRecruiterBounty(Number(e.target.value))}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded p-2 text-white font-mono text-xs font-bold focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-zinc-900/80 border border-zinc-800 p-3.5 rounded-lg space-y-1.5">
+                <label className="block text-[11px] font-bold text-cyan-400 uppercase">
+                  Recruit Welcome Starter Bonus (+🌿 GREEN)
+                </label>
+                <p className="text-[10px] text-zinc-500">
+                  Welcome bonus credited directly to the new player's wallet upon entering an operative invite code.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-cyan-400 font-mono text-sm">🌿</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={refRecruitWelcome}
+                    onChange={(e) => setRefRecruitWelcome(Number(e.target.value))}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded p-2 text-white font-mono text-xs font-bold focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-zinc-900/80 border border-zinc-800 p-3.5 rounded-lg space-y-1.5">
+                <label className="block text-[11px] font-bold text-emerald-400 uppercase">
+                  Daily Recruit Stipend (+🌿 GREEN / 24h)
+                </label>
+                <p className="text-[10px] text-zinc-500">
+                  Daily operative allowance claimable once every 24 hours by any player affiliated with a sponsor.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-emerald-400 font-mono text-sm">🌿</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={refDailyStipend}
+                    onChange={(e) => setRefDailyStipend(Number(e.target.value))}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded p-2 text-white font-mono text-xs font-bold focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: 5 Generational Jump Royalty Percentages */}
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                <span>🌳</span> 5 Generational Jump Royalty Percentages (% of Active Daily Gameplay)
+              </h3>
+              <span className="text-[11px] text-zinc-500 font-mono">Calculated 1x/Day based on real activity</span>
+            </div>
+            <p className="text-[11px] text-zinc-400">
+              Each tier represents a generational distance. Royalty is calculated exclusively from downstream active gameplay (crimes, gyms, taps).
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
+              {refTiers.map((t, idx) => (
+                <div key={t.tier} className="bg-zinc-900/80 border border-zinc-800 p-3.5 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-xs font-mono">Tier {t.tier}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono">
+                      {idx === 0 ? 'Direct' : `${idx} Jump${idx > 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={t.jumpLabel}
+                    onChange={(e) => {
+                      const updated = [...refTiers];
+                      updated[idx].jumpLabel = e.target.value;
+                      setRefTiers(updated);
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-[11px] text-zinc-300 font-mono focus:border-indigo-500 focus:outline-none"
+                    placeholder="Tier Label"
+                  />
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 mb-1 font-mono">Royalty Share (%)</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={t.percent}
+                        onChange={(e) => {
+                          const updated = [...refTiers];
+                          updated[idx].percent = Number(e.target.value);
+                          setRefTiers(updated);
+                        }}
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-white font-mono text-xs font-bold focus:border-indigo-500 focus:outline-none"
+                      />
+                      <span className="text-zinc-400 text-xs font-mono font-bold">%</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 3: Direct Recruit Milestone Progression Ladder */}
+          <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-3">
+            <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+              <span>🏆</span> Direct Recruit Milestone Rewards Ladder
+            </h3>
+            <p className="text-[11px] text-zinc-400">
+              One-time milestone unlock bonuses granted to players as their direct recruit headcount reaches Syndicate milestones.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+              {refMilestones.map((m, idx) => (
+                <div key={m.recruits} className="bg-zinc-900/80 border border-zinc-800 p-3.5 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-300 text-xs font-mono">
+                      {m.recruits} Direct Recruits
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-950 text-zinc-400 border border-zinc-800 font-mono">
+                      Milestone #{idx + 1}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={m.label}
+                    onChange={(e) => {
+                      const updated = [...refMilestones];
+                      updated[idx].label = e.target.value;
+                      setRefMilestones(updated);
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-[11px] text-zinc-300 font-mono focus:border-amber-500 focus:outline-none"
+                    placeholder="Milestone Title"
+                  />
+                  <div>
+                    <label className="block text-[10px] text-zinc-400 mb-1 font-mono">Bounty Reward (+🌿 GREEN)</label>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-amber-400 font-mono text-xs">🌿</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="50"
+                        value={m.rewardGreen}
+                        onChange={(e) => {
+                          const updated = [...refMilestones];
+                          updated[idx].rewardGreen = Number(e.target.value);
+                          setRefMilestones(updated);
+                        }}
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded px-2.5 py-1.5 text-white font-mono text-xs font-bold focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Action Footer */}
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleResetReferralDefaults}
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded text-xs font-bold transition cursor-pointer"
+            >
+              Reset to Defaults
+            </button>
+            <button
+              type="submit"
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-6 py-2.5 rounded transition shadow-lg shadow-emerald-950/50 cursor-pointer"
+            >
+              Save & Deploy Referral Reward Rules Across Cluster
+            </button>
+          </div>
+        </form>
       )}
 
       {/* MODAL: ADD / EDIT BOTANICAL CARD */}

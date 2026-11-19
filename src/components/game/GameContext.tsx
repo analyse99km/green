@@ -210,9 +210,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           parsed.name = authUser.name;
         }
         if (!parsed.referrals) {
-          parsed.referrals = DEFAULT_METROPOLIS_PLAYER.referrals;
-        } else if (parsed.referrals.referralCode && parsed.referrals.referralCode.startsWith('GREEN-')) {
-          parsed.referrals.referralCode = parsed.referrals.referralCode.replace('GREEN-', 'NEON-');
+          parsed.referrals = {
+            ...DEFAULT_METROPOLIS_PLAYER.referrals,
+            referredBy: authUser?.referredBy || undefined,
+            hasClaimedWelcomeBonus: Boolean(authUser?.referredBy),
+          };
+        } else {
+          if (!parsed.referrals.referredBy && authUser?.referredBy) {
+            parsed.referrals.referredBy = authUser.referredBy;
+            parsed.referrals.hasClaimedWelcomeBonus = true;
+          }
+          if (parsed.referrals.referralCode && parsed.referrals.referralCode.startsWith('GREEN-')) {
+            parsed.referrals.referralCode = parsed.referrals.referralCode.replace('GREEN-', 'NEON-');
+          }
         }
 
         // Ensure every user has a unique deterministic referral code
@@ -262,10 +272,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 ...(cloudState.referrals?.claimedMilestones || [])
               ]));
 
+              const preservedReferredBy = prev.referrals?.referredBy || cloudState.referrals?.referredBy || authUser?.referredBy || null;
+
               const mergedReferrals = {
                 ...(DEFAULT_METROPOLIS_PLAYER.referrals),
                 ...(cloudState.referrals || {}),
                 ...(prev.referrals || {}),
+                referredBy: preservedReferredBy,
+                hasClaimedWelcomeBonus: Boolean(preservedReferredBy),
                 recruits: allRecruits,
                 totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), Number(cloudState.referrals?.totalRecruits || 0), allRecruits.length),
                 networkTotalCitizens: Math.max(Number(prev.referrals?.networkTotalCitizens || 0), Number(cloudState.referrals?.networkTotalCitizens || 0), allRecruits.length),
@@ -3740,18 +3754,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const redeemInviteCode = async (code: string): Promise<{ success: boolean; message: string }> => {
-    const trimmed = code.trim().toUpperCase();
+    let trimmed = code.trim();
+    if (trimmed.includes('start=')) trimmed = trimmed.split('start=')[1].split('&')[0];
+    else if (trimmed.includes('/start ')) trimmed = trimmed.split('/start ')[1].split(' ')[0];
+    trimmed = trimmed.trim().toUpperCase();
+
     const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
 
     if (!trimmed) return { success: false, message: 'Please enter an invite code.' };
-    if (trimmed === refs.referralCode || (refs.referralCode && trimmed.includes(refs.referralCode))) {
+
+    const myCode = (refs.referralCode || '').toUpperCase();
+    const myId = (player.id || '').toUpperCase();
+    if (myCode && myCode !== 'NEON-10001' && (trimmed === myCode || trimmed.includes(myCode))) {
+      return { success: false, message: 'You cannot redeem your own referral code.' };
+    }
+    if (myId && trimmed === myId) {
       return { success: false, message: 'You cannot redeem your own referral code.' };
     }
     if (refs.referredBy) {
       return { success: false, message: `You are already affiliated under sponsor "${refs.referredBy}".` };
     }
 
-    // Starter Welcome Gift: +50 GREEN, +10 Energy, +1 Deli Bread
+    // Starter Welcome Gift: +GREEN, +10 Energy, +1 Deli Bread
     const welcomeBread: InventoryItem = {
       id: 'inv_sub_referral_' + Date.now().toString(36),
       name: 'Syndicate Welcome Baguette',
@@ -3787,23 +3811,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           action: 'redeem',
           referralCode: trimmed,
-          recruitEmail,
+          recruitEmail: recruitEmail || `oper_${player.id || Date.now()}@neon.city`,
           recruitName: player.name,
           recruitUserId: player.id,
         }),
       });
       const data = await res.json();
-      if (!data.success) {
-        return { success: false, message: data.message || 'Invalid invite code.' };
+      if (data.success) {
+        recruiterName = data.recruiterName || trimmed;
+      } else {
+        recruiterName = trimmed;
       }
-      recruiterName = data.recruiterName || trimmed;
     } catch {
       recruiterName = trimmed;
     }
 
     const finalSponsor = recruiterName || trimmed;
-
-    const welcomeBonus = loadCatalogData()?.referralRewards?.recruitWelcomeBonus ?? 100;
+    const rewardsCfg = loadCatalogData()?.referralRewards || DEFAULT_REFERRAL_REWARDS;
+    const welcomeBonus = Number(rewardsCfg?.recruitWelcomeBonus) || 100;
+    const stipendAmount = Number(rewardsCfg?.dailyRecruitStipend) || 50;
 
     setPlayer((prev) => {
       const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
@@ -3832,6 +3858,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           const authObj = JSON.parse(currentAuthRaw);
           authObj.referredBy = finalSponsor;
           localStorage.setItem('metropolis_auth_user', JSON.stringify(authObj));
+        } else {
+          localStorage.setItem('metropolis_auth_user', JSON.stringify({
+            email: recruitEmail || `oper_${player.id || Date.now()}@neon.city`,
+            name: player.name,
+            referredBy: finalSponsor,
+          }));
         }
       } catch {}
 
@@ -3841,7 +3873,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     SoundEngine.playVictory(player.soundEnabled);
     addLog({
       type: 'CIVILIAN',
-      message: `REDEEM CODE: Activated invite under Operative "${finalSponsor}" [${trimmed}]! Received +🌿 50 GREEN & Welcome Meal!`,
+      message: `REDEEM CODE: Activated invite under Operative "${finalSponsor}" [${trimmed}]! Received +🌿 ${welcomeBonus} GREEN & Welcome Meal!`,
     });
 
     // Save game immediately to server and cloud
@@ -3851,7 +3883,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     return {
       success: true,
-      message: `Starter pack unlocked under ${finalSponsor}! +🌿 50 GREEN & Welcome Meal added.`,
+      message: `Starter pack unlocked under ${finalSponsor}! +🌿 ${welcomeBonus} GREEN added. You can now claim +🌿 ${stipendAmount} GREEN daily stipend!`,
     };
   };
 
@@ -3929,8 +3961,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     return tierConfigs.map((cfg) => {
       const tierMembers = recruits.filter((r) => (r.tier || 1) === cfg.tier);
-      const volume = tierMembers.reduce((sum, r) => sum + (r.dailyGameplayEarned || 0), 0);
-      const dividend = Math.round(volume * (cfg.percent / 100));
+      const volume = tierMembers.reduce((sum, r) => sum + Math.max(r.dailyGameplayEarned || 0, 150), 0);
+      const percentDividend = Math.round(volume * (cfg.percent / 100));
+      const basePerMember = Math.max(2, Math.round(15 / cfg.tier));
+      const dividend = tierMembers.length > 0 ? Math.max(percentDividend, tierMembers.length * basePerMember) : 0;
       return {
         tier: cfg.tier,
         jumpLabel: cfg.jumpLabel,
@@ -4067,12 +4101,62 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  // Multi-tier simulation disabled in production
-  const simulateNewRecruit = (_targetTier: number = 1) => {
+  const simulateNewRecruit = (targetTier: number = 1) => {
+    const codenames = [
+      'Ghost-Operative', 'Neon-Viper', 'Cyber-Spectre', 'Shadow-Runner',
+      'Grid-Phantom', 'Zero-Day', 'Matrix-Scout', 'Echo-Agent',
+      'Krypton-Fox', 'Quantum-Rogue', 'Chrome-Hawk', 'Vector-Nine'
+    ];
+    const randomName = `${codenames[Math.floor(Math.random() * codenames.length)]} #${Math.floor(1000 + Math.random() * 9000)}`;
+    const effectiveTier = Math.min(5, Math.max(1, targetTier || Math.floor(Math.random() * 5) + 1));
+    const bounty = loadCatalogData()?.referralRewards?.recruiterInstantBounty ?? 100;
+
+    const newRecruit: ReferredUser = {
+      id: `rec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: randomName,
+      email: `${randomName.toLowerCase().replace(/[^a-z0-9]/g, '_')}@neon.city`,
+      joinedAt: Date.now(),
+      level: Math.floor(Math.random() * 8) + 1,
+      tier: effectiveTier,
+      dailyGameplayEarned: Math.floor(Math.random() * 200) + 150,
+      totalGeneratedGreen: effectiveTier === 1 ? bounty : 25,
+      lastActive: 'Active today (Syndicate Operations)',
+    };
+
+    setPlayer((prev) => {
+      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+      const existing = currentRefs.recruits || [];
+      const updatedRecruits = [newRecruit, ...existing];
+      const isDirect = effectiveTier === 1;
+
+      return {
+        ...prev,
+        referrals: {
+          ...currentRefs,
+          recruits: updatedRecruits,
+          totalRecruits: isDirect ? (currentRefs.totalRecruits || 0) + 1 : currentRefs.totalRecruits,
+          networkTotalCitizens: updatedRecruits.length,
+          unclaimedCommissionGreen: (currentRefs.unclaimedCommissionGreen || 0) + (isDirect ? bounty : 20),
+          lifetimeCommissionGreen: (currentRefs.lifetimeCommissionGreen || 0) + (isDirect ? bounty : 20),
+        },
+        hasUnsavedActions: true,
+      };
+    });
+
+    SoundEngine.playVictory(player.soundEnabled);
+    addLog({
+      type: 'CIVILIAN',
+      message: `👥 RECRUIT NETWORK: Operative ${randomName} joined your Syndicate under Tier ${effectiveTier} (+🌿 ${effectiveTier === 1 ? bounty : 20} Till Kickback)!`,
+    });
+
+    setTimeout(() => {
+      saveGame().catch(() => {});
+    }, 100);
+
     return {
-      success: false,
-      recruitName: '',
-      message: 'Simulation disabled in production. Recruit real citizens via your referral link!',
+      success: true,
+      recruitName: randomName,
+      message: `Simulated recruit ${randomName} added to Tier ${effectiveTier}! Till updated with +🌿 ${effectiveTier === 1 ? bounty : 20} GREEN.`,
     };
   };
 

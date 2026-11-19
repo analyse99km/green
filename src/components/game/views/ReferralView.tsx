@@ -41,6 +41,7 @@ export default function ReferralView() {
     calculateNetworkTiers,
     redeemInviteCode,
     refreshReferralNetwork,
+    simulateNewRecruit,
   } = useGame();
 
   const [copiedLink, setCopiedLink] = useState(false);
@@ -295,7 +296,7 @@ export default function ReferralView() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleClaimDailyDividend}
-              disabled={!isRoyaltyReady}
+              disabled={!isRoyaltyReady || totalDailyDividend <= 0}
               className={`px-4 py-2.5 rounded-xl font-bold font-mono text-xs flex items-center gap-1.5 transition-all shadow cursor-pointer ${
                 isRoyaltyReady && totalDailyDividend > 0
                   ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-neutral-950 shadow-amber-950/40 animate-pulse'
@@ -305,7 +306,9 @@ export default function ReferralView() {
               <Award className="w-4 h-4" />
               <span>
                 {isRoyaltyReady
-                  ? `Claim Daily Dividends (+🌿 ${Math.max(totalDailyDividend, 0).toLocaleString()} GREEN)`
+                  ? (totalDailyDividend > 0
+                      ? `Claim Daily Dividends (+🌿 ${totalDailyDividend.toLocaleString()} GREEN)`
+                      : 'No Active Recruits (Recruit to Earn)')
                   : `Next Dividend Distribution in ~${royaltyRemainingHours}h`}
               </span>
             </button>
@@ -531,17 +534,30 @@ export default function ReferralView() {
             <Users className="w-4 h-4 text-emerald-400" />
             <h3 className="font-bold text-white text-sm">Your Syndicate Network Roster ({totalNetworkCitizens})</h3>
           </div>
-          <button
-            onClick={() => {
-              refreshReferralNetwork();
-              setFeedback('Synced live syndicate network from cluster!');
-              setTimeout(() => setFeedback(null), 3000);
-            }}
-            className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 hover:text-emerald-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-neutral-800 hover:border-emerald-500/40 cursor-pointer transition-all"
-          >
-            <span>🔄</span>
-            <span>Refresh Roster</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const res = simulateNewRecruit();
+                setFeedback(res.message);
+                setTimeout(() => setFeedback(null), 3500);
+              }}
+              className="flex items-center gap-1.5 text-[11px] font-mono text-cyan-400 hover:text-cyan-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-neutral-800 hover:border-cyan-500/40 cursor-pointer transition-all"
+            >
+              <span>➕</span>
+              <span>Scout Test Recruit</span>
+            </button>
+            <button
+              onClick={() => {
+                refreshReferralNetwork();
+                setFeedback('Synced live syndicate network from cluster!');
+                setTimeout(() => setFeedback(null), 3000);
+              }}
+              className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 hover:text-emerald-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-neutral-800 hover:border-emerald-500/40 cursor-pointer transition-all"
+            >
+              <span>🔄</span>
+              <span>Refresh Roster</span>
+            </button>
+          </div>
         </div>
 
         {totalNetworkCitizens === 0 ? (

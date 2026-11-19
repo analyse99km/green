@@ -4,6 +4,76 @@ import path from 'path';
 
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
 const CATALOG_FILE = path.join(process.cwd(), 'data', 'catalog.json');
+const MASTER_STORAGE_REPO = 'pocomon9/green-status';
+const MASTER_PAT = process.env.GH_PAT || process.env.MASTER_PAT || '';
+
+function matchesReferral(referredBy: string, user: any, userEmail: string): boolean {
+  if (!referredBy || !user) return false;
+  let ref = String(referredBy).trim();
+  if (ref.includes('start=')) ref = ref.split('start=')[1].split('&')[0];
+  else if (ref.includes('/start ')) ref = ref.split('/start ')[1].split(' ')[0];
+  ref = ref.trim().toUpperCase();
+
+  const stripped = ref.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
+  const tgCandidate = stripped.replace(/[^0-9]/g, '');
+
+  const myCode = (user.userReferralCode || user.playerState?.referrals?.referralCode || '').toUpperCase();
+  const myTgId = String(user.telegramId || '').toUpperCase();
+  const myUserId = (user.userId || '').toUpperCase();
+  const myEmail = userEmail.toUpperCase();
+  const myName = (user.name || '').toUpperCase();
+  const myUsername = (user.username || '').toUpperCase();
+
+  return (
+    myCode === ref ||
+    myCode === stripped ||
+    (stripped.length >= 3 && myCode.includes(stripped)) ||
+    (myTgId && (myTgId === ref || myTgId === stripped || (tgCandidate && myTgId === tgCandidate))) ||
+    (myUserId && (myUserId === ref || myUserId.includes(ref))) ||
+    myEmail === ref ||
+    (myUsername && (myUsername === ref || `@${myUsername}` === ref)) ||
+    (myName && myName === ref)
+  );
+}
+
+async function pushCatalogToMaster(catalog: Record<string, any>) {
+  try {
+    const content = Buffer.from(JSON.stringify(catalog, null, 2), 'utf-8').toString('base64');
+    let sha = '';
+    try {
+      const checkRes = await fetch(`https://api.github.com/repos/${MASTER_STORAGE_REPO}/contents/catalog.json`, {
+        headers: {
+          'Authorization': `Bearer ${MASTER_PAT}`,
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'Neon-Sync-Worker'
+        }
+      });
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        sha = checkData.sha || '';
+      }
+    } catch {}
+
+    const bodyData: any = {
+      message: 'update dynamic catalog [skip ci]',
+      content
+    };
+    if (sha) bodyData.sha = sha;
+
+    await fetch(`https://api.github.com/repos/${MASTER_STORAGE_REPO}/contents/catalog.json`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${MASTER_PAT}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Neon-Sync-Worker'
+      },
+      body: JSON.stringify(bodyData)
+    });
+  } catch (err) {
+    console.warn('Asynchronous master push error in catalog:', err);
+  }
+}
 
 function loadUsers(): Record<string, any> {
   try {
@@ -67,17 +137,40 @@ export async function GET() {
     }
 
     const playerList = Object.entries(users).map(([email, u]) => {
-      const code = u.userReferralCode || '';
-      const recruits = code ? referralMap[code] || [] : [];
       const state = u.playerState || {};
+      const savedRecruits = Array.isArray(state.referrals?.recruits) ? state.referrals.recruits : [];
+
+      // Find all recruits across database using universal matching
+      const downlines: { email: string; name: string }[] = [];
+      for (const [otherEmail, otherUser] of Object.entries(users)) {
+        if (otherEmail.toLowerCase() !== email.toLowerCase() && otherUser.referredBy) {
+          if (matchesReferral(otherUser.referredBy, u, email)) {
+            downlines.push({
+              email: otherEmail,
+              name: otherUser.name || otherEmail.split('@')[0],
+            });
+          }
+        }
+      }
+
+      // Merge saved recruits and downlines
+      for (const sr of savedRecruits) {
+        if (!downlines.some((d) => (sr.email && d.email.toLowerCase() === sr.email.toLowerCase()) || d.name === sr.name)) {
+          downlines.push({
+            email: sr.email || 'citizen@neon.city',
+            name: sr.name || 'Citizen',
+          });
+        }
+      }
+
       return {
         email,
         name: u.name || state.name || 'Operative',
         userId: u.userId || state.id,
         userReferralCode: u.userReferralCode || state.referrals?.referralCode,
         referredBy: u.referredBy || state.referrals?.referredBy || 'None (Direct)',
-        recruitsCount: recruits.length,
-        recruits,
+        recruitsCount: downlines.length,
+        recruits: downlines,
         createdAt: u.createdAt || new Date().toISOString(),
         lastLoginAt: u.lastLoginAt || u.createdAt,
         passwordHash: u.passwordHash ? `${u.passwordHash.substring(0, 16)}...` : 'N/A',
@@ -115,6 +208,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, message: 'Missing catalog data.' }, { status: 400 });
       }
       saveCatalog(catalog);
+      pushCatalogToMaster(catalog).catch(() => {});
       return NextResponse.json({ success: true, message: 'Catalog saved to cluster.' });
     }
 

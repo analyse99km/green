@@ -29,7 +29,11 @@ function saveUsers(users: Record<string, any>) {
 
 function matchesReferral(referredBy: string, user: any, userEmail: string): boolean {
   if (!referredBy || !user) return false;
-  const ref = String(referredBy).trim().toUpperCase();
+  let ref = String(referredBy).trim();
+  if (ref.includes('start=')) ref = ref.split('start=')[1].split('&')[0];
+  else if (ref.includes('/start ')) ref = ref.split('/start ')[1].split(' ')[0];
+  ref = ref.trim().toUpperCase();
+
   const stripped = ref.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
   const tgCandidate = stripped.replace(/[^0-9]/g, '');
 
@@ -37,14 +41,18 @@ function matchesReferral(referredBy: string, user: any, userEmail: string): bool
   const myTgId = String(user.telegramId || '').toUpperCase();
   const myUserId = (user.userId || '').toUpperCase();
   const myEmail = userEmail.toUpperCase();
+  const myName = (user.name || '').toUpperCase();
+  const myUsername = (user.username || '').toUpperCase();
 
   return (
     myCode === ref ||
     myCode === stripped ||
-    (stripped.length > 3 && myCode.includes(stripped)) ||
+    (stripped.length >= 3 && myCode.includes(stripped)) ||
     (myTgId && (myTgId === ref || myTgId === stripped || (tgCandidate && myTgId === tgCandidate))) ||
-    (myUserId && myUserId === ref) ||
-    myEmail === ref
+    (myUserId && (myUserId === ref || myUserId.includes(ref))) ||
+    myEmail === ref ||
+    (myUsername && (myUsername === ref || `@${myUsername}` === ref)) ||
+    (myName && myName === ref)
   );
 }
 
