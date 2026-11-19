@@ -3826,6 +3826,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       try {
         localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+
+        const currentAuthRaw = localStorage.getItem('metropolis_auth_user');
+        if (currentAuthRaw) {
+          const authObj = JSON.parse(currentAuthRaw);
+          authObj.referredBy = finalSponsor;
+          localStorage.setItem('metropolis_auth_user', JSON.stringify(authObj));
+        }
       } catch {}
 
       return updatedPlayer;

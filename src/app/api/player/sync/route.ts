@@ -298,6 +298,15 @@ export async function POST(req: NextRequest) {
     if (playerState.level !== undefined) user.level = Number(playerState.level);
     if (playerState.rank !== undefined) user.rank = playerState.rank;
     if (playerState.name) user.name = playerState.name;
+
+    // Preserve and synchronize referredBy bidirectionally
+    if (playerState.referrals?.referredBy) {
+      user.referredBy = playerState.referrals.referredBy;
+    } else if (user.referredBy) {
+      if (!playerState.referrals) playerState.referrals = {};
+      playerState.referrals.referredBy = user.referredBy;
+    }
+
     user.lastSaveAt = Date.now();
     user.lastLoginAt = Date.now();
     users[cleanEmail] = user;

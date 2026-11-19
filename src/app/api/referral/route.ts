@@ -207,13 +207,29 @@ export async function POST(req: NextRequest) {
       recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + bounty;
     }
 
-    // Update recruit's record if they have an email profile
-    if (cleanRecruitEmail && users[cleanRecruitEmail]) {
-      users[cleanRecruitEmail].referredBy = cleanCode;
-      if (!users[cleanRecruitEmail].playerState) users[cleanRecruitEmail].playerState = {};
-      if (!users[cleanRecruitEmail].playerState.referrals) users[cleanRecruitEmail].playerState.referrals = {};
-      users[cleanRecruitEmail].playerState.referrals.referredBy = cleanCode;
-      users[cleanRecruitEmail].playerState.referrals.hasClaimedWelcomeBonus = true;
+    // Ensure recruit's record is permanently registered with referredBy
+    const userKey = cleanRecruitEmail || `${effectiveId}@neon.city`;
+    if (!users[userKey]) {
+      users[userKey] = {
+        userId: effectiveId,
+        email: userKey,
+        name: effectiveName,
+        userReferralCode: `NEON-${Date.now().toString(36).toUpperCase()}`,
+        referredBy: cleanCode,
+        createdAt: Date.now(),
+        playerState: {
+          referrals: {
+            referredBy: cleanCode,
+            hasClaimedWelcomeBonus: true,
+          }
+        }
+      };
+    } else {
+      users[userKey].referredBy = cleanCode;
+      if (!users[userKey].playerState) users[userKey].playerState = {};
+      if (!users[userKey].playerState.referrals) users[userKey].playerState.referrals = {};
+      users[userKey].playerState.referrals.referredBy = cleanCode;
+      users[userKey].playerState.referrals.hasClaimedWelcomeBonus = true;
     }
 
     users[recruiterEmail] = recruiter;
@@ -226,7 +242,7 @@ export async function POST(req: NextRequest) {
       recruiterName: recruiter.name || 'Operative',
       recruiterEmail,
       referralCode: cleanCode,
-      bonusGreen: 50,
+      bonusGreen: Number(rewardsCfg.recruitWelcomeBonus) || 100,
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });

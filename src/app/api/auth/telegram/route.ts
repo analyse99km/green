@@ -189,8 +189,54 @@ export async function POST(req: NextRequest) {
       if (user.first_name && !targetUser.name) {
         targetUser.name = [user.first_name, user.last_name].filter(Boolean).join(' ');
       }
+      // If returning user never had a sponsor, attribute them now from the invite link!
+      if ((!targetUser.referredBy || targetUser.referredBy === 'null') && referralCode) {
+        const cleanRef = String(referralCode).trim().toUpperCase();
+        let recruiterEmail = findRecruiterEmail(users, cleanRef);
+        if (recruiterEmail && users[recruiterEmail] && recruiterEmail.toLowerCase() !== targetUser.email.toLowerCase()) {
+          targetUser.referredBy = cleanRef;
+          if (!targetUser.playerState) targetUser.playerState = {};
+          if (!targetUser.playerState.referrals) targetUser.playerState.referrals = {};
+          targetUser.playerState.referrals.referredBy = cleanRef;
+
+          const recruiter = users[recruiterEmail];
+          if (!recruiter.playerState) recruiter.playerState = {};
+          if (!recruiter.playerState.referrals) {
+            recruiter.playerState.referrals = {
+              referralCode: recruiter.userReferralCode || cleanRef,
+              recruits: [],
+              totalRecruits: 0,
+              networkTotalCitizens: 0,
+              unclaimedCommissionGreen: 0,
+              lifetimeCommissionGreen: 0,
+              claimedMilestones: [],
+            };
+          }
+          if (!Array.isArray(recruiter.playerState.referrals.recruits)) recruiter.playerState.referrals.recruits = [];
+          const exists = recruiter.playerState.referrals.recruits.some((r: any) => r.id === targetUser.userId || (r.email && r.email.toLowerCase() === targetUser.email.toLowerCase()));
+          if (!exists) {
+            recruiter.playerState.referrals.recruits.unshift({
+              id: targetUser.userId,
+              name: targetUser.name,
+              email: targetUser.email,
+              joinedAt: Date.now(),
+              level: targetUser.level || 1,
+              tier: 1,
+              dailyGameplayEarned: 100,
+              totalGeneratedGreen: 50,
+              lastActive: 'Active today (Telegram SSO)'
+            });
+            recruiter.playerState.referrals.totalRecruits = recruiter.playerState.referrals.recruits.length;
+            recruiter.playerState.referrals.networkTotalCitizens = recruiter.playerState.referrals.recruits.length;
+            recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
+            recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
+          }
+          users[recruiterEmail] = recruiter;
+        }
+      }
       users[targetUser.email] = targetUser;
       saveUsers(users);
+      pushUsersToMaster(users).catch(() => {});
       return buildAuthResponse(targetUser, 'Welcome back, Operative!');
     }
 

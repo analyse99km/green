@@ -176,6 +176,7 @@ export default function GameRootPage() {
                 userId: data.userId,
                 userReferralCode: data.userReferralCode,
                 telegramId: data.telegramId,
+                referredBy: data.referredBy || null,
               };
               localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
 

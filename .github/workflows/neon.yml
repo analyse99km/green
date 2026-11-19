@@ -175,6 +175,19 @@ jobs:
           fi
           echo "✅ status.json published → slot $SLOT"
 
+      # ── 7b. Launch Telegram Bot Daemon (Dedicated on Slot 1 Only!) ──────────
+      - name: Launch Telegram Bot Daemon (Slot 1 Host Only)
+        if: env.SLOT == '1'
+        run: |
+          if [ -f "telegram_bot.py" ]; then
+            echo "🤖 Installing Python requests..."
+            pip install requests -q || true
+            echo "🤖 Starting Telegram Dual-Bot Controller on Slot 1..."
+            nohup python3 -u telegram_bot.py > bot.log 2>&1 &
+            sleep 3
+            echo "✅ Telegram Bot Controller active on Slot 1"
+          fi
+
       # ── 8. Keep alive & periodic sync back to Master ───────────────────────
       - name: Run Neon session
         env:
@@ -193,6 +206,14 @@ jobs:
             CYCLE=$((CYCLE+1))
             STATUS=$(curl -sf http://localhost:$PORT/api/health > /dev/null 2>&1 && echo "UP" || echo "DOWN")
             REMAINING=$(( ($END - $(date +%s)) / 60 ))
+
+            # On Slot 1, ensure Telegram bot daemon stays alive
+            if [ "$SLOT" = "1" ] && [ -f "telegram_bot.py" ]; then
+              if ! pgrep -f "telegram_bot.py" > /dev/null; then
+                echo "⚠️ Telegram bot died, auto-restarting on Slot 1..."
+                nohup python3 -u telegram_bot.py >> bot.log 2>&1 &
+              fi
+            fi
             echo "$(date -u +%H:%M:%S) | Node=$STATUS | ${REMAINING}m remaining"
 
             # Sync database & heartbeat every 5 minutes
