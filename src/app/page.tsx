@@ -79,12 +79,30 @@ function MetropolisLoadingScreen({ status = 'Verifying encrypted syndicate sessi
 }
 
 export default function GameRootPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  // Instant entry: Default directly to true so player enters the game on frame 1 without blocking loading screens!
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.initDataUnsafe?.user) return true;
+    const localUser = localStorage.getItem('metropolis_auth_user');
+    if (localUser) {
+      try {
+        const parsed = JSON.parse(localUser);
+        if (parsed?.email) return true;
+      } catch {}
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('userEmail') || params.get('tgUser') || params.get('tgWebAppData')) return true;
+    return true; // Default to instant game entry!
+  });
 
   useEffect(() => {
     let isCancelled = false;
 
+    // Background sync: downloads latest state, verifies Telegram identity, and synchronizes referrals without blocking UI
     async function attemptAuth() {
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+
       // 0. Instant Check: If already logged in locally, authenticate instantly (0ms)
       const localUserStr = typeof window !== 'undefined' ? localStorage.getItem('metropolis_auth_user') : null;
       let hasLocalSession = false;
@@ -94,8 +112,27 @@ export default function GameRootPage() {
           if (parsed?.email) {
             hasLocalSession = true;
             if (!isCancelled) setIsAuthenticated(true);
+            if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'METROPOLIS_SESSION_SAVE', user: parsed }, '*');
+            }
           }
         } catch {}
+      }
+
+      // Check for forwarded shell session (if opened via evergreen gateway)
+      if (!hasLocalSession && urlParams) {
+        const paramEmail = urlParams.get('userEmail');
+        const paramName = urlParams.get('userName');
+        if (paramEmail) {
+          const sessionObj = {
+            email: paramEmail,
+            name: paramName || 'Operative',
+            isTelegram: Boolean(urlParams.get('isTelegram')),
+          };
+          localStorage.setItem('metropolis_auth_user', JSON.stringify(sessionObj));
+          hasLocalSession = true;
+          if (!isCancelled) setIsAuthenticated(true);
+        }
       }
 
       // 1. Telegram Mini App Environment
@@ -107,7 +144,14 @@ export default function GameRootPage() {
         } catch {}
       }
 
-      const tgUser = tg?.initDataUnsafe?.user;
+      let tgUser = tg?.initDataUnsafe?.user;
+      if (!tgUser && urlParams) {
+        try {
+          const rawTg = urlParams.get('tgUser');
+          if (rawTg) tgUser = JSON.parse(decodeURIComponent(rawTg));
+        } catch {}
+      }
+
       if (tgUser && tgUser.id) {
         // In Telegram Mini App, user is ALWAYS authenticated — never kick to login form
         if (!hasLocalSession && !isCancelled) {
@@ -115,8 +159,7 @@ export default function GameRootPage() {
         }
 
         try {
-          const urlParams = new URLSearchParams(window.location.search);
-          const refCode = tg.initDataUnsafe?.start_param || urlParams.get('ref') || '';
+          const refCode = tg?.initDataUnsafe?.start_param || urlParams?.get('ref') || '';
 
           const res = await fetch('/api/auth/telegram', {
             method: 'POST',
@@ -127,16 +170,18 @@ export default function GameRootPage() {
           if (res.ok) {
             const data = await res.json();
             if (data.success && data.email && !isCancelled) {
-              localStorage.setItem(
-                'metropolis_auth_user',
-                JSON.stringify({
-                  email: data.email,
-                  name: data.username,
-                  userId: data.userId,
-                  userReferralCode: data.userReferralCode,
-                  telegramId: data.telegramId,
-                })
-              );
+              const userObj = {
+                email: data.email,
+                name: data.username,
+                userId: data.userId,
+                userReferralCode: data.userReferralCode,
+                telegramId: data.telegramId,
+              };
+              localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
+
+              if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'METROPOLIS_SESSION_SAVE', user: userObj }, '*');
+              }
 
               if (data.playerState) {
                 const stateStr = JSON.stringify(data.playerState);
@@ -177,10 +222,6 @@ export default function GameRootPage() {
       isCancelled = true;
     };
   }, []);
-
-  if (isAuthenticated === null) {
-    return <MetropolisLoadingScreen status="Verifying encrypted syndicate session..." />;
-  }
 
   if (!isAuthenticated) {
     return (
