@@ -40,7 +40,11 @@ interface FloatingText {
   color: string;
 }
 
-export default function DreamTapView() {
+interface DreamTapViewProps {
+  onNavigateToCity?: () => void;
+}
+
+export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {}) {
   const {
     player,
     tapDreamEnergy,
@@ -186,6 +190,43 @@ export default function DreamTapView() {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-3">
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* LUCID TAP TOP HEADER: Sparks Counter, Coin, and Direct Home Button  */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-r from-neutral-900 via-emerald-950/40 to-neutral-900 border border-emerald-500/30 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-xl shadow-inner animate-pulse">
+            🌿
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono font-black text-sm uppercase text-white tracking-wider">
+                LUCID DREAM MINTING CORE
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-mono">
+                Tap Coin
+              </span>
+            </div>
+            <div className="text-[11px] font-mono text-neutral-400">
+              Operative: <strong className="text-emerald-300">{player.name}</strong> &bull; Level {player.level}
+            </div>
+          </div>
+        </div>
+
+        {onNavigateToCity && (
+          <button
+            onClick={() => {
+              SoundEngine.playTick(player.soundEnabled);
+              onNavigateToCity();
+            }}
+            className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-black text-xs font-mono shadow-lg shadow-emerald-900/50 transition-all cursor-pointer active:scale-95 flex items-center gap-2 shrink-0"
+          >
+            <span>🏙️ Enter Metropolis (Home)</span>
+            <span>→</span>
+          </button>
+        )}
+      </div>
+
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* TOP NAVIGATION PILLS                                                */}
       {/* ─────────────────────────────────────────────────────────────────── */}

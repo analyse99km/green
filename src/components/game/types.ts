@@ -318,6 +318,7 @@ export interface ReferralState {
 export interface PlayerState {
   id: string;
   name: string;
+  hasCustomId?: boolean;
   xid: string;
   role: PlayerRole;
   rank: string;

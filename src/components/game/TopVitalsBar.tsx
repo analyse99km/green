@@ -18,12 +18,14 @@ interface TopVitalsBarProps {
   onOpenStreak?: () => void;
   onOpenDreamTap?: () => void;
   onOpenForge?: () => void;
+  onOpenEditId?: () => void;
 }
 
 export default function TopVitalsBar({
   onOpenStreak,
   onOpenDreamTap,
   onOpenForge,
+  onOpenEditId,
 }: TopVitalsBarProps) {
   const { player, claimDailyStreak } = useGame();
   const [streakClaimedMsg, setStreakClaimedMsg] = useState<string | null>(null);
@@ -63,6 +65,15 @@ export default function TopVitalsBar({
               <span className="text-emerald-400">👤</span>
               <span className="font-bold text-xs text-white max-w-[120px] sm:max-w-[180px] truncate">{player.name}</span>
               <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">[{player.xid}]</span>
+              {onOpenEditId && (
+                <button
+                  onClick={onOpenEditId}
+                  className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-emerald-300 font-mono transition cursor-pointer"
+                  title="Edit Operative Codename / ID"
+                >
+                  ✏️ Edit
+                </button>
+              )}
             </div>
 
             {/* Level Badge with mini XP bar */}
