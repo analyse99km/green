@@ -440,9 +440,12 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
           </div>
 
           {/* CENTER: THE BIG CIRCULAR GLOWING ARENA (DIRECT PLAY - ENLARGED COIN) */}
-          <div className="relative flex items-center justify-center my-2 sm:my-4 select-none">
+          <div className="relative flex items-center justify-center my-3 sm:my-6 select-none">
             {/* Ambient Multi-Ring Glow */}
-            <div className="w-60 h-60 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr from-emerald-600/30 via-teal-500/25 to-cyan-500/30 blur-2xl absolute pointer-events-none animate-pulse" />
+            <div className="w-72 h-72 sm:w-96 sm:h-96 md:w-[420px] md:h-[420px] rounded-full bg-gradient-to-tr from-emerald-600/35 via-teal-500/30 to-cyan-400/30 blur-3xl absolute pointer-events-none animate-pulse" />
+
+            {/* Glowing Decorative Outer Orbital Ring */}
+            <div className="w-68 h-68 sm:w-88 sm:h-88 md:w-[370px] md:h-[370px] rounded-full border-2 border-dashed border-emerald-500/25 absolute pointer-events-none animate-spin" style={{ animationDuration: '25s' }} />
 
             <button
               onClick={handleTap}
@@ -450,19 +453,22 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
               onTouchEnd={() => setIsPressing(false)}
               onMouseDown={() => setIsPressing(true)}
               onMouseUp={() => setIsPressing(false)}
-              className={`relative z-10 w-48 h-48 sm:w-64 sm:h-64 rounded-full p-2.5 bg-gradient-to-b from-emerald-400 via-teal-600 to-emerald-950 shadow-2xl transition-all duration-100 flex items-center justify-center cursor-pointer outline-none ${
-                isPressing ? 'scale-95 shadow-inner' : 'hover:scale-102 hover:shadow-emerald-500/40'
+              className={`relative z-10 w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full p-3 sm:p-4 bg-gradient-to-b from-emerald-300 via-teal-500 to-emerald-950 shadow-[0_0_50px_rgba(16,185,129,0.35)] transition-all duration-75 flex items-center justify-center cursor-pointer outline-none ring-4 sm:ring-8 ring-emerald-500/20 active:ring-emerald-400/50 ${
+                isPressing ? 'scale-92 shadow-inner brightness-110' : 'hover:scale-103 hover:shadow-emerald-500/50'
               }`}
             >
-              {/* Inner Circle Disc */}
-              <div className="w-full h-full rounded-full bg-gradient-to-b from-neutral-900 to-black border-4 border-emerald-400/40 flex flex-col items-center justify-center relative overflow-hidden">
-                <span className="text-6xl sm:text-8xl filter drop-shadow-[0_0_20px_rgba(52,211,153,0.7)] transform transition-transform duration-100 select-none">
+              {/* Inner 3D Coin Disc */}
+              <div className="w-full h-full rounded-full bg-gradient-to-b from-neutral-900 via-neutral-950 to-black border-4 sm:border-[6px] border-emerald-400/50 flex flex-col items-center justify-center relative overflow-hidden shadow-2xl">
+                <span className="text-7xl sm:text-9xl md:text-[115px] filter drop-shadow-[0_0_30px_rgba(52,211,153,0.85)] transform transition-transform duration-75 select-none leading-none">
                   {currentPlant.icon}
                 </span>
 
-                <div className="absolute bottom-2.5 sm:bottom-4 text-center">
-                  <div className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-400">
+                <div className="absolute bottom-3.5 sm:bottom-6 text-center">
+                  <div className="text-[11px] sm:text-xs font-black uppercase tracking-[0.25em] text-emerald-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]">
                     TAP TO MINT
+                  </div>
+                  <div className="text-[9px] sm:text-[10px] font-mono text-emerald-400/80 font-bold">
+                    {currentPlant.name} &bull; {currentPlant.bonus}
                   </div>
                 </div>
               </div>
