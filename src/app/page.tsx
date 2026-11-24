@@ -14,80 +14,44 @@ import {
   getCompactCloudSave,
 } from '@/lib/telegramStorage';
 
-function MetropolisLoadingScreen({ status = 'Verifying encrypted syndicate session...' }: { status?: string }) {
-  const [progress, setProgress] = useState(15);
-  const [currentStatus, setCurrentStatus] = useState(status);
-
-  useEffect(() => {
-    const steps = [
-      { at: 35, text: 'Establishing encrypted quantum uplink...' },
-      { at: 65, text: 'Authenticating Telegram syndicate identity...' },
-      { at: 85, text: 'Synchronizing botanical district networks...' },
-      { at: 98, text: 'Entering Neon Metropolis underworld...' }
-    ];
-
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 98) {
-          clearInterval(interval);
-          return 98;
-        }
-        const next = Math.min(98, prev + Math.floor(Math.random() * 15) + 8);
-        if (currentStep < steps.length && next >= steps[currentStep].at) {
-          setCurrentStatus(steps[currentStep].text);
-          currentStep++;
-        }
-        return next;
-      });
-    }, 180);
-
-    return () => clearInterval(interval);
-  }, []);
-
+function MetropolisLoadingScreen({ status = 'Entering Neon Metropolis...' }: { status?: string }) {
   return (
     <div className="fixed inset-0 z-50 bg-[#030705] flex flex-col items-center justify-center font-sans text-neutral-300 p-6 overflow-hidden select-none">
       {/* Ambient background glow */}
       <div className="absolute w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none animate-pulse" />
 
       {/* Glowing Core Orb */}
-      <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
-        <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 border-t-emerald-400 animate-spin" style={{ animationDuration: '0.9s' }} />
-        <span className="text-4xl animate-bounce filter drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]">🌿</span>
+      <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 border-t-emerald-400 animate-spin" style={{ animationDuration: '0.8s' }} />
+        <span className="text-3xl animate-bounce filter drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]">🌿</span>
       </div>
 
       {/* Branding */}
       <div className="flex items-center gap-2 mb-1">
-        <span className="font-mono font-black text-xl uppercase tracking-[0.25em] text-white drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]">
+        <span className="font-mono font-black text-lg uppercase tracking-[0.25em] text-white drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]">
           NEON METROPOLIS
         </span>
       </div>
-      <div className="text-[10px] font-mono tracking-[0.3em] uppercase text-emerald-400/80 mb-6 font-bold">
+      <div className="text-[10px] font-mono tracking-[0.3em] uppercase text-emerald-400/80 mb-4 font-bold">
         Underworld RPG Mesh
       </div>
 
-      {/* Progress Bar Container */}
-      <div className="w-full max-w-[280px] bg-neutral-900/80 border border-emerald-500/30 rounded-xl p-1 mb-3.5 shadow-2xl backdrop-blur-sm">
-        <div
-          className="h-2 rounded-lg bg-gradient-to-r from-emerald-600 via-emerald-400 to-teal-300 transition-all duration-200 ease-out shadow-[0_0_12px_rgba(16,185,129,0.8)]"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
       {/* Terminal Readout */}
-      <div className="text-[11px] font-mono text-emerald-300 tracking-wide min-h-[20px] text-center">
-        &gt; {currentStatus}
+      <div className="text-[11px] font-mono text-emerald-300 tracking-wide min-h-[20px] text-center animate-pulse">
+        &gt; {status}
       </div>
 
-      <div className="mt-6 text-[9px] font-mono tracking-widest text-emerald-900 uppercase">
-        ⚡ Cluster Protocol v2.3 | Multi-Node Mesh
+      <div className="mt-4 text-[9px] font-mono tracking-widest text-emerald-900 uppercase">
+        ⚡ Cluster Protocol v2.3 | Instant Load
       </div>
     </div>
   );
 }
 
 export default function GameRootPage() {
-  // Instant entry: In Telegram or with local state, default directly to true so player never sees a login form!
+  // If user already logged in previously, localStorage has their session -> load immediately without login form!
+  // If inside Telegram Mini App, always authenticated via Telegram identity!
+  // If new unauthenticated web visitor, show the Operative Registration / Login portal!
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     if (isTelegramEnv()) return true; // Telegram players are ALWAYS authenticated!
@@ -100,7 +64,7 @@ export default function GameRootPage() {
     }
     const params = new URLSearchParams(window.location.search);
     if (params.get('userEmail') || params.get('tgUser') || params.get('tgWebAppData')) return true;
-    return true; // Default to instant game entry!
+    return false; // Show registration & login portal for unauthenticated web visitors!
   });
 
   useEffect(() => {
@@ -263,30 +227,25 @@ export default function GameRootPage() {
         return;
       }
 
+      // Check if browser has an existing server session cookie
       try {
         const res = await fetch('/api/auth/email');
         const data = await res.json();
         if (data.authenticated && data.user && !isCancelled) {
+          const userObj = {
+            email: data.user.email,
+            name: data.user.name,
+            userId: data.user.userId,
+            loginTime: Date.now(),
+          };
+          localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
           setIsAuthenticated(true);
         } else if (!isCancelled) {
-          // Zero-barrier instant guest operative session: web players never see a login form!
-          const guestOperative = {
-            email: `operative_${Math.floor(100000 + Math.random() * 900000)}@metropolis.neon`,
-            name: `Operative #${Math.floor(1000 + Math.random() * 9000)}`,
-            isTelegram: false,
-          };
-          localStorage.setItem('metropolis_auth_user', JSON.stringify(guestOperative));
-          setIsAuthenticated(true);
+          setIsAuthenticated(false);
         }
       } catch {
         if (!isCancelled) {
-          const guestOperative = {
-            email: `operative_${Math.floor(100000 + Math.random() * 900000)}@metropolis.neon`,
-            name: `Operative #${Math.floor(1000 + Math.random() * 9000)}`,
-            isTelegram: false,
-          };
-          localStorage.setItem('metropolis_auth_user', JSON.stringify(guestOperative));
-          setIsAuthenticated(true);
+          setIsAuthenticated(false);
         }
       }
     }

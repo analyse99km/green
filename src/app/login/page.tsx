@@ -16,6 +16,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { deriveUserSigningKey } from '@/components/game/gameCrypto';
+import { isTelegramEnv, parseTelegramInitData, tgCloudSet } from '@/lib/telegramStorage';
 
 interface OperativeSession {
   authenticated: boolean;
@@ -86,6 +87,75 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
       setLoading(false);
     }
   }
+
+  const handleTelegramLogin = async () => {
+    if (isTelegramEnv()) {
+      const { user: tgUser, start_param: refCode } = parseTelegramInitData();
+      if (tgUser && tgUser.id) {
+        setAuthMsg({ text: `Authenticating Telegram Operative @${tgUser.username || tgUser.first_name}...`, isError: false });
+        try {
+          const res = await fetch('/api/auth/telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user: tgUser, referralCode: refCode }),
+          });
+          const data = await res.json();
+          if (data.success && data.email) {
+            const userObj = {
+              email: data.email,
+              name: data.username || tgUser.first_name || 'Operative',
+              userId: data.userId,
+              userReferralCode: data.userReferralCode,
+              telegramId: data.telegramId,
+              loginTime: Date.now(),
+            };
+            localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
+            tgCloudSet('metropolis_auth_user', JSON.stringify(userObj)).catch(() => {});
+            if (onSuccess) onSuccess();
+            else window.location.href = '/';
+            return;
+          }
+        } catch {}
+      }
+    }
+
+    const handle = prompt('Enter your Telegram @username or Syndicate Call-sign:');
+    if (handle) {
+      const cleanHandle = handle.replace('@', '').trim();
+      if (!cleanHandle) return;
+      const mockEmail = `tg_${cleanHandle.toLowerCase()}@telegram.neon`;
+      const userObj = {
+        email: mockEmail,
+        name: cleanHandle,
+        userId: `tg_${Date.now()}`,
+        isTelegram: true,
+        loginTime: Date.now(),
+      };
+      localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
+      setAuthMsg({ text: `✓ Verified as Operative ${cleanHandle}! Entering Metropolis...`, isError: false });
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+        else window.location.href = '/';
+      }, 500);
+    }
+  };
+
+  const handleGuestLogin = () => {
+    const randId = Math.floor(1000 + Math.random() * 9000);
+    const guestUser = {
+      email: `guest_${randId}@metropolis.neon`,
+      name: `Operative #${randId}`,
+      userId: `guest_${randId}`,
+      isGuest: true,
+      loginTime: Date.now(),
+    };
+    localStorage.setItem('metropolis_auth_user', JSON.stringify(guestUser));
+    setAuthMsg({ text: `✓ Quick Guest session initialized as Operative #${randId}!`, isError: false });
+    setTimeout(() => {
+      if (onSuccess) onSuccess();
+      else window.location.href = '/';
+    }, 400);
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -446,7 +516,23 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             )}
 
             {/* Main Auth Form Card */}
-            <div className="p-6 sm:p-7 rounded-3xl bg-neutral-900/95 border border-neutral-800 shadow-2xl space-y-5">
+            <div className="p-6 sm:p-7 rounded-3xl bg-neutral-900/95 border border-neutral-800 shadow-2xl space-y-4">
+              {/* Telegram 1-Click Fast Access */}
+              <button
+                type="button"
+                onClick={handleTelegramLogin}
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-blue-500 text-white font-mono font-bold text-xs shadow-lg shadow-blue-950/60 flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-98"
+              >
+                <span className="text-base">✈️</span>
+                <span>Login with Telegram (Instant 1-Click)</span>
+              </button>
+
+              <div className="flex items-center gap-3 my-1">
+                <div className="flex-1 h-px bg-neutral-800" />
+                <span className="text-[10px] font-mono text-neutral-500 uppercase">Or with Operative ID</span>
+                <div className="flex-1 h-px bg-neutral-800" />
+              </div>
+
               {/* Tab Selector: Sign In vs Register */}
               <div className="grid grid-cols-2 p-1 bg-neutral-950 rounded-xl border border-neutral-800 text-xs font-mono">
                 <button
@@ -595,6 +681,17 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
                   <span>{isRegister ? 'Create Account & Enter Metropolis' : 'Sign In to Metropolis'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
+
+                {/* Instant Guest Play Option */}
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={handleGuestLogin}
+                    className="text-[11px] font-mono text-neutral-400 hover:text-emerald-400 underline decoration-dashed transition cursor-pointer"
+                  >
+                    🎮 Skip for now: Enter with Instant Guest Pass
+                  </button>
+                </div>
               </form>
             </div>
 

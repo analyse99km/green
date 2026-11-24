@@ -87,10 +87,12 @@ export default function TornSidebar({ currentView, onSelectView, onOpenPhone }: 
       {/* Player Identity Header */}
       <div className="p-3.5 bg-neutral-950 border-b border-neutral-800">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-white text-sm tracking-tight flex items-center gap-1.5">
+          <span className="font-bold text-white text-sm tracking-tight flex items-center gap-1.5 truncate">
             <span className="text-emerald-400">👤</span> {player.name}
           </span>
-          <span className="font-mono text-[11px] text-neutral-400">[{player.xid}]</span>
+          <span className="font-mono text-[10px] text-amber-400 font-bold bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-500/30">
+            {player.rank || 'Recruit'}
+          </span>
         </div>
 
         <div className="mt-1 text-[11px] text-neutral-400 flex items-center justify-between">

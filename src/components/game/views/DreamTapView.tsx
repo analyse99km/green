@@ -216,8 +216,15 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                 Tap Coin
               </span>
             </div>
-            <div className="text-[11px] font-mono text-neutral-400">
-              Operative: <strong className="text-emerald-300">{player.name}</strong> &bull; Level {player.level}
+            <div className="text-[11px] font-mono text-neutral-400 flex items-center gap-1.5 flex-wrap">
+              <span>Operative:</span>
+              <strong className="text-emerald-300 font-bold">{player.name}</strong>
+              <span>&bull;</span>
+              <span className="text-amber-300 font-bold px-1.5 py-0.2 bg-amber-950/60 rounded border border-amber-500/30 text-[10px]">
+                {player.rank || 'Greenhorn Recruit'}
+              </span>
+              <span>&bull;</span>
+              <span className="text-cyan-400 font-bold">Level {player.level}</span>
             </div>
           </div>
         </div>

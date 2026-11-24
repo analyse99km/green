@@ -64,6 +64,9 @@ export default function TopVitalsBar({
             <div className="flex items-center gap-1.5 bg-neutral-950 px-2 sm:px-2.5 py-1 rounded-lg border border-neutral-800 text-neutral-200">
               <span className="text-emerald-400">👤</span>
               <span className="font-bold text-xs text-white max-w-[120px] sm:max-w-[180px] truncate">{player.name}</span>
+              <span className="text-amber-400 font-bold text-[10px] bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-500/30">
+                {player.rank || 'Recruit'}
+              </span>
               <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">[{player.xid}]</span>
               {onOpenEditId && (
                 <button
