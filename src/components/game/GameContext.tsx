@@ -218,6 +218,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (authUser?.name) {
           parsed.name = authUser.name;
         }
+        if (!parsed.activeTapperSkinId) {
+          parsed.activeTapperSkinId = 'tree_mint';
+        }
+        if (!parsed.unlockedTapperSkins || parsed.unlockedTapperSkins.length === 0) {
+          parsed.unlockedTapperSkins = ['tree_mint', 'tree_sprout'];
+        }
         if (!parsed.referrals) {
           parsed.referrals = {
             ...DEFAULT_METROPOLIS_PLAYER.referrals,
@@ -232,6 +238,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           if (parsed.referrals.referralCode && parsed.referrals.referralCode.startsWith('GREEN-')) {
             parsed.referrals.referralCode = parsed.referrals.referralCode.replace('GREEN-', 'NEON-');
           }
+          parsed.referrals.totalRecruits = Math.max(Number(parsed.referrals.totalRecruits || 0), (parsed.referrals.recruits || []).length);
+          parsed.referrals.networkTotalCitizens = Math.max(Number(parsed.referrals.networkTotalCitizens || 0), (parsed.referrals.recruits || []).length);
         }
 
         // Ensure every user has a unique deterministic referral code
@@ -2768,7 +2776,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       skin_toxic_cyber: 1.5,
       skin_void_dark: 2.0,
     };
-    const plantBonus = plantMultipliers[player.activeTapperSkinId || 'tree_sprout'] || 1.0;
+    const plantBonus = plantMultipliers[player.activeTapperSkinId || 'tree_mint'] || 1.0;
 
     const comboMultiplier = 1 + Math.floor(newCombo / 5);
     const sparksEarned = Math.round(1 * comboMultiplier * plantBonus);
@@ -2899,7 +2907,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         dreamPoints: req.sparks ? prev.dreamPoints - req.sparks : prev.dreamPoints,
         money: req.green ? prev.money - req.green : prev.money,
-        unlockedTapperSkins: [...(prev.unlockedTapperSkins || ['tree_sprout']), skinId],
+        unlockedTapperSkins: [...(prev.unlockedTapperSkins || ['tree_mint']), skinId],
         activeTapperSkinId: skinId,
         missions: msnRes.updated ? msnRes.updatedMissions : prev.missions,
         hasUnsavedActions: true,
@@ -2912,7 +2920,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const equipTapperSkin = (skinId: string) => {
-    const unlocked = player.unlockedTapperSkins || ['tree_sprout', 'skin_cyan_neon'];
+    const unlocked = player.unlockedTapperSkins || ['tree_mint', 'tree_sprout', 'skin_cyan_neon'];
     if (!unlocked.includes(skinId)) return { success: false, message: 'Plant stage not unlocked yet.' };
 
     setPlayer((prev) => ({

@@ -76,6 +76,10 @@ export default function ReferralView() {
 
   const effectiveReferredBy = player.referrals?.referredBy || authUserReferredBy || undefined;
 
+  const recruitsList = Array.isArray(player.referrals?.recruits) ? player.referrals.recruits : [];
+  const effectiveTotalRecruits = Math.max(Number(player.referrals?.totalRecruits || 0), recruitsList.length);
+  const effectiveTotalNetwork = Math.max(Number(player.referrals?.networkTotalCitizens || 0), recruitsList.length);
+
   const refs = {
     ...(player.referrals || {
       referralCode: `NEON-${player.xid || '10001'}`,
@@ -93,6 +97,9 @@ export default function ReferralView() {
       claimedMilestones: [],
     }),
     referredBy: effectiveReferredBy,
+    recruits: recruitsList,
+    totalRecruits: effectiveTotalRecruits,
+    networkTotalCitizens: effectiveTotalNetwork,
   };
 
   const effectiveCode = (refs.referralCode || `NEON-${player.xid || '10001'}`).replace(/^GREEN-/, 'NEON-');

@@ -112,8 +112,8 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
   );
 
   const cards = player.dreamCards || {};
-  const unlockedPlants = player.unlockedTapperSkins || ['tree_sprout'];
-  const activePlant = player.activeTapperSkinId || 'tree_sprout';
+  const unlockedPlants = player.unlockedTapperSkins || ['tree_mint', 'tree_sprout'];
+  const activePlant = player.activeTapperSkinId || 'tree_mint';
 
   // Calculate dynamic auto sparks per second
   const autoSparksPerSec = (catalog.cards || []).reduce((acc, card) => {
@@ -212,8 +212,9 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
               <span className="font-mono font-black text-sm uppercase text-white tracking-wider">
                 LUCID DREAM MINTING CORE
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-mono">
-                Tap Coin
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-mono flex items-center gap-1">
+                <span>🌿</span>
+                <span>Green Mint Core</span>
               </span>
             </div>
             <div className="text-[11px] font-mono text-neutral-400 flex items-center gap-1.5 flex-wrap">

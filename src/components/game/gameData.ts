@@ -1227,8 +1227,8 @@ export const DEFAULT_METROPOLIS_PLAYER: PlayerState = {
     card_yggdrasil_uplink: 0,
     card_quantum_chloroplast: 0,
   },
-  activeTapperSkinId: 'tree_sprout',
-  unlockedTapperSkins: ['tree_sprout'],
+  activeTapperSkinId: 'tree_mint',
+  unlockedTapperSkins: ['tree_mint', 'tree_sprout'],
   bodyAugmentations: [],
   settledReceiptIds: [],
 

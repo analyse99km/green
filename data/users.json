@@ -595,7 +595,7 @@
           "foodRestore": 30,
           "energyRestore": 10,
           "happyRestore": 10,
-          "icon": "🥪",
+          "icon": "\ud83e\udd6a",
           "quantity": 1
         }
       ],
@@ -1319,14 +1319,27 @@
       "canClaimDailyStreak": false,
       "referrals": {
         "referralCode": "NEON-E7CC880D",
-        "totalRecruits": 0,
-        "unclaimedCommissionGreen": 0,
-        "lifetimeCommissionGreen": 0,
-        "recruits": [],
+        "totalRecruits": 1,
+        "unclaimedCommissionGreen": 100,
+        "lifetimeCommissionGreen": 100,
+        "recruits": [
+          {
+            "id": "usr_71f63e2038a30959",
+            "name": "Dhruv11",
+            "email": "dhruv19240@gmail.com",
+            "joinedAt": 1794998780043,
+            "level": 1,
+            "tier": 1,
+            "dailyGameplayEarned": 150,
+            "totalGeneratedGreen": 50,
+            "lastActive": "Active Operative"
+          }
+        ],
         "claimedMilestones": [],
         "referredBy": "NEON-44861F74",
         "hasClaimedWelcomeBonus": false,
-        "lastDailyStipendClaimTimestamp": 1794997190833
+        "lastDailyStipendClaimTimestamp": 1794997190833,
+        "networkTotalCitizens": 1
       },
       "arsonStats": {
         "breaches": 1,

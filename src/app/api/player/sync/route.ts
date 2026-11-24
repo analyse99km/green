@@ -58,6 +58,64 @@ function matchesReferral(referredBy: string, user: any, userEmail: string): bool
   );
 }
 
+function reconcileAllReferrals(users: Record<string, any>): boolean {
+  let modified = false;
+  for (const [recruiterKey, recruiter] of Object.entries(users)) {
+    if (!recruiter.playerState) recruiter.playerState = {};
+    if (!recruiter.playerState.referrals) {
+      recruiter.playerState.referrals = {
+        referralCode: recruiter.userReferralCode || `NEON-${Date.now().toString(36).toUpperCase()}`,
+        recruits: [],
+        totalRecruits: 0,
+        networkTotalCitizens: 0,
+        unclaimedCommissionGreen: 0,
+        lifetimeCommissionGreen: 0,
+        claimedMilestones: [],
+      };
+    }
+    if (!Array.isArray(recruiter.playerState.referrals.recruits)) {
+      recruiter.playerState.referrals.recruits = [];
+    }
+
+    const recruits = recruiter.playerState.referrals.recruits;
+    for (const [candidateKey, candidate] of Object.entries(users)) {
+      if (candidateKey.toLowerCase() === recruiterKey.toLowerCase()) continue;
+      const ref = candidate.referredBy || candidate.playerState?.referrals?.referredBy;
+      if (ref && matchesReferral(ref, recruiter, recruiterKey)) {
+        const alreadyIn = recruits.some(
+          (r: any) =>
+            r.id === candidate.userId ||
+            r.id === candidate.playerState?.id ||
+            (r.email && candidate.email && r.email.toLowerCase() === candidate.email.toLowerCase()) ||
+            (candidate.telegramId && String(r.telegramId) === String(candidate.telegramId))
+        );
+        if (!alreadyIn) {
+          recruits.unshift({
+            id: candidate.userId || candidateKey,
+            name: candidate.name || candidate.playerState?.name || candidateKey.split('@')[0],
+            email: candidate.email || candidateKey,
+            joinedAt: candidate.createdAt || Date.now(),
+            level: candidate.level || candidate.playerState?.level || 1,
+            tier: 1,
+            dailyGameplayEarned: 150,
+            totalGeneratedGreen: 50,
+            lastActive: 'Active Operative'
+          });
+          recruiter.playerState.referrals.unclaimedCommissionGreen = (recruiter.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
+          recruiter.playerState.referrals.lifetimeCommissionGreen = (recruiter.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
+          modified = true;
+        }
+      }
+    }
+    if (recruiter.playerState.referrals.totalRecruits !== recruits.length || recruiter.playerState.referrals.networkTotalCitizens !== recruits.length) {
+      recruiter.playerState.referrals.totalRecruits = recruits.length;
+      recruiter.playerState.referrals.networkTotalCitizens = recruits.length;
+      modified = true;
+    }
+  }
+  return modified;
+}
+
 // Push updated users to master storage asynchronously (non-blocking)
 async function pushToMaster(users: Record<string, any>) {
   try {
@@ -170,63 +228,30 @@ export async function GET(req: NextRequest) {
       user.playerState.referrals.hasClaimedWelcomeBonus = true;
     }
 
-    // Real-time aggregate referrals
-    const myCode = (user.userReferralCode || user.playerState?.referrals?.referralCode || '').toUpperCase();
-    if (myCode) {
-      if (!user.playerState) user.playerState = {};
-      if (!user.playerState.referrals) {
-        user.playerState.referrals = {
-          referralCode: myCode,
-          referredBy: finalReferredBy,
-          hasClaimedWelcomeBonus: Boolean(finalReferredBy),
-          recruits: [],
-          totalRecruits: 0,
-          networkTotalCitizens: 0,
-          unclaimedCommissionGreen: 0,
-          lifetimeCommissionGreen: 0,
-          claimedMilestones: [],
-        };
-      }
-      if (!Array.isArray(user.playerState.referrals.recruits)) {
-        user.playerState.referrals.recruits = [];
-      }
-
-      let modified = false;
-      for (const [em, other] of Object.entries(users)) {
-        if (em.toLowerCase() !== userKey.toLowerCase()) {
-          const otherRef = other.referredBy || other.playerState?.referrals?.referredBy;
-          if (otherRef && matchesReferral(otherRef, user, userKey)) {
-            const exists = user.playerState.referrals.recruits.some(
-              (r: any) => r.id === other.userId || r.name === other.name || (r.email && r.email.toLowerCase() === em.toLowerCase())
-            );
-            if (!exists) {
-              user.playerState.referrals.recruits.unshift({
-                id: other.userId,
-                name: other.name || em.split('@')[0],
-                email: em,
-                joinedAt: other.createdAt || Date.now(),
-                level: other.level || other.playerState?.level || 1,
-                tier: 1,
-                dailyGameplayEarned: 150,
-                totalGeneratedGreen: 50,
-                lastActive: 'Active Operative'
-              });
-              user.playerState.referrals.unclaimedCommissionGreen = (user.playerState.referrals.unclaimedCommissionGreen || 0) + 100;
-              user.playerState.referrals.lifetimeCommissionGreen = (user.playerState.referrals.lifetimeCommissionGreen || 0) + 100;
-              modified = true;
-            }
-          }
-        }
-      }
-
-      if (modified) {
-        user.playerState.referrals.totalRecruits = user.playerState.referrals.recruits.length;
-        user.playerState.referrals.networkTotalCitizens = user.playerState.referrals.recruits.length;
-        users[userKey] = user;
-        saveUsers(users);
-        pushToMaster(users).catch(() => {});
-      }
+    // Reconcile and calculate real-time downline network across all cluster users
+    if (reconcileAllReferrals(users)) {
+      saveUsers(users);
+      pushToMaster(users).catch(() => {});
     }
+
+    if (!user.playerState) user.playerState = {};
+    if (!user.playerState.referrals) {
+      user.playerState.referrals = {
+        referralCode: user.userReferralCode || `NEON-${Date.now().toString(36).toUpperCase()}`,
+        referredBy: finalReferredBy,
+        hasClaimedWelcomeBonus: Boolean(finalReferredBy),
+        recruits: [],
+        totalRecruits: 0,
+        networkTotalCitizens: 0,
+        unclaimedCommissionGreen: 0,
+        lifetimeCommissionGreen: 0,
+        claimedMilestones: [],
+      };
+    }
+    const currentRecruitsList = Array.isArray(user.playerState.referrals.recruits) ? user.playerState.referrals.recruits : [];
+    user.playerState.referrals.recruits = currentRecruitsList;
+    user.playerState.referrals.totalRecruits = Math.max(Number(user.playerState.referrals.totalRecruits || 0), currentRecruitsList.length);
+    user.playerState.referrals.networkTotalCitizens = Math.max(Number(user.playerState.referrals.networkTotalCitizens || 0), currentRecruitsList.length);
 
     return NextResponse.json({
       success: true,
@@ -369,6 +394,9 @@ export async function POST(req: NextRequest) {
     user.lastSaveAt = Date.now();
     user.lastLoginAt = Date.now();
     users[cleanEmail] = user;
+
+    // Run network-wide reconciliation across all cluster operatives
+    reconcileAllReferrals(users);
 
     saveUsers(users);
 

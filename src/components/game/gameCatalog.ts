@@ -56,8 +56,8 @@ export interface TreeStageDef {
 }
 
 export const INITIAL_TREE_STAGES: TreeStageDef[] = [
-  { id: 'tree_sprout', name: 'Chlorophyll Sprout', icon: '🌱', bonus: '+1/tap', sparksPerTap: 1, multiplier: 1.0, unlockCostSparks: 0, unlockCostGreen: 0, description: 'Primary seedling organism with natural chlorophyll minting.' },
-  { id: 'tree_mint', name: 'Peppermint Shrub', icon: '🌿', bonus: '+3/tap', sparksPerTap: 3, multiplier: 2.0, unlockCostSparks: 200, unlockCostGreen: 0, description: 'Mint leaf botanical shrub producing cool synthetic energy.' },
+  { id: 'tree_mint', name: 'Green Mint Core', icon: '🌿', bonus: '+1/tap', sparksPerTap: 1, multiplier: 1.0, unlockCostSparks: 0, unlockCostGreen: 0, description: 'Pure green mint botanical organism channeling bioluminescent chlorophyll energy.' },
+  { id: 'tree_sprout', name: 'Chlorophyll Sprout', icon: '🌱', bonus: '+3/tap', sparksPerTap: 3, multiplier: 2.0, unlockCostSparks: 200, unlockCostGreen: 0, description: 'Sprouting bio-synthetic plant expanding minting power.' },
   { id: 'tree_bonsai', name: 'Ancient Zen Bonsai', icon: '🪴', bonus: '+8/tap', sparksPerTap: 8, multiplier: 4.0, unlockCostSparks: 500, unlockCostGreen: 0, description: 'Century-old meditative bonsai channeling calm underworld frequencies.' },
   { id: 'tree_bamboo', name: 'Cybernetic Bamboo', icon: '🎋', bonus: '+20/tap', sparksPerTap: 20, multiplier: 8.0, unlockCostSparks: 1000, unlockCostGreen: 0, description: 'High-tensile bamboo fibers reinforced with carbon nanotubes.' },
   { id: 'tree_oak', name: 'Sacred Banyan Canopy', icon: '🌳', bonus: '+50/tap', sparksPerTap: 50, multiplier: 16.0, unlockCostSparks: 2500, unlockCostGreen: 0, description: 'Colossal banyan roots tapping deep geothermal subterranean power.' },
