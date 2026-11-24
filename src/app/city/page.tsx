@@ -40,19 +40,8 @@ export function TornCityContent() {
   const [isPhoneOpen, setIsPhoneOpen] = useState(false);
   const [isIdModalOpen, setIsIdModalOpen] = useState(false);
 
-  // Auto-prompt Operative ID registration for brand new users without custom ID
-  useEffect(() => {
-    const currentName = player.name || '';
-    const isGenericDefault = !player.hasCustomId && (
-      !currentName ||
-      currentName === 'Operative' ||
-      currentName.startsWith('Operative #') ||
-      currentName.startsWith('tg_operative_')
-    );
-    if (isGenericDefault) {
-      setIsIdModalOpen(true);
-    }
-  }, [player.hasCustomId, player.name]);
+  // Operative ID modal is accessible on demand via Vitals bar (onOpenEditId) or phone
+  // Auto-prompt popup disabled so it never interrupts or overwhelms new players
 
   // Vitals thresholds check
   const isFoodLow = (player.food ?? 100) <= 20;

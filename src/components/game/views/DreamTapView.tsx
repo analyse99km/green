@@ -27,6 +27,8 @@ import {
   Info,
 } from 'lucide-react';
 import ReferralView from './ReferralView';
+import MissionsModal from './MissionsModal';
+import HowToPlayModal from './HowToPlayModal';
 import { SoundEngine } from '../gameAudio';
 import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef, INITIAL_DREAM_MARKET_ITEMS, DreamMarketItemDef, INITIAL_TREE_STAGES, TreeStageDef } from '../gameCatalog';
 import DynamicIcon from '../DynamicIcon';
@@ -47,6 +49,7 @@ interface DreamTapViewProps {
 export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {}) {
   const {
     player,
+    unclaimedMissionsCount,
     tapDreamEnergy,
     exchangeDreamSparks,
     upgradeDreamCard,
@@ -71,6 +74,8 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
   const [floaters, setFloaters] = useState<FloatingText[]>([]);
   const [isPressing, setIsPressing] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
+  const [showMissionsModal, setShowMissionsModal] = useState(false);
+  const [showHowToPlayModal, setShowHowToPlayModal] = useState(false);
   const [dailyWeekTab, setDailyWeekTab] = useState<number>(1);
 
   const todayCombo = getTodayDailyCombo(catalog);
@@ -122,6 +127,14 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
     : INITIAL_TREE_STAGES;
 
   const currentPlant = plantStages.find((p) => p.id === activePlant) || plantStages[0];
+
+  // Active mission tracking (prioritizes claimable missions, then in-progress)
+  const allMissions = player.missions || [];
+  const activeMission =
+    allMissions.find((m) => m.completed && !m.claimed) ||
+    allMissions.find((m) => !m.completed && !m.claimed) ||
+    null;
+  const isMissionClaimable = Boolean(activeMission && activeMission.completed && !activeMission.claimed);
 
   const handleTap = (e: React.MouseEvent<HTMLButtonElement> | React.TouchEvent<HTMLButtonElement>) => {
     if ((player.tapStamina ?? 500) <= 0) {
@@ -209,18 +222,48 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
           </div>
         </div>
 
-        {onNavigateToCity && (
+        <div className="flex items-center gap-2">
           <button
             onClick={() => {
               SoundEngine.playTick(player.soundEnabled);
-              onNavigateToCity();
+              setShowHowToPlayModal(true);
             }}
-            className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-black text-xs font-mono shadow-lg shadow-emerald-900/50 transition-all cursor-pointer active:scale-95 flex items-center gap-2 shrink-0"
+            className="px-3 py-2 rounded-xl bg-neutral-800/90 hover:bg-neutral-700 border border-neutral-700 text-neutral-200 hover:text-white font-mono text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+            title="How to Play Guide"
           >
-            <span>🏙️ Enter Metropolis (Home)</span>
-            <span>→</span>
+            <span className="text-sm">❓</span>
+            <span className="hidden sm:inline">Guide</span>
           </button>
-        )}
+
+          <button
+            onClick={() => {
+              SoundEngine.playTick(player.soundEnabled);
+              setShowMissionsModal(true);
+            }}
+            className="relative px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-teal-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 border border-amber-500/40 text-amber-200 font-mono text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+          >
+            <span className="text-sm">🎯</span>
+            <span>Missions</span>
+            {unclaimedMissionsCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-400 text-black text-[10px] font-black animate-bounce shadow">
+                {unclaimedMissionsCount}
+              </span>
+            )}
+          </button>
+
+          {onNavigateToCity && (
+            <button
+              onClick={() => {
+                SoundEngine.playTick(player.soundEnabled);
+                onNavigateToCity();
+              }}
+              className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-black text-xs font-mono shadow-lg shadow-emerald-900/50 transition-all cursor-pointer active:scale-95 flex items-center gap-2 shrink-0"
+            >
+              <span>🏙️ Metropolis</span>
+              <span>→</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
@@ -377,14 +420,14 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
             </div>
           </div>
 
-          {/* QUICK ACTION ROW (Daily Reward, Daily Combo, Quick Awake) */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-w-lg mx-auto w-full my-1">
+          {/* QUICK ACTION ROW (Daily Reward, Missions, Daily Combo, Guide, Friends) */}
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2 max-w-xl mx-auto w-full my-1">
             <button
               onClick={() => {
                 SoundEngine.playTick(player.soundEnabled);
                 setShowDailyRewardModal(true);
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 group"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 group cursor-pointer"
             >
               <div className="relative">
                 <span className="text-base sm:text-lg">🎁</span>
@@ -392,7 +435,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
                 )}
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Daily Reward</span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Daily</span>
               <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono">
                 {canClaim ? 'CLAIM NOW' : `Day ${currentStreakDay}`}
               </span>
@@ -401,13 +444,44 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
             <button
               onClick={() => {
                 SoundEngine.playTick(player.soundEnabled);
+                setShowMissionsModal(true);
+              }}
+              className="bg-neutral-900 hover:bg-neutral-800 border border-amber-500/40 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 relative group cursor-pointer"
+            >
+              <div className="relative">
+                <span className="text-base sm:text-lg">🎯</span>
+                {unclaimedMissionsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping" />
+                )}
+              </div>
+              <span className="text-[9px] sm:text-[10px] font-bold text-amber-200">Missions</span>
+              <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">
+                {unclaimedMissionsCount > 0 ? `${unclaimedMissionsCount} Ready!` : 'View All'}
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                SoundEngine.playTick(player.soundEnabled);
                 setActiveSubTab('CARDS_STORE');
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer"
             >
               <span className="text-base sm:text-lg">🃏</span>
-              <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Daily Combo</span>
-              <span className="text-[8px] sm:text-[9px] text-amber-300 font-mono">+{formatCompactNumber(todayCombo.rewardSparks)} Sparks</span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Combo</span>
+              <span className="text-[8px] sm:text-[9px] text-amber-300 font-mono">+{formatCompactNumber(todayCombo.rewardSparks)}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                SoundEngine.playTick(player.soundEnabled);
+                setShowHowToPlayModal(true);
+              }}
+              className="bg-neutral-900 hover:bg-neutral-800 border border-cyan-500/40 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer"
+            >
+              <span className="text-base sm:text-lg">❓</span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-cyan-200">Guide</span>
+              <span className="text-[8px] sm:text-[9px] text-cyan-400 font-mono">How to Play</span>
             </button>
 
             <button
@@ -415,25 +489,69 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                 SoundEngine.playTick(player.soundEnabled);
                 setActiveSubTab('REFERRALS');
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1"
+              className="hidden sm:flex bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer"
             >
               <span className="text-base sm:text-lg">👥</span>
               <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Friends</span>
               <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono">+50G Direct</span>
             </button>
-
-            <button
-              onClick={() => {
-                SoundEngine.playTick(player.soundEnabled);
-                setActiveSubTab('MARKET');
-              }}
-              className="hidden sm:flex bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-2 text-center transition flex-col items-center justify-center gap-1"
-            >
-              <span className="text-lg">🛒</span>
-              <span className="text-[10px] font-bold text-neutral-200">Bazaar Store</span>
-              <span className="text-[9px] text-zinc-400 font-mono">P2P Mesh</span>
-            </button>
           </div>
+
+          {/* ACTIVE MISSION GOAL TRACKER (Instant Guidance on what to do next) */}
+          {activeMission && (
+            <div className="max-w-md mx-auto w-full my-1.5 px-1">
+              <button
+                onClick={() => {
+                  SoundEngine.playTick(player.soundEnabled);
+                  setShowMissionsModal(true);
+                }}
+                className={`w-full p-2.5 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left shadow-lg cursor-pointer ${
+                  isMissionClaimable
+                    ? 'bg-gradient-to-r from-amber-950/90 via-emerald-950/80 to-teal-950/90 border-amber-400/80 animate-pulse ring-1 ring-amber-400'
+                    : 'bg-neutral-900/90 hover:bg-neutral-800 border-neutral-700/80 hover:border-emerald-500/50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-neutral-950 border border-neutral-700 flex items-center justify-center text-base shrink-0">
+                    {activeMission.icon || '🎯'}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-neutral-400">
+                        {activeMission.category || 'Story'} Goal:
+                      </span>
+                      {isMissionClaimable ? (
+                        <span className="text-[9px] font-mono font-black px-1.5 py-0.2 bg-amber-400 text-black rounded-full animate-bounce">
+                          CLAIM REWARD!
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-mono text-emerald-400 font-bold">
+                          +{activeMission.rewardCredits} Credits
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs font-bold text-white truncate">
+                      {activeMission.title}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className="text-[11px] font-mono font-bold text-emerald-300">
+                    {Math.min(activeMission.currentCount, activeMission.targetCount)} / {activeMission.targetCount}
+                  </div>
+                  <div className="w-16 bg-neutral-950 h-1.5 rounded-full overflow-hidden border border-neutral-800 mt-1">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${isMissionClaimable ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                      style={{
+                        width: `${Math.min(100, (activeMission.currentCount / activeMission.targetCount) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* CENTER: THE BIG CIRCULAR GLOWING ARENA (DIRECT PLAY - EXTRA LARGE COIN) */}
           <div className="relative flex items-center justify-center my-4 sm:my-8 select-none">
@@ -1040,6 +1158,19 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
           </div>
         </div>
       )}
+
+      {/* Multi-Tier Missions System Modal */}
+      <MissionsModal
+        isOpen={showMissionsModal}
+        onClose={() => setShowMissionsModal(false)}
+      />
+
+      {/* 5-Step Underworld Quick Guide Modal */}
+      <HowToPlayModal
+        isOpen={showHowToPlayModal}
+        onClose={() => setShowHowToPlayModal(false)}
+        onEnterCity={onNavigateToCity}
+      />
     </div>
   );
 }

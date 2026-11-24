@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   PlayerState,
   PlayerRole,
@@ -61,6 +61,7 @@ import { InsufficientFundsData } from './InsufficientFundsModal';
 import { P2PPurchaseReceipt } from './types';
 import { loadCatalogData, saveCatalogData, syncCatalogFromServer, DynamicCatalogData, BotanicalCardDef, DEFAULT_REFERRAL_REWARDS } from './gameCatalog';
 import { isTelegramEnv, tgCloudGet, tgCloudSet, getCompactCloudSave } from '@/lib/telegramStorage';
+import { ensureMissionsSynchronized, recordMissionAction } from './gameMissions';
 
 const LOCAL_STORAGE_KEY = 'neon_metropolis_v6_botanical_green';
 
@@ -71,6 +72,8 @@ interface GameContextType {
   logs: GameLog[];
   cashCompliance: ReturnType<typeof checkCashRatio>;
   saveGame: () => Promise<void>;
+  claimMissionReward: (missionId: string) => { success: boolean; message: string; rewardText?: string };
+  unclaimedMissionsCount: number;
   togglePropertyLock: (propertyId: string) => void;
   sleepAtHome: () => { success: boolean; message: string };
   depositToBank: (amount: number) => { success: boolean; message: string };
@@ -248,6 +251,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (!parsed.arsonProgress) {
           parsed.arsonProgress = DEFAULT_METROPOLIS_PLAYER.arsonProgress;
         }
+        const msnSync = ensureMissionsSynchronized(parsed);
+        parsed.missions = msnSync.missions;
+        parsed.lastDailyMissionsDate = msnSync.lastDaily;
+        parsed.lastWeeklyMissionsWeek = msnSync.lastWeekly;
+        parsed.lastMonthlyMissionsMonth = msnSync.lastMonthly;
         setPlayer((prev) => ({ ...prev, ...parsed }));
       } catch {
         // ignore
@@ -258,7 +266,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (cloudSaveRaw) {
           try {
             const parsed = JSON.parse(cloudSaveRaw);
-            setPlayer((prev) => ({ ...prev, ...parsed }));
+            const msnSync = ensureMissionsSynchronized(parsed);
+        parsed.missions = msnSync.missions;
+        parsed.lastDailyMissionsDate = msnSync.lastDaily;
+        parsed.lastWeeklyMissionsWeek = msnSync.lastWeekly;
+        parsed.lastMonthlyMissionsMonth = msnSync.lastMonthly;
+        setPlayer((prev) => ({ ...prev, ...parsed }));
           } catch {}
         }
       }).catch(() => {});
@@ -478,10 +491,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [player.hasUnsavedActions]);
 
-  // Periodic 1-second timer tick for Sleep countdown, Hospital & Jail timers
+  // Periodic 1-second timer tick for Sleep countdown, Hospital & Jail timers (Lag-Free: only updates if active)
   useEffect(() => {
     const timer = setInterval(() => {
       setPlayer((prev) => {
+        // Performance optimization: skip update if not sleeping, not in jail, and not in hospital
+        if (!prev.isSleeping && (prev.jailTimeRemainingSeconds || 0) <= 0 && (prev.hospitalTimeRemainingSeconds || 0) <= 0) {
+          return prev;
+        }
+
         let isSleeping = prev.isSleeping;
         let sleepRemaining = prev.sleepRemainingSeconds;
         let energy = prev.energy;
@@ -1148,22 +1166,26 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     if (roll <= successRate) {
       const reward = Math.floor(Math.random() * (crime.cashRewardMax - crime.cashRewardMin + 1)) + crime.cashRewardMin;
-      setPlayer((prev) => ({
-        ...prev,
-        nerve: prev.nerve - crime.nerveCost,
-        money: prev.money + reward,
-        xp: prev.xp + 35,
-        criminalSkills: {
-          ...prev.criminalSkills,
-          [skillKey]: +(prev.criminalSkills[skillKey] + 0.12).toFixed(2),
-        },
-        criminalRecord: {
-          ...prev.criminalRecord,
-          totalOffenses: prev.criminalRecord.totalOffenses + 1,
-          theft: prev.criminalRecord.theft + 1,
-        },
-        hasUnsavedActions: true,
-      }));
+      setPlayer((prev) => {
+        const msnRes = recordMissionAction(prev.missions, 'CRIME', 1);
+        return {
+          ...prev,
+          nerve: prev.nerve - crime.nerveCost,
+          money: prev.money + reward,
+          xp: prev.xp + 35,
+          criminalSkills: {
+            ...prev.criminalSkills,
+            [skillKey]: +(prev.criminalSkills[skillKey] + 0.12).toFixed(2),
+          },
+          criminalRecord: {
+            ...prev.criminalRecord,
+            totalOffenses: prev.criminalRecord.totalOffenses + 1,
+            theft: prev.criminalRecord.theft + 1,
+          },
+          missions: msnRes.updated ? msnRes.updatedMissions : prev.missions,
+          hasUnsavedActions: true,
+        };
+      });
       addLog({
         type: 'CRIME',
         message: `Crime Success: "${crime.name}" executed! Escaped with 🌿 ${reward.toLocaleString()} GREEN!`,
@@ -1877,16 +1899,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const trainStat = (stat: keyof BattleStats, energyCost: number) => {
     if (player.energy < energyCost) return { success: false, message: `Need ${energyCost} Energy.` };
     const gain = Math.floor(Math.random() * 2) + 1;
-    setPlayer((prev) => ({
-      ...prev,
-      energy: prev.energy - energyCost,
-      battleStats: {
-        ...prev.battleStats,
-        [stat]: prev.battleStats[stat] + gain,
-      },
-      xp: prev.xp + 15,
-      hasUnsavedActions: true,
-    }));
+    setPlayer((prev) => {
+      const msnRes = recordMissionAction(prev.missions, 'TRAIN', 1);
+      return {
+        ...prev,
+        energy: prev.energy - energyCost,
+        battleStats: {
+          ...prev.battleStats,
+          [stat]: prev.battleStats[stat] + gain,
+        },
+        xp: prev.xp + 15,
+        missions: msnRes.updated ? msnRes.updatedMissions : prev.missions,
+        hasUnsavedActions: true,
+      };
+    });
     addLog({
       type: 'TRAIN',
       message: `Trained ${stat.toUpperCase()}! Gained +${gain} stat points.`,
@@ -2067,6 +2093,62 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return { success: true, message: `Acquired ${item.name}!` };
   };
 
+  const claimMissionReward = (missionId: string) => {
+    let claimedMission: Mission | null = null;
+    let rewardSummary = '';
+
+    setPlayer((prev) => {
+      const mIdx = (prev.missions || []).findIndex((m) => m.id === missionId);
+      if (mIdx === -1) return prev;
+      const msn = prev.missions[mIdx];
+      if (!msn.completed || msn.claimed) return prev;
+
+      claimedMission = msn;
+
+      const rewCash = msn.rewardCash || 0;
+      const rewGreen = msn.rewardGreen || 0;
+      const rewSparks = msn.rewardSparks || 0;
+      const rewCredits = msn.rewardCredits || 0;
+
+      const rewardParts: string[] = [];
+      if (rewGreen > 0) rewardParts.push(`+🌿 ${rewGreen} GREEN`);
+      if (rewSparks > 0) rewardParts.push(`+⚡ ${rewSparks} Sparks`);
+      if (rewCash > 0) rewardParts.push(`+$${rewCash.toLocaleString()}`);
+      if (rewCredits > 0) rewardParts.push(`+${rewCredits} Credits`);
+      rewardSummary = rewardParts.join(', ');
+
+      const updatedMissions = [...prev.missions];
+      updatedMissions[mIdx] = { ...msn, claimed: true };
+
+      const updated: PlayerState = {
+        ...prev,
+        money: prev.money + rewCash,
+        greenTokens: (prev.greenTokens || 0) + rewGreen,
+        dreamPoints: (prev.dreamPoints || 0) + rewSparks,
+        missionCredits: (prev.missionCredits || 0) + rewCredits,
+        missions: updatedMissions,
+        hasUnsavedActions: true,
+      };
+
+      saveGame(updated).catch(() => {});
+      return updated;
+    });
+
+    if (claimedMission) {
+      SoundEngine.playVictory(player.soundEnabled);
+      addLog({
+        type: 'CIVILIAN',
+        message: `🎯 MISSION CLAIMED: "${(claimedMission as Mission).title}" completed! Rewarded: ${rewardSummary}!`,
+      });
+      return { success: true, message: `Reward claimed: ${rewardSummary}!`, rewardText: rewardSummary };
+    }
+    return { success: false, message: 'Mission reward already claimed or conditions not met.' };
+  };
+
+  const unclaimedMissionsCount = useMemo(() => {
+    return (player.missions || []).filter((m) => m.completed && !m.claimed).length;
+  }, [player.missions]);
+
   const playCasinoGame = (
     game: 'SLOTS' | 'ROULETTE' | 'HIGH_LOW' | 'KENO' | 'CRAPS' | 'BOOKIE' | 'LOTTERY' | 'BLACKJACK',
     bet: number
@@ -2133,11 +2215,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const mult = multipliers[game] || 2;
     const won = Math.random() < finalWinProb;
 
+    const msnRes = recordMissionAction(player.missions, 'CASINO', 1);
+    const updatedMissions = msnRes.updated ? msnRes.updatedMissions : player.missions;
+
     if (won) {
       const winPayout = Math.round(bet * mult);
       const updated: PlayerState = {
         ...player,
         money: player.money + (winPayout - bet),
+        missions: updatedMissions,
         hasUnsavedActions: true,
       };
       setPlayer(updated);
@@ -2152,6 +2238,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const updated: PlayerState = {
         ...player,
         money: player.money - bet,
+        missions: updatedMissions,
         hasUnsavedActions: true,
       };
       setPlayer(updated);
@@ -2654,14 +2741,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const sparksEarned = Math.round(1 * comboMultiplier * plantBonus);
     const bonusEnergy = newCombo % 10 === 0 ? 1 : 0;
 
-    setPlayer((prev) => ({
-      ...prev,
-      dreamPoints: (prev.dreamPoints || 0) + sparksEarned,
-      totalTaps: (prev.totalTaps || 0) + 1,
-      tapStamina: Math.max(0, (prev.tapStamina ?? 500) - 1),
-      energy: Math.min(prev.maxEnergy, prev.energy + bonusEnergy),
-      hasUnsavedActions: true,
-    }));
+    setPlayer((prev) => {
+      const msnRes = recordMissionAction(prev.missions, 'TAP', 1);
+      return {
+        ...prev,
+        dreamPoints: (prev.dreamPoints || 0) + sparksEarned,
+        totalTaps: (prev.totalTaps || 0) + 1,
+        tapStamina: Math.max(0, (prev.tapStamina ?? 500) - 1),
+        energy: Math.min(prev.maxEnergy, prev.energy + bonusEnergy),
+        missions: msnRes.updated ? msnRes.updatedMissions : prev.missions,
+        hasUnsavedActions: true,
+      };
+    });
 
     SoundEngine.playTick(player.soundEnabled);
 
@@ -2706,15 +2797,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
 
     const nextLvl = currentLvl + 1;
-    setPlayer((prev) => ({
-      ...prev,
-      dreamPoints: prev.dreamPoints - cost,
-      dreamCards: {
-        ...(prev.dreamCards || {}),
-        [cardId]: nextLvl,
-      },
-      hasUnsavedActions: true,
-    }));
+    setPlayer((prev) => {
+      const msnRes = recordMissionAction(prev.missions, 'CARD_UPGRADE', 1);
+      return {
+        ...prev,
+        dreamPoints: prev.dreamPoints - cost,
+        dreamCards: {
+          ...(prev.dreamCards || {}),
+          [cardId]: nextLvl,
+        },
+        missions: msnRes.updated ? msnRes.updatedMissions : prev.missions,
+        hasUnsavedActions: true,
+      };
+    });
 
     SoundEngine.playLoot(player.soundEnabled);
     addLog({
@@ -2757,14 +2852,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return { success: false, message: `Need 🌿 ${req.green} GREEN Coins to evolve this tree.` };
     }
 
-    setPlayer((prev) => ({
-      ...prev,
-      dreamPoints: req.sparks ? prev.dreamPoints - req.sparks : prev.dreamPoints,
-      money: req.green ? prev.money - req.green : prev.money,
-      unlockedTapperSkins: [...(prev.unlockedTapperSkins || ['tree_sprout']), skinId],
-      activeTapperSkinId: skinId,
-      hasUnsavedActions: true,
-    }));
+    setPlayer((prev) => {
+      const msnRes = recordMissionAction(prev.missions, 'TREE_EVOLVE', 1);
+      return {
+        ...prev,
+        dreamPoints: req.sparks ? prev.dreamPoints - req.sparks : prev.dreamPoints,
+        money: req.green ? prev.money - req.green : prev.money,
+        unlockedTapperSkins: [...(prev.unlockedTapperSkins || ['tree_sprout']), skinId],
+        activeTapperSkinId: skinId,
+        missions: msnRes.updated ? msnRes.updatedMissions : prev.missions,
+        hasUnsavedActions: true,
+      };
+    });
 
     SoundEngine.playVictory(player.soundEnabled);
     addLog({ type: 'SHOP', message: `Plant Evolution: Evolved and equipped plant species [${skinId}]!` });
@@ -4298,6 +4397,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         toggleBusinessService,
         collectBusinessRevenue,
         spendMissionCredits,
+        claimMissionReward,
+        unclaimedMissionsCount,
         playCasinoGame,
         deductMoney,
         awardMoney,

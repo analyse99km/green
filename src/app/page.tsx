@@ -269,11 +269,25 @@ export default function GameRootPage() {
         if (data.authenticated && data.user && !isCancelled) {
           setIsAuthenticated(true);
         } else if (!isCancelled) {
-          // If in web browser with no saved session, allow login page
-          setIsAuthenticated(false);
+          // Zero-barrier instant guest operative session: web players never see a login form!
+          const guestOperative = {
+            email: `operative_${Math.floor(100000 + Math.random() * 900000)}@metropolis.neon`,
+            name: `Operative #${Math.floor(1000 + Math.random() * 9000)}`,
+            isTelegram: false,
+          };
+          localStorage.setItem('metropolis_auth_user', JSON.stringify(guestOperative));
+          setIsAuthenticated(true);
         }
       } catch {
-        if (!isCancelled) setIsAuthenticated(false);
+        if (!isCancelled) {
+          const guestOperative = {
+            email: `operative_${Math.floor(100000 + Math.random() * 900000)}@metropolis.neon`,
+            name: `Operative #${Math.floor(1000 + Math.random() * 9000)}`,
+            isTelegram: false,
+          };
+          localStorage.setItem('metropolis_auth_user', JSON.stringify(guestOperative));
+          setIsAuthenticated(true);
+        }
       }
     }
 

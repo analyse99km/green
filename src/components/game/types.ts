@@ -199,14 +199,20 @@ export interface BusinessRegistry {
 export interface Mission {
   id: string;
   title: string;
-  contractor: string; // e.g. "Fixer Vance", "Chief O'Connor"
+  contractor: string; // e.g. "Botanical Overseer", "Fixer Vance", "Syndicate Boss Duke", "Neon Syndicate"
   description: string;
   rewardCredits: number;
   rewardCash: number;
+  rewardGreen?: number;
+  rewardSparks?: number;
   completed: boolean;
-  reqType: 'CRIME' | 'TRAIN' | 'STAT' | 'LEVEL' | 'BUY';
+  claimed?: boolean;
+  category?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'STORY';
+  reqType: 'CRIME' | 'TRAIN' | 'STAT' | 'LEVEL' | 'BUY' | 'TAP' | 'CARD_UPGRADE' | 'TREE_EVOLVE' | 'CASINO' | 'REFERRAL' | 'LOGIN';
   targetCount: number;
   currentCount: number;
+  icon?: string;
+  expiresAt?: number;
 }
 
 export interface NewspaperArticle {
@@ -361,6 +367,9 @@ export interface PlayerState {
   educationCourses: EducationCourse[];
   businessRegistries: BusinessRegistry[];
   missions: Mission[];
+  lastDailyMissionsDate?: string;
+  lastWeeklyMissionsWeek?: string;
+  lastMonthlyMissionsMonth?: string;
 
   // Property, Market & Bazaar Assets
   properties: Property[];
