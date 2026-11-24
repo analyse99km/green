@@ -54,6 +54,11 @@ export default function GameRootPage() {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({ type: 'METROPOLIS_READY' }, '*');
+      } catch {}
+    }
     let isCancelled = false;
 
     // Check initial authentication
