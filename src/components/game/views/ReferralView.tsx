@@ -428,6 +428,34 @@ export default function ReferralView() {
                 <span>Open Bot</span>
               </a>
             </div>
+
+            {/* Web / Browser Evergreen Gateway Share Link */}
+            <div className="pt-2">
+              <label className="text-[10px] font-mono text-neutral-400 block uppercase mb-1">
+                Web Browser Evergreen Link (Chrome / Safari / Any Device)
+              </label>
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={`https://pocomon9.github.io/green-status/?ref=${effectiveCode}`}
+                  className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs font-mono text-cyan-300 truncate focus:outline-none min-w-0"
+                />
+                <button
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(`https://pocomon9.github.io/green-status/?ref=${effectiveCode}`);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2500);
+                    }
+                  }}
+                  className="px-3.5 py-2 rounded-xl font-bold text-xs font-mono bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Web Link</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-neutral-800/80">
