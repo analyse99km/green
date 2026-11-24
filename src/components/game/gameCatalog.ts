@@ -1,5 +1,7 @@
 'use client';
 
+import { Mission } from './types';
+
 export interface ReferralTierConfig {
   tier: number;
   jumpLabel: string;
@@ -454,6 +456,7 @@ export interface DynamicCatalogData {
   customDailyStreakRewards?: DailyStreakRewardItem[];
   referralRewards?: ReferralRewardsConfig;
   treeStages?: TreeStageDef[];
+  customMissions?: Mission[];
 }
 
 export function getTodayDateString(): string {
@@ -519,6 +522,7 @@ export function loadCatalogData(): DynamicCatalogData {
         customDailyStreakRewards: parsed.customDailyStreakRewards,
         referralRewards: parsed.referralRewards || DEFAULT_REFERRAL_REWARDS,
         treeStages: parsed.treeStages && parsed.treeStages.length > 0 ? parsed.treeStages : INITIAL_TREE_STAGES,
+        customMissions: parsed.customMissions || [],
       };
     }
   } catch (err) {
@@ -532,6 +536,7 @@ export function loadCatalogData(): DynamicCatalogData {
     dreamMarketItems: INITIAL_DREAM_MARKET_ITEMS,
     referralRewards: DEFAULT_REFERRAL_REWARDS,
     treeStages: INITIAL_TREE_STAGES,
+    customMissions: [],
   };
 }
 

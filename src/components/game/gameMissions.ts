@@ -383,7 +383,10 @@ export const INITIAL_STORY_MISSIONS: Mission[] = [
 ];
 
 // ── 5. MISSIONS SYNCHRONIZATION & AUTO-ROLLOVER ENGINE ─────────────────────────
-export function ensureMissionsSynchronized(player: PlayerState): { updated: boolean; missions: Mission[]; lastDaily: string; lastWeekly: string; lastMonthly: string } {
+export function ensureMissionsSynchronized(
+  player: PlayerState,
+  customAdminMissions?: Mission[]
+): { updated: boolean; missions: Mission[]; lastDaily: string; lastWeekly: string; lastMonthly: string } {
   const currentDailyKey = getDailyDateKey();
   const currentWeeklyKey = getWeeklyDateKey();
   const currentMonthlyKey = getMonthlyDateKey();
@@ -400,22 +403,32 @@ export function ensureMissionsSynchronized(player: PlayerState): { updated: bool
     }
   }
 
-  // 2. Daily Missions Rollover
+  // 2. Custom Admin-Created Missions (Watch Video, Open Partner Link, Ads, Specific Cards)
+  if (customAdminMissions && customAdminMissions.length > 0) {
+    for (const cm of customAdminMissions) {
+      const idx = existingMissions.findIndex((m) => m.id === cm.id);
+      if (idx === -1) {
+        existingMissions.push({ ...cm });
+        updated = true;
+      }
+    }
+  }
+
+  // 3. Daily Missions Rollover
   if (player.lastDailyMissionsDate !== currentDailyKey) {
-    // Keep completed story / weekly / monthly missions, replace daily
     existingMissions = existingMissions.filter((m) => m.category !== 'DAILY');
     existingMissions.push(...getDailyMissions(currentDailyKey));
     updated = true;
   }
 
-  // 3. Weekly Missions Rollover
+  // 4. Weekly Missions Rollover
   if (player.lastWeeklyMissionsWeek !== currentWeeklyKey) {
     existingMissions = existingMissions.filter((m) => m.category !== 'WEEKLY');
     existingMissions.push(...getWeeklyMissions(currentWeeklyKey));
     updated = true;
   }
 
-  // 4. Monthly Missions Rollover
+  // 5. Monthly Missions Rollover
   if (player.lastMonthlyMissionsMonth !== currentMonthlyKey) {
     existingMissions = existingMissions.filter((m) => m.category !== 'MONTHLY');
     existingMissions.push(...getMonthlyMissions(currentMonthlyKey));

@@ -207,12 +207,15 @@ export interface Mission {
   rewardSparks?: number;
   completed: boolean;
   claimed?: boolean;
-  category?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'STORY';
-  reqType: 'CRIME' | 'TRAIN' | 'STAT' | 'LEVEL' | 'BUY' | 'TAP' | 'CARD_UPGRADE' | 'TREE_EVOLVE' | 'CASINO' | 'REFERRAL' | 'LOGIN';
+  category?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'STORY' | 'PARTNER';
+  reqType: 'CRIME' | 'TRAIN' | 'STAT' | 'LEVEL' | 'BUY' | 'TAP' | 'CARD_UPGRADE' | 'TREE_EVOLVE' | 'CASINO' | 'REFERRAL' | 'LOGIN' | 'WATCH_VIDEO' | 'EXTERNAL_LINK';
   targetCount: number;
   currentCount: number;
   icon?: string;
   expiresAt?: number;
+  externalUrl?: string; // YouTube video link or partner URL
+  buttonLabel?: string; // e.g. "Watch Video", "Open Link", "Join Telegram"
+  targetCardId?: string; // Specific card ID required
 }
 
 export interface NewspaperArticle {

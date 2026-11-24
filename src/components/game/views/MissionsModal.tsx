@@ -27,8 +27,8 @@ interface MissionsModalProps {
 }
 
 export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
-  const { player, claimMissionReward, spendMissionCredits, addLog } = useGame();
-  const [activeTab, setActiveTab] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'STORY' | 'SHOP'>('DAILY');
+  const { player, claimMissionReward, completeExternalMission, spendMissionCredits, addLog } = useGame();
+  const [activeTab, setActiveTab] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'STORY' | 'PARTNER' | 'SHOP'>('DAILY');
   const [shopFeedback, setShopFeedback] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -37,13 +37,15 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
   const dailyMissions = missions.filter((m) => m.category === 'DAILY');
   const weeklyMissions = missions.filter((m) => m.category === 'WEEKLY');
   const monthlyMissions = missions.filter((m) => m.category === 'MONTHLY');
-  const storyMissions = missions.filter((m) => m.category === 'STORY' || !m.category);
+  const storyMissions = missions.filter((m) => m.category === 'STORY' || (!m.category && m.reqType !== 'WATCH_VIDEO' && m.reqType !== 'EXTERNAL_LINK'));
+  const partnerMissions = missions.filter((m) => m.category === 'PARTNER' || m.reqType === 'WATCH_VIDEO' || m.reqType === 'EXTERNAL_LINK');
 
   // Unclaimed counts for badges
   const unclaimedDaily = dailyMissions.filter((m) => m.completed && !m.claimed).length;
   const unclaimedWeekly = weeklyMissions.filter((m) => m.completed && !m.claimed).length;
   const unclaimedMonthly = monthlyMissions.filter((m) => m.completed && !m.claimed).length;
   const unclaimedStory = storyMissions.filter((m) => m.completed && !m.claimed).length;
+  const unclaimedPartner = partnerMissions.filter((m) => m.completed && !m.claimed).length;
 
   const displayedMissions =
     activeTab === 'DAILY'
@@ -54,6 +56,8 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
       ? monthlyMissions
       : activeTab === 'STORY'
       ? storyMissions
+      : activeTab === 'PARTNER'
+      ? partnerMissions
       : [];
 
   const missionShopItems: { item: InventoryItem; cost: number }[] = [
@@ -263,6 +267,23 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
           <button
             onClick={() => {
               SoundEngine.playTick(player.soundEnabled);
+              setActiveTab('PARTNER');
+            }}
+            className={`py-2 rounded-xl transition font-bold relative flex items-center justify-center gap-1 cursor-pointer ${
+              activeTab === 'PARTNER'
+                ? 'bg-emerald-500 text-black shadow-md'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            <span>📺 Video & Ads</span>
+            {unclaimedPartner > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping absolute top-1 right-1" />
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              SoundEngine.playTick(player.soundEnabled);
               setActiveTab('SHOP');
             }}
             className={`py-2 rounded-xl transition font-bold relative flex items-center justify-center gap-1 cursor-pointer ${
@@ -383,7 +404,7 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
                         </div>
                       </div>
 
-                      <div className="shrink-0">
+                      <div className="shrink-0 flex items-center gap-2">
                         {isCompleted ? (
                           <button
                             onClick={() => claimMissionReward(mission.id)}
@@ -397,6 +418,19 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
                             <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                             <span>Claimed</span>
                           </span>
+                        ) : (mission.reqType === 'WATCH_VIDEO' || mission.reqType === 'EXTERNAL_LINK') && mission.externalUrl ? (
+                          <button
+                            onClick={() => {
+                              SoundEngine.playTick(player.soundEnabled);
+                              if (mission.externalUrl) {
+                                window.open(mission.externalUrl, '_blank');
+                              }
+                              completeExternalMission(mission.id);
+                            }}
+                            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-mono font-black text-xs shadow-lg transition transform active:scale-95 flex items-center gap-1.5 cursor-pointer animate-pulse"
+                          >
+                            <span>{mission.buttonLabel || (mission.reqType === 'WATCH_VIDEO' ? '▶️ Watch Video' : '🔗 Open Link')}</span>
+                          </button>
                         ) : (
                           <span className="text-[10px] font-mono text-neutral-500 px-3 py-1 rounded-lg bg-neutral-950 border border-neutral-800">
                             In Progress

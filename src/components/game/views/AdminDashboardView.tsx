@@ -15,6 +15,7 @@ import {
   TreeStageDef,
   INITIAL_TREE_STAGES,
 } from '../gameCatalog';
+import { Mission } from '../types';
 import { SoundEngine } from '../gameAudio';
 import { useGame } from '../GameContext';
 import DynamicIcon from '../DynamicIcon';
@@ -35,7 +36,7 @@ interface AdminPlayer {
 
 export const AdminDashboardView: React.FC = () => {
   const { player } = useGame();
-  const [activeTab, setActiveTab] = useState<'PLAYERS' | 'CARDS' | 'ITEMS' | 'REFERRAL' | 'TREE'>('PLAYERS');
+  const [activeTab, setActiveTab] = useState<'PLAYERS' | 'CARDS' | 'ITEMS' | 'REFERRAL' | 'TREE' | 'MISSIONS'>('PLAYERS');
   const [players, setPlayers] = useState<AdminPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -47,7 +48,28 @@ export const AdminDashboardView: React.FC = () => {
     cards: [],
     customItems: [],
     treeStages: INITIAL_TREE_STAGES,
+    customMissions: [],
   });
+
+  // Missions Management State
+  const [customMissions, setCustomMissions] = useState<Mission[]>([]);
+  const [showMissionModal, setShowMissionModal] = useState(false);
+  const [editingMission, setEditingMission] = useState<Mission | null>(null);
+  const [missionId, setMissionId] = useState('');
+  const [missionTitle, setMissionTitle] = useState('');
+  const [missionContractor, setMissionContractor] = useState('Neon Syndicate');
+  const [missionDesc, setMissionDesc] = useState('');
+  const [missionCategory, setMissionCategory] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'STORY' | 'PARTNER'>('DAILY');
+  const [missionReqType, setMissionReqType] = useState<Mission['reqType']>('WATCH_VIDEO');
+  const [missionTargetCount, setMissionTargetCount] = useState(1);
+  const [missionIcon, setMissionIcon] = useState('🎥');
+  const [missionRewardGreen, setMissionRewardGreen] = useState(20);
+  const [missionRewardSparks, setMissionRewardSparks] = useState(500);
+  const [missionRewardCredits, setMissionRewardCredits] = useState(10);
+  const [missionRewardCash, setMissionRewardCash] = useState(5000);
+  const [missionExternalUrl, setMissionExternalUrl] = useState('');
+  const [missionButtonLabel, setMissionButtonLabel] = useState('▶️ Watch Video');
+  const [missionTargetCardId, setMissionTargetCardId] = useState('');
 
   // Tree Evolution Stages State
   const [treeStages, setTreeStages] = useState<TreeStageDef[]>(INITIAL_TREE_STAGES);
@@ -155,7 +177,102 @@ export const AdminDashboardView: React.FC = () => {
     if (catalog.treeStages && catalog.treeStages.length > 0) {
       setTreeStages(catalog.treeStages);
     }
+    if (catalog.customMissions) {
+      setCustomMissions(catalog.customMissions);
+    }
   }, [catalog]);
+
+  const handleOpenAddMission = () => {
+    setEditingMission(null);
+    setMissionId(`custom_msn_${Date.now()}`);
+    setMissionTitle('Watch Syndicate Intel Briefing');
+    setMissionContractor('Neon Syndicate');
+    setMissionDesc('Watch this intelligence video on YouTube to earn bonus credits & sparks.');
+    setMissionCategory('DAILY');
+    setMissionReqType('WATCH_VIDEO');
+    setMissionTargetCount(1);
+    setMissionIcon('🎥');
+    setMissionRewardGreen(25);
+    setMissionRewardSparks(500);
+    setMissionRewardCredits(10);
+    setMissionRewardCash(5000);
+    setMissionExternalUrl('https://www.youtube.com');
+    setMissionButtonLabel('▶️ Watch Video');
+    setMissionTargetCardId('');
+    setShowMissionModal(true);
+  };
+
+  const handleOpenEditMission = (m: Mission) => {
+    setEditingMission(m);
+    setMissionId(m.id);
+    setMissionTitle(m.title);
+    setMissionContractor(m.contractor || 'Neon Syndicate');
+    setMissionDesc(m.description);
+    setMissionCategory(m.category || 'DAILY');
+    setMissionReqType(m.reqType || 'WATCH_VIDEO');
+    setMissionTargetCount(m.targetCount || 1);
+    setMissionIcon(m.icon || '🎯');
+    setMissionRewardGreen(m.rewardGreen || 0);
+    setMissionRewardSparks(m.rewardSparks || 0);
+    setMissionRewardCredits(m.rewardCredits || 0);
+    setMissionRewardCash(m.rewardCash || 0);
+    setMissionExternalUrl(m.externalUrl || '');
+    setMissionButtonLabel(m.buttonLabel || '▶️ Watch Video');
+    setMissionTargetCardId(m.targetCardId || '');
+    setShowMissionModal(true);
+  };
+
+  const handleSaveMission = (e: React.FormEvent) => {
+    e.preventDefault();
+    const mDef: Mission = {
+      id: missionId.trim(),
+      title: missionTitle.trim(),
+      contractor: missionContractor.trim() || 'Neon Syndicate',
+      description: missionDesc.trim(),
+      category: missionCategory,
+      reqType: missionReqType,
+      targetCount: Number(missionTargetCount) || 1,
+      currentCount: 0,
+      completed: false,
+      claimed: false,
+      icon: missionIcon.trim() || '🎯',
+      rewardGreen: Number(missionRewardGreen) || 0,
+      rewardSparks: Number(missionRewardSparks) || 0,
+      rewardCredits: Number(missionRewardCredits) || 0,
+      rewardCash: Number(missionRewardCash) || 0,
+      externalUrl: missionExternalUrl.trim() || undefined,
+      buttonLabel: missionButtonLabel.trim() || undefined,
+      targetCardId: missionTargetCardId.trim() || undefined,
+    };
+
+    let updatedMissions: Mission[];
+    if (editingMission) {
+      updatedMissions = customMissions.map((m) => (m.id === editingMission.id ? mDef : m));
+    } else {
+      updatedMissions = [...customMissions, mDef];
+    }
+
+    setCustomMissions(updatedMissions);
+    saveCatalogChanges({
+      ...catalog,
+      customMissions: updatedMissions,
+    });
+    setSuccessMsg(editingMission ? 'Mission updated successfully!' : 'New mission published!');
+    setTimeout(() => setSuccessMsg(''), 3000);
+    setShowMissionModal(false);
+  };
+
+  const handleDeleteMission = (id: string) => {
+    if (!confirm('Delete this mission from the game catalog?')) return;
+    const updated = customMissions.filter((m) => m.id !== id);
+    setCustomMissions(updated);
+    saveCatalogChanges({
+      ...catalog,
+      customMissions: updated,
+    });
+    setSuccessMsg('Mission removed.');
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
 
   const handleOpenAddTreeStage = () => {
     const nextIdx = treeStages.length + 1;
@@ -608,6 +725,19 @@ export const AdminDashboardView: React.FC = () => {
           }`}
         >
           <span>🌳</span> Tree Evolution Stages ({treeStages.length})
+        </button>
+        <button
+          onClick={() => {
+            SoundEngine.playTick(player.soundEnabled);
+            setActiveTab('MISSIONS');
+          }}
+          className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition border-b-2 flex items-center gap-2 ${
+            activeTab === 'MISSIONS'
+              ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
+              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <span>🎯</span> Missions & Ads Manager ({customMissions.length})
         </button>
       </div>
 
@@ -1279,6 +1409,138 @@ export const AdminDashboardView: React.FC = () => {
         </div>
       )}
 
+      {/* TAB 6: CUSTOM MISSIONS & PARTNER VIDEO/ADS MANAGER */}
+      {activeTab === 'MISSIONS' && (
+        <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-zinc-200 uppercase tracking-wide flex items-center gap-2">
+                <span>🎯</span> Custom Missions, Video Tasks & Partner Ads ({customMissions.length})
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Create and manage custom player missions with live rewards. Add Watch Video tasks (YouTube links),
+                Telegram channel joins, website partner visits, ads, or specific Botanical Card upgrade assignments.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenAddMission}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded transition flex items-center gap-1.5 shrink-0 shadow-lg cursor-pointer"
+            >
+              <span>➕</span> Add New Mission / Video Task
+            </button>
+          </div>
+
+          {customMissions.length === 0 ? (
+            <div className="p-8 text-center bg-zinc-900/50 border border-zinc-800 rounded-lg text-zinc-400 text-xs space-y-3">
+              <span className="text-3xl block">🎯</span>
+              <p>No custom missions published yet. Add your first YouTube video task, partner link, or card challenge!</p>
+              <button
+                type="button"
+                onClick={handleOpenAddMission}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded transition inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>➕</span> Create First Mission
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {customMissions.map((m) => (
+                <div
+                  key={m.id}
+                  className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 space-y-3 hover:border-zinc-700 transition relative flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl p-2 bg-black/60 rounded-lg border border-zinc-800">
+                          {m.icon || '🎯'}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300">
+                              {m.category || 'DAILY'}
+                            </span>
+                            <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/40 font-bold">
+                              {m.reqType}
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-bold text-white mt-1 line-clamp-1">{m.title}</h4>
+                          <span className="text-[10px] text-zinc-400 font-mono block">By {m.contractor}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                      {m.description}
+                    </p>
+
+                    {m.externalUrl && (
+                      <div className="bg-black/50 p-2 rounded border border-zinc-800 font-mono text-[10px] space-y-1">
+                        <div className="text-zinc-500 uppercase">Target Link / Video:</div>
+                        <a
+                          href={m.externalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-cyan-400 hover:underline truncate block"
+                        >
+                          🔗 {m.externalUrl}
+                        </a>
+                        {m.buttonLabel && (
+                          <div className="text-zinc-400">
+                            Button: <strong className="text-white">{m.buttonLabel}</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {m.targetCardId && (
+                      <div className="bg-black/50 p-1.5 rounded border border-zinc-800 font-mono text-[10px] text-amber-300">
+                        Target Card ID: <strong>{m.targetCardId}</strong>
+                      </div>
+                    )}
+
+                    {/* Rewards Summary */}
+                    <div className="grid grid-cols-2 gap-1.5 pt-1 font-mono text-[10px]">
+                      {m.rewardGreen ? (
+                        <span className="text-emerald-400 font-bold">🌿 +{m.rewardGreen} GREEN</span>
+                      ) : null}
+                      {m.rewardSparks ? (
+                        <span className="text-cyan-300 font-bold">⚡ +{m.rewardSparks} Sparks</span>
+                      ) : null}
+                      {m.rewardCredits ? (
+                        <span className="text-amber-400 font-bold">🏆 +{m.rewardCredits} Credits</span>
+                      ) : null}
+                      {m.rewardCash ? (
+                        <span className="text-zinc-300 font-bold">+${m.rewardCash.toLocaleString()}</span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800/80 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditMission(m)}
+                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>✏️</span> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMission(m.id)}
+                      className="bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/50 px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>🗑️</span> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* MODAL: ADD / EDIT BOTANICAL CARD */}
       {showCardModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1800,6 +2062,253 @@ export const AdminDashboardView: React.FC = () => {
                 >
                   {editingTreeStage ? 'Update Stage' : 'Save Stage'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD / EDIT CUSTOM MISSION & VIDEO TASK */}
+      {showMissionModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-zinc-950 border border-emerald-500/50 rounded-xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-8">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                <span>🎯</span> {editingMission ? 'Edit Mission / Video Task' : 'Publish New Mission / Video Task'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowMissionModal(false)}
+                className="text-zinc-500 hover:text-zinc-200 text-sm font-mono cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMission} className="space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-zinc-400 mb-1">Mission Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={missionTitle}
+                    onChange={(e) => setMissionTitle(e.target.value)}
+                    placeholder="e.g. Watch Syndicate Intel Briefing"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Contractor / Sponsor</label>
+                  <input
+                    type="text"
+                    required
+                    value={missionContractor}
+                    onChange={(e) => setMissionContractor(e.target.value)}
+                    placeholder="e.g. YouTube Sponsor, Neon Syndicate"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-zinc-400 mb-1">Category</label>
+                  <select
+                    value={missionCategory}
+                    onChange={(e) => setMissionCategory(e.target.value as any)}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100"
+                  >
+                    <option value="DAILY">📅 Daily (24h)</option>
+                    <option value="WEEKLY">📆 Weekly (7d)</option>
+                    <option value="MONTHLY">🏆 Monthly (30d)</option>
+                    <option value="STORY">📜 Story Milestone</option>
+                    <option value="PARTNER">📺 Video & Partner Ads</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Requirement Type</label>
+                  <select
+                    value={missionReqType}
+                    onChange={(e) => setMissionReqType(e.target.value as any)}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-emerald-400 font-bold"
+                  >
+                    <option value="WATCH_VIDEO">▶️ Watch Video (YouTube / Link)</option>
+                    <option value="EXTERNAL_LINK">🔗 Open Website / Telegram / Ad</option>
+                    <option value="CARD_UPGRADE">🃏 Buy / Upgrade Botanical Card</option>
+                    <option value="TAP">🌿 Tap Green Mint Coin</option>
+                    <option value="TREE_EVOLVE">🌳 Tree Stage Evolution</option>
+                    <option value="CRIME">🕵️ Commit Crimes</option>
+                    <option value="CASINO">🎰 Casino Wager</option>
+                    <option value="REFERRAL">👥 Syndicate Recruits</option>
+                    <option value="LEVEL">🎖️ Reach Level</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-zinc-400 mb-1">Target Count</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={missionTargetCount}
+                    onChange={(e) => setMissionTargetCount(Number(e.target.value) || 1)}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Dynamic Video / Link URL configuration */}
+              {(missionReqType === 'WATCH_VIDEO' || missionReqType === 'EXTERNAL_LINK') && (
+                <div className="p-3 bg-zinc-900/80 border border-cyan-500/30 rounded-lg space-y-2">
+                  <div className="text-cyan-400 font-bold text-[11px] flex items-center gap-1.5">
+                    <span>{missionReqType === 'WATCH_VIDEO' ? '▶️' : '🔗'}</span>
+                    <span>Video URL / External Destination Link</span>
+                  </div>
+                  <div>
+                    <input
+                      type="url"
+                      value={missionExternalUrl}
+                      onChange={(e) => setMissionExternalUrl(e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=... or https://t.me/your_channel"
+                      className="w-full bg-black/60 border border-zinc-700 rounded p-2 text-zinc-100 font-mono text-xs"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-zinc-400 text-[10px] mb-0.5">Button Display Text</label>
+                      <input
+                        type="text"
+                        value={missionButtonLabel}
+                        onChange={(e) => setMissionButtonLabel(e.target.value)}
+                        placeholder="e.g. ▶️ Watch on YouTube"
+                        className="w-full bg-black/60 border border-zinc-700 rounded p-1.5 text-zinc-100 text-xs"
+                      />
+                    </div>
+                    <div className="text-[10px] text-zinc-400 flex items-center">
+                      Operatives tap this button to open the link & automatically unlock rewards!
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Specific Card Requirement */}
+              {missionReqType === 'CARD_UPGRADE' && (
+                <div className="p-3 bg-zinc-900/80 border border-amber-500/30 rounded-lg space-y-1.5">
+                  <label className="block text-amber-400 font-bold text-[11px]">
+                    Specific Botanical Card Required (Optional)
+                  </label>
+                  <select
+                    value={missionTargetCardId}
+                    onChange={(e) => setMissionTargetCardId(e.target.value)}
+                    className="w-full bg-black/60 border border-zinc-700 rounded p-2 text-zinc-100 text-xs"
+                  >
+                    <option value="">Any Botanical Card (Generic Upgrade)</option>
+                    {(catalog.cards || []).map((card) => (
+                      <option key={card.id} value={card.id}>
+                        {card.icon} {card.title} ({card.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-zinc-400 mb-1">Description / Assignment Details</label>
+                <textarea
+                  rows={2}
+                  value={missionDesc}
+                  onChange={(e) => setMissionDesc(e.target.value)}
+                  placeholder="Explain what the operative must do to complete this mission..."
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-zinc-100 resize-none"
+                />
+              </div>
+
+              {/* Rewards Grid */}
+              <div className="border border-zinc-800 rounded-lg p-3 bg-black/40 space-y-2">
+                <span className="text-[11px] font-bold text-zinc-300 block uppercase font-mono">
+                  Mission Rewards Granted
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-emerald-400 text-[10px] mb-0.5">🌿 GREEN Tokens</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={missionRewardGreen}
+                      onChange={(e) => setMissionRewardGreen(Number(e.target.value) || 0)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded p-1.5 text-emerald-400 font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-cyan-300 text-[10px] mb-0.5">⚡ Sparks</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={missionRewardSparks}
+                      onChange={(e) => setMissionRewardSparks(Number(e.target.value) || 0)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded p-1.5 text-cyan-300 font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-amber-400 text-[10px] mb-0.5">🏆 Mission Credits</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={missionRewardCredits}
+                      onChange={(e) => setMissionRewardCredits(Number(e.target.value) || 0)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded p-1.5 text-amber-400 font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-zinc-300 text-[10px] mb-0.5">💵 Cash ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={missionRewardCash}
+                      onChange={(e) => setMissionRewardCash(Number(e.target.value) || 0)}
+                      className="w-full bg-zinc-900 border border-zinc-700 rounded p-1.5 text-zinc-100 font-bold text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <label className="text-zinc-400 text-[11px]">Icon:</label>
+                  <input
+                    type="text"
+                    value={missionIcon}
+                    onChange={(e) => setMissionIcon(e.target.value)}
+                    className="w-12 bg-zinc-900 border border-zinc-700 rounded p-1 text-center text-base"
+                  />
+                  <div className="flex gap-1">
+                    {['🎥', '📺', '🔗', '🌿', '🃏', '💰', '👑', '✈️'].map((em) => (
+                      <button
+                        key={em}
+                        type="button"
+                        onClick={() => setMissionIcon(em)}
+                        className="p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-xs cursor-pointer"
+                      >
+                        {em}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowMissionModal(false)}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded font-bold transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2 rounded font-bold transition shadow-lg shadow-emerald-950/40 cursor-pointer"
+                  >
+                    {editingMission ? 'Update Mission' : 'Publish Mission'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

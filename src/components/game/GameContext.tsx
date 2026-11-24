@@ -73,6 +73,7 @@ interface GameContextType {
   cashCompliance: ReturnType<typeof checkCashRatio>;
   saveGame: () => Promise<void>;
   claimMissionReward: (missionId: string) => { success: boolean; message: string; rewardText?: string };
+  completeExternalMission: (missionId: string) => void;
   unclaimedMissionsCount: number;
   togglePropertyLock: (propertyId: string) => void;
   sleepAtHome: () => { success: boolean; message: string };
@@ -251,7 +252,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (!parsed.arsonProgress) {
           parsed.arsonProgress = DEFAULT_METROPOLIS_PLAYER.arsonProgress;
         }
-        const msnSync = ensureMissionsSynchronized(parsed);
+        const customMsn = loadCatalogData().customMissions || [];
+        const msnSync = ensureMissionsSynchronized(parsed, customMsn);
         parsed.missions = msnSync.missions;
         parsed.lastDailyMissionsDate = msnSync.lastDaily;
         parsed.lastWeeklyMissionsWeek = msnSync.lastWeekly;
@@ -266,7 +268,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (cloudSaveRaw) {
           try {
             const parsed = JSON.parse(cloudSaveRaw);
-            const msnSync = ensureMissionsSynchronized(parsed);
+            const customMsn = loadCatalogData().customMissions || [];
+        const msnSync = ensureMissionsSynchronized(parsed, customMsn);
         parsed.missions = msnSync.missions;
         parsed.lastDailyMissionsDate = msnSync.lastDaily;
         parsed.lastWeeklyMissionsWeek = msnSync.lastWeekly;
@@ -2145,6 +2148,36 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return { success: false, message: 'Mission reward already claimed or conditions not met.' };
   };
 
+  const completeExternalMission = (missionId: string) => {
+    let completedMissionTitle = '';
+    setPlayer((prev) => {
+      const mIdx = (prev.missions || []).findIndex((m) => m.id === missionId);
+      if (mIdx === -1) return prev;
+      const msn = prev.missions[mIdx];
+      if (msn.completed || msn.claimed) return prev;
+
+      completedMissionTitle = msn.title;
+      const updatedMissions = [...prev.missions];
+      updatedMissions[mIdx] = { ...msn, currentCount: msn.targetCount, completed: true };
+
+      const updated: PlayerState = {
+        ...prev,
+        missions: updatedMissions,
+        hasUnsavedActions: true,
+      };
+      saveGame(updated).catch(() => {});
+      return updated;
+    });
+
+    if (completedMissionTitle) {
+      SoundEngine.playVictory(player.soundEnabled);
+      addLog({
+        type: 'CIVILIAN',
+        message: `🎯 MISSION COMPLETED: "${completedMissionTitle}"! Claim your reward now!`,
+      });
+    }
+  };
+
   const unclaimedMissionsCount = useMemo(() => {
     return (player.missions || []).filter((m) => m.completed && !m.claimed).length;
   }, [player.missions]);
@@ -2799,6 +2832,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const nextLvl = currentLvl + 1;
     setPlayer((prev) => {
       const msnRes = recordMissionAction(prev.missions, 'CARD_UPGRADE', 1);
+      let updatedMissions = msnRes.updated ? msnRes.updatedMissions : prev.missions;
+      // Also complete specific card assignment missions if card matches
+      updatedMissions = updatedMissions.map((m) => {
+        if (m.reqType === 'CARD_UPGRADE' && m.targetCardId === cardId && !m.completed && !m.claimed) {
+          return { ...m, currentCount: m.targetCount, completed: true };
+        }
+        return m;
+      });
       return {
         ...prev,
         dreamPoints: prev.dreamPoints - cost,
@@ -2806,7 +2847,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           ...(prev.dreamCards || {}),
           [cardId]: nextLvl,
         },
-        missions: msnRes.updated ? msnRes.updatedMissions : prev.missions,
+        missions: updatedMissions,
         hasUnsavedActions: true,
       };
     });
@@ -4398,6 +4439,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         collectBusinessRevenue,
         spendMissionCredits,
         claimMissionReward,
+        completeExternalMission,
         unclaimedMissionsCount,
         playCasinoGame,
         deductMoney,
