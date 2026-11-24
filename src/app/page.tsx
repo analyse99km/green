@@ -49,26 +49,31 @@ function MetropolisLoadingScreen({ status = 'Entering Neon Metropolis...' }: { s
 }
 
 export default function GameRootPage() {
-  // If user already logged in previously, localStorage has their session -> load immediately without login form!
-  // If inside Telegram Mini App, always authenticated via Telegram identity!
-  // If new unauthenticated web visitor, show the Operative Registration / Login portal!
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    if (isTelegramEnv()) return true; // Telegram players are ALWAYS authenticated!
-    const localUser = localStorage.getItem('metropolis_auth_user');
-    if (localUser) {
-      try {
-        const parsed = JSON.parse(localUser);
-        if (parsed?.email) return true;
-      } catch {}
-    }
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('userEmail') || params.get('tgUser') || params.get('tgWebAppData')) return true;
-    return false; // Show registration & login portal for unauthenticated web visitors!
-  });
+  const [mounted, setMounted] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   useEffect(() => {
+    setMounted(true);
     let isCancelled = false;
+
+    // Check initial authentication
+    if (isTelegramEnv()) {
+      setIsAuthenticated(true);
+    } else {
+      const localUser = localStorage.getItem('metropolis_auth_user');
+      let authed = false;
+      if (localUser) {
+        try {
+          const parsed = JSON.parse(localUser);
+          if (parsed?.email) authed = true;
+        } catch {}
+      }
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('userEmail') || params.get('tgUser') || params.get('tgWebAppData')) {
+        authed = true;
+      }
+      setIsAuthenticated(authed);
+    }
 
     // Background sync: downloads latest state, verifies Telegram identity, and synchronizes referrals without blocking UI
     async function attemptAuth() {
@@ -256,6 +261,10 @@ export default function GameRootPage() {
       isCancelled = true;
     };
   }, []);
+
+  if (!mounted) {
+    return <MetropolisLoadingScreen status="Initializing Neon Metropolis..." />;
+  }
 
   if (!isAuthenticated) {
     return (
