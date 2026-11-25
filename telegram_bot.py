@@ -340,12 +340,14 @@ def get_player_content(action, user_first="Operative", user_id=None, ref_code=""
     if action == "welcome":
         if ref_code:
             text = (
-                f"🎉 *WELCOME TO NEON METROPOLIS, OPERATIVE!*\n\n"
+                f"🌱 *WELCOME TO NEON METROPOLIS — THE ECO-FRIENDLY DECENTRALIZED REVOLUTION!* 🌿\n\n"
                 f"🤝 *You have been recruited via VIP Invite:* `{ref_code}`\n\n"
-                f"🎁 *Your Recruit Welcome Benefits:*\n"
+                f"🎁 *Your Citizen Welcome Starter Kit:*\n"
                 f"• 🌿 *+100 Instant GREEN Tokens Starter Bounty*\n"
                 f"• 🍞 *Syndicate Welcome Baguette (+30 Food, +10 Energy)*\n"
-                f"• ⚡ *+50 GREEN Daily Allowance Active*\n"
+                f"• ⚡ *+50 GREEN Daily Clean Energy Allowance Active*\n"
+                f"• 🌳 *7 Regenerative District Botanical Cards Unlocked*\n"
+                f"• 🌐 *P2P Underworld Bazaar Access*\n"
                 f"• 🪙 *Real GREEN Coin Mainnet Launching Soon!*\n\n"
                 f"Tap below to enter the city and claim your starter kit:"
             )
@@ -442,21 +444,24 @@ def get_player_content(action, user_first="Operative", user_id=None, ref_code=""
         ref_id = str(user_id or "operative")
         ref_link = f"https://t.me/{BOT_USERNAME}?start=NEON-TG-{ref_id}"
         viral_share_text = (
-            "🌿 Join the Neon Metropolis Revolution! 🚀\n\n"
-            "💰 PLAY & EARN: Real GREEN Token Currency Launching Soon!\n"
-            "⚡ Tap the Core Plant, level up 7 District Botanical Cards, and build your digital empire.\n"
-            "🎁 Use my VIP link for an INSTANT +100 GREEN Starter Bonus + 50 GREEN/Day Allowance:\n"
+            "🌱 Enter Neon Metropolis — The World's First Eco-Friendly Decentralized Tap Empire! 🌿🚀\n\n"
+            "💰 PLAY & EARN: Real GREEN Token Mainnet Launching Soon!\n"
+            "⚡ Tap the Bioluminescent Core Plant to mint pure clean bio-energy sparks.\n"
+            "🌳 Upgrade 7 Regenerative District Botanical Cards (Mycelial Networks, Ancient Canopies & Solar Flora).\n"
+            "🌐 100% Decentralized & Community-Owned: Trade via P2P Underworld Bazaar & cultivate your sovereign digital forest.\n"
+            "🎁 Join via my VIP Operative link for an INSTANT +100 GREEN Starter Bounty + 50 GREEN/Day Allowance:\n"
         )
         share_url = f"https://t.me/share/url?url={urllib.parse.quote(ref_link)}&text={urllib.parse.quote(viral_share_text)}"
         text = (
-            "🚀 *Recruit Operatives & Earn Lifetime Dividends!*\n\n"
-            "💰 *PLAY & EARN — Real GREEN Token Currency Launching Soon!*\n\n"
+            "🌱 *Recruit Citizens to the Decentralized Green Empire!* 🌿\n\n"
+            "💰 *PLAY & EARN — Real GREEN Token Mainnet Launching Soon!*\n"
+            "⚡ *Eco-Friendly Game Logic:* Harvest clean bio-energy sparks, nurture 7 botanical district cards, and trade freely via P2P mesh!\n\n"
             f"🔗 *Your VIP Recruit Link:*\n`{ref_link}`\n\n"
-            "🎁 *Recruiter Bounty & Squad Benefits:*\n"
+            "🎁 *Recruiter Bounty & Squad Dividends:*\n"
             "• 🤝 Your recruit gets an *instant +100 GREEN bonus* + *50 GREEN/day allowance*\n"
             "• 🪙 You get *+100 GREEN instantly* for every recruit + *10% lifetime commissions* on their harvest\n"
-            "• 🏆 Level up your Syndicate Network rank on the city leaderboard!\n\n"
-            "Tap below to send this viral invite directly to your Telegram contacts:"
+            "• 🌳 Earn cascading daily royalties across 5 generations of botanical cultivators!\n\n"
+            "Tap below to send this viral eco-friendly invite directly to your Telegram contacts:"
         )
         kb = {
             "inline_keyboard": [

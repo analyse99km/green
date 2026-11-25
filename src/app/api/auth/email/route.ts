@@ -69,10 +69,21 @@ async function pushUsersToMaster(users: Record<string, any>) {
   }
 }
 
-// Universal recruiter finder across all referral formats (telegramId, raw ID, ref_ID, NEON-TG-ID, NEON-CODE, email)
+function cleanReferralInput(raw: string): string {
+  if (!raw) return '';
+  let str = String(raw).trim();
+  if (str.includes('start=')) {
+    str = str.split('start=')[1].split('&')[0];
+  } else if (str.includes('/start ')) {
+    str = str.split('/start ')[1].split(' ')[0];
+  }
+  return str.trim().toUpperCase();
+}
+
+// Universal recruiter finder across all referral formats (telegramId, raw ID, ref_ID, NEON-TG-ID, NEON-CODE, email, username)
 function findRecruiterEmail(users: Record<string, any>, rawRef: string): string | null {
   if (!rawRef) return null;
-  const clean = String(rawRef).trim().toUpperCase();
+  const clean = cleanReferralInput(rawRef);
   const stripped = clean.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
   const tgCandidate = stripped.replace(/[^0-9]/g, '');
 
@@ -81,15 +92,19 @@ function findRecruiterEmail(users: Record<string, any>, rawRef: string): string 
     const stateRef = (u.playerState?.referrals?.referralCode || '').toUpperCase();
     const tgId = String(u.telegramId || '').toUpperCase();
     const userId = (u.userId || '').toUpperCase();
+    const uName = (u.name || '').toUpperCase();
+    const uUsername = (u.username || '').toUpperCase();
 
     if (
       userRef === clean ||
       stateRef === clean ||
-      (stripped && userRef.includes(stripped)) ||
-      (stripped && stateRef.includes(stripped)) ||
-      (tgId && (tgId === clean || tgId === stripped || tgId === tgCandidate)) ||
-      (userId && userId === clean) ||
-      em.toUpperCase() === clean
+      (stripped && stripped.length >= 3 && userRef.includes(stripped)) ||
+      (stripped && stripped.length >= 3 && stateRef.includes(stripped)) ||
+      (tgId && (tgId === clean || tgId === stripped || (tgCandidate && tgId === tgCandidate))) ||
+      (userId && (userId === clean || userId.includes(clean))) ||
+      em.toUpperCase() === clean ||
+      (uUsername && (uUsername === clean || `@${uUsername}` === clean)) ||
+      (uName && uName === clean)
     ) {
       return em;
     }

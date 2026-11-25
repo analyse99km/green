@@ -41,7 +41,6 @@ export default function ReferralView() {
     calculateNetworkTiers,
     redeemInviteCode,
     refreshReferralNetwork,
-    simulateNewRecruit,
   } = useGame();
 
   const [copiedLink, setCopiedLink] = useState(false);
@@ -120,10 +119,10 @@ export default function ReferralView() {
   const isStipendReady = refs.referredBy && (lastStipendClaim === 0 || now - lastStipendClaim >= 86400000);
   const stipendRemainingHours = Math.max(0, Math.ceil((86400000 - (now - lastStipendClaim)) / (1000 * 60 * 60)));
 
-  const viralPitchText = `🌿 Join the Neon Metropolis Revolution! 🚀\n\n💰 PLAY & EARN: Real GREEN Token Currency Launching Soon!\n⚡ Tap the Core Plant, level up 7 District Botanical Cards, and build your digital empire.\n🎁 Use my VIP link for an INSTANT +100 GREEN Starter Bonus + 50 GREEN/Day Allowance:\n${referralUrl}`;
+  const viralPitchText = `🌱 Enter Neon Metropolis — The World's First Eco-Friendly Decentralized Tap Empire! 🌿🚀\n\n💰 PLAY & EARN: Real GREEN Token Mainnet Launching Soon!\n⚡ Tap the Bioluminescent Core Plant to mint pure clean bio-energy sparks.\n🌳 Upgrade 7 Regenerative District Botanical Cards (Mycelial Networks, Ancient Canopies & Solar Flora).\n🌐 100% Decentralized & Community-Owned: Trade via P2P Underworld Bazaar & cultivate your sovereign digital forest.\n🎁 Join via my VIP Operative link for an INSTANT +100 GREEN Starter Bounty + 50 GREEN/Day Allowance:\n${referralUrl}`;
 
   const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralUrl)}&text=${encodeURIComponent(
-    '🌿 Join the Neon Metropolis Revolution! 🚀\n\n💰 PLAY & EARN: Real GREEN Token Currency Launching Soon!\n⚡ Tap the Core Plant, level up 7 District Botanical Cards, and build your digital empire.\n🎁 Use my VIP link for an INSTANT +100 GREEN Starter Bonus + 50 GREEN/Day Allowance!'
+    "🌱 Enter Neon Metropolis — The World's First Eco-Friendly Decentralized Tap Empire! 🌿🚀\n\n💰 PLAY & EARN: Real GREEN Token Mainnet Launching Soon!\n⚡ Tap the Bioluminescent Core Plant to mint pure clean bio-energy sparks.\n🌳 Upgrade 7 Regenerative District Botanical Cards (Mycelial Networks, Ancient Canopies & Solar Flora).\n🌐 100% Decentralized & Community-Owned: Trade via P2P Underworld Bazaar & cultivate your sovereign digital forest.\n🎁 Join via my VIP Operative link for an INSTANT +100 GREEN Starter Bounty + 50 GREEN/Day Allowance!"
   )}`;
 
   const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(viralPitchText)}`;
@@ -458,14 +457,16 @@ export default function ReferralView() {
           </div>
 
           {/* Pitch Preview Box */}
-          <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800/80 text-[11px] font-mono text-neutral-300 space-y-1">
-            <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              <span>Viral Share Pitch Preview</span>
+          <div className="p-3.5 bg-neutral-950 rounded-xl border border-emerald-500/30 text-[11px] font-mono text-neutral-300 space-y-1.5 shadow-sm">
+            <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Eco-Friendly & Decentralized Viral Share Pitch</span>
             </div>
             <p className="text-neutral-300 leading-relaxed">
-              🌿 <strong>Join the Neon Metropolis Revolution! 🚀</strong><br/>
-              💰 <em>PLAY & EARN: Real GREEN Token Currency Launching Soon!</em><br/>
+              🌱 <strong>Enter Neon Metropolis — The World's First Eco-Friendly Decentralized Tap Empire! 🌿🚀</strong><br/>
+              💰 <em>PLAY & EARN: Real GREEN Token Mainnet Launching Soon!</em><br/>
+              ⚡ <em>Tap the Bioluminescent Core Plant to mint clean bio-energy sparks & upgrade 7 Botanical Districts.</em><br/>
+              🌐 <em>100% Decentralized, P2P Sovereign Economy & Community-Owned.</em><br/>
               🎁 Use my VIP link for an <strong>INSTANT +100 GREEN Starter Bonus + 50 GREEN/Day Allowance!</strong>
             </p>
           </div>
@@ -635,17 +636,6 @@ export default function ReferralView() {
             <h3 className="font-bold text-white text-sm">Your Syndicate Network Roster ({totalNetworkCitizens})</h3>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                const res = simulateNewRecruit();
-                setFeedback(res.message);
-                setTimeout(() => setFeedback(null), 3500);
-              }}
-              className="flex items-center gap-1.5 text-[11px] font-mono text-cyan-400 hover:text-cyan-300 bg-neutral-950 px-2.5 py-1 rounded-lg border border-neutral-800 hover:border-cyan-500/40 cursor-pointer transition-all"
-            >
-              <span>➕</span>
-              <span>Scout Test Recruit</span>
-            </button>
             <button
               onClick={() => {
                 refreshReferralNetwork();

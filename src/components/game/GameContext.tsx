@@ -165,7 +165,6 @@ interface GameContextType {
   calculateNetworkTiers: () => NetworkTierStats[];
   redeemInviteCode: (code: string) => Promise<{ success: boolean; message: string }>;
   refreshReferralNetwork: () => Promise<void>;
-  simulateNewRecruit: (tier?: number) => { success: boolean; recruitName: string; message: string };
   updatePlayerName: (newName: string) => { success: boolean; message: string };
   insufficientFundsModal: InsufficientFundsData | null;
   triggerInsufficientFunds: (data: Omit<InsufficientFundsData, 'isOpen'>) => void;
@@ -4503,76 +4502,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  const simulateNewRecruit = (targetTier: number = 1) => {
-    const codenames = [
-      'Ghost-Operative', 'Neon-Viper', 'Cyber-Spectre', 'Shadow-Runner',
-      'Grid-Phantom', 'Zero-Day', 'Matrix-Scout', 'Echo-Agent',
-      'Krypton-Fox', 'Quantum-Rogue', 'Chrome-Hawk', 'Vector-Nine'
-    ];
-    const randomName = `${codenames[Math.floor(Math.random() * codenames.length)]} #${Math.floor(1000 + Math.random() * 9000)}`;
-    const effectiveTier = Math.min(5, Math.max(1, targetTier || Math.floor(Math.random() * 5) + 1));
-    const bounty = loadCatalogData()?.referralRewards?.recruiterInstantBounty ?? 100;
-
-    const newRecruit: ReferredUser = {
-      id: `rec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      name: randomName,
-      email: `${randomName.toLowerCase().replace(/[^a-z0-9]/g, '_')}@neon.city`,
-      joinedAt: Date.now(),
-      level: Math.floor(Math.random() * 8) + 1,
-      tier: effectiveTier,
-      dailyGameplayEarned: Math.floor(Math.random() * 200) + 150,
-      totalGeneratedGreen: effectiveTier === 1 ? bounty : 25,
-      lastActive: 'Active today (Syndicate Operations)',
-    };
-
-    setPlayer((prev) => {
-      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-      const existing = currentRefs.recruits || [];
-      const updatedRecruits = [newRecruit, ...existing];
-      const isDirect = effectiveTier === 1;
-      const directRecruitsCount = updatedRecruits.filter((r) => (r.tier || 1) === 1).length;
-      const updatedTotalRecruits = Math.max(
-        Number(currentRefs.totalRecruits || 0) + (isDirect ? 1 : 0),
-        directRecruitsCount
-      );
-
-      const updatedPlayer: PlayerState = {
-        ...prev,
-        referrals: {
-          ...currentRefs,
-          recruits: updatedRecruits,
-          totalRecruits: updatedTotalRecruits,
-          networkTotalCitizens: Math.max(Number(currentRefs.networkTotalCitizens || 0) + 1, updatedRecruits.length),
-          unclaimedCommissionGreen: (currentRefs.unclaimedCommissionGreen || 0) + (isDirect ? bounty : 20),
-          lifetimeCommissionGreen: (currentRefs.lifetimeCommissionGreen || 0) + (isDirect ? bounty : 20),
-        },
-        hasUnsavedActions: true,
-      };
-
-      playerRef.current = updatedPlayer;
-      try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
-      } catch {}
-      return updatedPlayer;
-    });
-
-    SoundEngine.playVictory(player.soundEnabled);
-    addLog({
-      type: 'CIVILIAN',
-      message: `👥 RECRUIT NETWORK: Operative ${randomName} joined your Syndicate under Tier ${effectiveTier} (+🌿 ${effectiveTier === 1 ? bounty : 20} Till Kickback)!`,
-    });
-
-    setTimeout(() => {
-      saveGame().catch(() => {});
-    }, 100);
-
-    return {
-      success: true,
-      recruitName: randomName,
-      message: `Simulated recruit ${randomName} added to Tier ${effectiveTier}! Till updated with +🌿 ${effectiveTier === 1 ? bounty : 20} GREEN.`,
-    };
-  };
-
   return (
     <GameContext.Provider
       value={{
@@ -4657,7 +4586,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         calculateNetworkTiers,
         redeemInviteCode,
         refreshReferralNetwork,
-        simulateNewRecruit,
         updatePlayerName,
         insufficientFundsModal,
         triggerInsufficientFunds,
