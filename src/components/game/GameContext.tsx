@@ -250,8 +250,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           if (parsed.referrals.referralCode && parsed.referrals.referralCode.startsWith('GREEN-')) {
             parsed.referrals.referralCode = parsed.referrals.referralCode.replace('GREEN-', 'NEON-');
           }
-          parsed.referrals.totalRecruits = Math.max(Number(parsed.referrals.totalRecruits || 0), (parsed.referrals.recruits || []).length);
-          parsed.referrals.networkTotalCitizens = Math.max(Number(parsed.referrals.networkTotalCitizens || 0), (parsed.referrals.recruits || []).length);
+          const recArr = Array.isArray(parsed.referrals.recruits) ? parsed.referrals.recruits : [];
+          const tier1Count = recArr.filter((r: any) => (r.tier || 1) === 1).length;
+          parsed.referrals.totalRecruits = recArr.length > 0 ? tier1Count : Number(parsed.referrals.totalRecruits || 0);
+          parsed.referrals.networkTotalCitizens = Math.max(Number(parsed.referrals.networkTotalCitizens || 0), recArr.length);
         }
 
         // Hydrate persistent irrevocable claimed mission ledger
@@ -4129,10 +4131,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
     const currentBase = playerRef.current || player;
     const refs = currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-    const effectiveRecruits = Math.max(
-      Number(refs.totalRecruits || 0),
-      Array.isArray(refs.recruits) ? refs.recruits.length : 0
-    );
+    const recArr = Array.isArray(refs.recruits) ? refs.recruits : [];
+    const tier1Count = recArr.filter((r: any) => (r.tier || 1) === 1).length;
+    const effectiveRecruits = recArr.length > 0 ? tier1Count : Number(refs.totalRecruits || 0);
 
     if (effectiveRecruits < recruitsRequired) {
       return { success: false, message: `Need ${recruitsRequired} recruits to claim this milestone reward.` };

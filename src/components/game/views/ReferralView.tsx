@@ -80,7 +80,10 @@ export default function ReferralView() {
   const effectiveReferredBy = player.referrals?.referredBy || authUserReferredBy || standaloneSponsor || undefined;
 
   const recruitsList = Array.isArray(player.referrals?.recruits) ? player.referrals.recruits : [];
-  const effectiveTotalRecruits = Math.max(Number(player.referrals?.totalRecruits || 0), recruitsList.length);
+  const tier1RecruitsCount = recruitsList.filter((r: any) => (r.tier || 1) === 1).length;
+  const effectiveTotalRecruits = recruitsList.length > 0
+    ? tier1RecruitsCount
+    : Number(player.referrals?.totalRecruits || 0);
   const effectiveTotalNetwork = Math.max(Number(player.referrals?.networkTotalCitizens || 0), recruitsList.length);
 
   const refs = {
