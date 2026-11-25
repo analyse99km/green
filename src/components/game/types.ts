@@ -410,6 +410,14 @@ export interface PlayerState {
   dailyStreak: number;
   lastStreakClaimTimestamp: number;
   canClaimDailyStreak: boolean;
+  lastNewspaperRationTimestamp?: number;
+
+  // Daily Combo Hamster-Style System (Must buy/upgrade on same day; resets daily)
+  dailyComboProgress?: {
+    date: string;
+    upgradedCardIds: string[];
+    claimed: boolean;
+  };
 
   // Viral Referrals & Syndicate Affiliate Rewards
   referrals: ReferralState;

@@ -650,14 +650,34 @@ export default function ReferralView() {
           </div>
         </div>
 
-        {totalNetworkCitizens === 0 ? (
-          <div className="p-8 bg-neutral-950 rounded-xl border border-neutral-800 text-center space-y-2">
-            <span className="text-3xl block">🌐</span>
-            <h4 className="text-sm font-bold text-white">No recruits in your syndicate network yet</h4>
-            <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
-              Share your link to recruit citizens. You earn milestone bounties and multi-jump royalties once a day based on active gameplay!
-            </p>
-          </div>
+        {refs.recruits.length === 0 ? (
+          totalNetworkCitizens > 0 ? (
+            <div className="p-8 bg-neutral-950 rounded-xl border border-neutral-800 text-center space-y-3">
+              <span className="text-3xl block animate-spin">🔄</span>
+              <h4 className="text-sm font-bold text-white">Syncing {totalNetworkCitizens} Syndicate Recruits...</h4>
+              <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
+                Your downline network citizens are registered in the cluster database. Click below to pull their live cards into this roster.
+              </p>
+              <button
+                onClick={() => {
+                  refreshReferralNetwork();
+                  setFeedback('Refreshing syndicate roster from cluster...');
+                  setTimeout(() => setFeedback(null), 3000);
+                }}
+                className="mt-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-neutral-950 text-xs font-bold rounded-lg cursor-pointer transition"
+              >
+                Sync Downlines Now
+              </button>
+            </div>
+          ) : (
+            <div className="p-8 bg-neutral-950 rounded-xl border border-neutral-800 text-center space-y-2">
+              <span className="text-3xl block">🌐</span>
+              <h4 className="text-sm font-bold text-white">No recruits in your syndicate network yet</h4>
+              <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
+                Share your link to recruit citizens. You earn milestone bounties and multi-jump royalties once a day based on active gameplay!
+              </p>
+            </div>
+          )
         ) : (
           <div className="divide-y divide-neutral-800/80 overflow-x-auto">
             {refs.recruits.map((rec) => {

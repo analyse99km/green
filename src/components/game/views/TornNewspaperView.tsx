@@ -23,6 +23,8 @@ export default function TornNewspaperView() {
   const { player, addLog, awardMoney, deductMoney, saveGame } = useGame();
   const [activeTab, setActiveTab] = useState<'FRONT' | 'MARKET' | 'CLASSIFIEDS' | 'LOTTERY'>('FRONT');
   const [claimedDailyRation, setClaimedDailyRation] = useState(() => {
+    const lastPlayerClaim = player.lastNewspaperRationTimestamp || 0;
+    if (lastPlayerClaim > 0 && Date.now() - lastPlayerClaim < 86400000) return true;
     if (typeof window === 'undefined') return false;
     const last = Number(localStorage.getItem(`metropolis_newspaper_claim_${player.id || 'default'}`) || 0);
     return last > 0 && Date.now() - last < 86400000;
@@ -73,8 +75,9 @@ export default function TornNewspaperView() {
   ];
 
   const handleClaimDailyRation = () => {
-    if (claimedDailyRation) return;
     const now = Date.now();
+    const lastPlayerClaim = player.lastNewspaperRationTimestamp || 0;
+    if (claimedDailyRation || (lastPlayerClaim > 0 && now - lastPlayerClaim < 86400000)) return;
     localStorage.setItem(`metropolis_newspaper_claim_${player.id || 'default'}`, String(now));
     setClaimedDailyRation(true);
     awardMoney(1500, 'Newspaper Daily Ration');
@@ -82,6 +85,8 @@ export default function TornNewspaperView() {
       type: 'CIVILIAN',
       message: 'Claimed Newspaper Daily Ration: +$1,500 Cash, +20 Energy, +20 Happy!',
     });
+    player.lastNewspaperRationTimestamp = now;
+    player.hasUnsavedActions = true;
     saveGame().catch(() => {});
   };
 

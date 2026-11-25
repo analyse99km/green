@@ -239,9 +239,22 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
         } catch {}
       }
 
+      const uniqueRef = data.userReferralCode || `NEON-${Math.floor(100000 + Math.random() * 900000)}`;
+
       // Merge local and cloud state so progress is NEVER wiped by an older cloud or empty local state
       if (!isRegister) {
         if (cloudState && localState) {
+          const cloudRefs = cloudState.referrals || {};
+          const localRefs = localState.referrals || {};
+          const mergedRecruits = [...(cloudRefs.recruits || [])];
+          for (const lr of (localRefs.recruits || [])) {
+            if (!mergedRecruits.some((r: any) => r.id === lr.id || (r.email && lr.email && r.email.toLowerCase() === lr.email.toLowerCase()))) {
+              mergedRecruits.push(lr);
+            }
+          }
+          const effTotal = Math.max(Number(cloudRefs.totalRecruits || 0), Number(localRefs.totalRecruits || 0), mergedRecruits.length);
+          const effNetwork = Math.max(Number(cloudRefs.networkTotalCitizens || 0), Number(localRefs.networkTotalCitizens || 0), mergedRecruits.length);
+
           playerState = {
             ...localState,
             ...cloudState,
@@ -253,6 +266,19 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             level: Math.max(Number(localState.level || 1), Number(cloudState.level || 1)),
             inventory: (localState.inventory && localState.inventory.length > 0) ? localState.inventory : (cloudState.inventory || []),
             dreamCards: { ...(cloudState.dreamCards || {}), ...(localState.dreamCards || {}) },
+            referrals: {
+              ...localRefs,
+              ...cloudRefs,
+              referralCode: data.userReferralCode || cloudRefs.referralCode || localRefs.referralCode || uniqueRef,
+              referredBy: cloudRefs.referredBy || localRefs.referredBy || undefined,
+              recruits: mergedRecruits,
+              totalRecruits: effTotal,
+              networkTotalCitizens: effNetwork,
+              unclaimedCommissionGreen: Math.max(Number(cloudRefs.unclaimedCommissionGreen || 0), Number(localRefs.unclaimedCommissionGreen || 0)),
+              lifetimeCommissionGreen: Math.max(Number(cloudRefs.lifetimeCommissionGreen || 0), Number(localRefs.lifetimeCommissionGreen || 0)),
+              claimedMilestones: Array.from(new Set([...(cloudRefs.claimedMilestones || []), ...(localRefs.claimedMilestones || [])]))
+            },
+            dailyComboProgress: cloudState.dailyComboProgress || localState.dailyComboProgress || undefined,
             lastSaveTimestamp: Math.max(localState.lastSaveTimestamp || 0, cloudState.lastSaveTimestamp || 0, Date.now())
           };
         } else if (cloudState) {
@@ -261,8 +287,6 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
           playerState = localState;
         }
       }
-
-      const uniqueRef = data.userReferralCode || `NEON-${Math.floor(100000 + Math.random() * 900000)}`;
 
       if (isRegister) {
         const uniqueXid = String(Math.floor(1000000 + Math.random() * 9000000));

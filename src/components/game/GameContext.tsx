@@ -59,7 +59,7 @@ import {
 } from './gameCrypto';
 import { InsufficientFundsData } from './InsufficientFundsModal';
 import { P2PPurchaseReceipt } from './types';
-import { loadCatalogData, saveCatalogData, syncCatalogFromServer, DynamicCatalogData, BotanicalCardDef, DEFAULT_REFERRAL_REWARDS } from './gameCatalog';
+import { loadCatalogData, saveCatalogData, syncCatalogFromServer, DynamicCatalogData, BotanicalCardDef, DEFAULT_REFERRAL_REWARDS, getTodayDailyCombo, getTodayDateString } from './gameCatalog';
 import { isTelegramEnv, tgCloudGet, tgCloudSet, getCompactCloudSave } from '@/lib/telegramStorage';
 import { ensureMissionsSynchronized, recordMissionAction } from './gameMissions';
 
@@ -126,6 +126,7 @@ interface GameContextType {
   syncCloudItems: () => Promise<{ success: boolean; newCount: number; message: string }>;
   tapDreamEnergy: () => { sparksEarned: number; comboStreak: number; totalSparks: number };
   upgradeDreamCard: (cardId: string) => { success: boolean; message: string; newLevel?: number };
+  claimDailyComboReward: () => { success: boolean; message: string; rewardSparks?: number };
   equipTapperSkin: (skinId: string) => { success: boolean; message: string };
   unlockTapperSkin: (skinId: string) => { success: boolean; message: string };
   installBodyAugmentation: (augId: string) => { success: boolean; message: string };
@@ -677,6 +678,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(autoSaveInterval);
   }, [addLog]);
 
+  // ── REACTIVE AUTO-SAVE ON EVERY BUTTON ACTION (Zero-Latency Local Write + Debounced Cloud Cluster Sync) ──
+  const actionSaveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    if (!mounted || !player.hasUnsavedActions) return;
+
+    // Immediate non-blocking write to localStorage on EVERY button click or state mutation
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(player));
+      const authUserRaw = localStorage.getItem('metropolis_auth_user');
+      if (authUserRaw) {
+        const authUser = JSON.parse(authUserRaw);
+        if (authUser?.email) {
+          localStorage.setItem(`neon_metropolis_user_${authUser.email.trim().toLowerCase()}`, JSON.stringify(player));
+        }
+      }
+    } catch {}
+
+    // Debounce cloud cluster sync (800ms) so rapid button clicks coalesce cleanly into 1 server save
+    if (actionSaveDebounceRef.current) clearTimeout(actionSaveDebounceRef.current);
+    actionSaveDebounceRef.current = setTimeout(() => {
+      saveGame(playerRef.current).catch(() => {});
+    }, 800);
+  }, [player, mounted]);
+
   const saveGame = async (explicitState?: PlayerState) => {
     setIsSaving(true);
     try {
@@ -713,13 +738,37 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(updatedPlayer)).catch(() => {});
       }
 
-      // Asynchronously sync player state to cluster cloud server for cross-machine access
+      // Sync player state to cluster cloud server and merge live server downlines
       if (userEmail) {
-        fetch('/api/player/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: userEmail, playerState: updatedPlayer }),
-        }).catch(() => {});
+        try {
+          const syncRes = await fetch('/api/player/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, playerState: updatedPlayer }),
+          });
+          if (syncRes.ok) {
+            const syncData = await syncRes.json();
+            if (syncData.referrals && Array.isArray(syncData.referrals.recruits)) {
+              const currentRecruits = updatedPlayer.referrals?.recruits || [];
+              const serverRecruits = syncData.referrals.recruits;
+              const mergedRecruits = [...serverRecruits];
+              for (const cr of currentRecruits) {
+                if (!mergedRecruits.some((r: any) => r.id === cr.id || (r.email && cr.email && r.email.toLowerCase() === cr.email.toLowerCase()))) {
+                  mergedRecruits.push(cr);
+                }
+              }
+              updatedPlayer.referrals = {
+                ...(updatedPlayer.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
+                ...syncData.referrals,
+                recruits: mergedRecruits,
+                totalRecruits: Math.max(Number(updatedPlayer.referrals?.totalRecruits || 0), Number(syncData.referrals.totalRecruits || 0), mergedRecruits.length),
+                networkTotalCitizens: Math.max(Number(updatedPlayer.referrals?.networkTotalCitizens || 0), Number(syncData.referrals.networkTotalCitizens || 0), mergedRecruits.length),
+              };
+              localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
+              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+            }
+          }
+        } catch {}
 
         // Dual sync: Also update runner memory & disk via /api/admin
         fetch('/api/admin', {
@@ -739,8 +788,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }).catch(() => {});
       }
 
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 400));
 
+      playerRef.current = updatedPlayer;
       setPlayer(updatedPlayer);
       setIsSaving(false);
       setSaveSuccess(true);
@@ -2909,6 +2959,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
 
     const nextLvl = currentLvl + 1;
+    const today = getTodayDateString();
+    const todayCombo = getTodayDailyCombo(catalog);
+    const isComboCard = todayCombo.cardIds.includes(cardId);
+
     setPlayer((prev) => {
       const msnRes = recordMissionAction(prev.missions, 'CARD_UPGRADE', 1);
       let updatedMissions = msnRes.updated ? msnRes.updatedMissions : prev.missions;
@@ -2919,6 +2973,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }
         return m;
       });
+
+      // Daily Combo Progress: must be upgraded on TODAY'S date. Resets automatically when date rolls over!
+      let currentCombo = prev.dailyComboProgress;
+      if (!currentCombo || currentCombo.date !== today) {
+        currentCombo = { date: today, upgradedCardIds: [], claimed: false };
+      }
+      let updatedCombo = currentCombo;
+      if (isComboCard && !currentCombo.upgradedCardIds.includes(cardId)) {
+        updatedCombo = {
+          ...currentCombo,
+          date: today,
+          upgradedCardIds: [...currentCombo.upgradedCardIds, cardId],
+        };
+      }
+
       return {
         ...prev,
         dreamPoints: prev.dreamPoints - cost,
@@ -2926,6 +2995,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           ...(prev.dreamCards || {}),
           [cardId]: nextLvl,
         },
+        dailyComboProgress: updatedCombo,
         missions: updatedMissions,
         hasUnsavedActions: true,
       };
@@ -2934,13 +3004,90 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     SoundEngine.playLoot(player.soundEnabled);
     addLog({
       type: 'CIVILIAN',
-      message: `Botanical Cards: Upgraded ${cardId.replace('card_', '').toUpperCase()} to Level ${nextLvl}!`,
+      message: `Botanical Cards: Upgraded ${cardDef?.title || cardId.replace('card_', '').toUpperCase()} to Level ${nextLvl}!`,
     });
 
     return {
       success: true,
       newLevel: nextLvl,
       message: `Card Upgraded to Level ${nextLvl}! Passive auto-sparks production increased.`,
+    };
+  };
+
+  const claimDailyComboReward = (): { success: boolean; message: string; rewardSparks?: number } => {
+    if (isClaimingRewardRef.current) {
+      return { success: false, message: 'Processing daily combo claim, please wait...' };
+    }
+    const currentBase = playerRef.current || player;
+    const catalog = loadCatalogData();
+    const today = getTodayDateString();
+    const todayCombo = getTodayDailyCombo(catalog);
+
+    const comboProg = currentBase.dailyComboProgress?.date === today
+      ? currentBase.dailyComboProgress
+      : { date: today, upgradedCardIds: [], claimed: false };
+
+    if (comboProg.claimed) {
+      return {
+        success: false,
+        message: 'Today\'s Daily Combo reward (+5,000,000 Sparks) is already claimed! Resets at midnight UTC.',
+      };
+    }
+
+    const allThreeUpgradedToday = todayCombo.cardIds.every((cid) =>
+      (comboProg.upgradedCardIds || []).includes(cid)
+    );
+
+    if (!allThreeUpgradedToday) {
+      const remaining = todayCombo.cardIds.filter((cid) => !(comboProg.upgradedCardIds || []).includes(cid)).length;
+      return {
+        success: false,
+        message: `Daily combo incomplete! You need to buy or upgrade ${remaining} more daily combo card(s) today.`,
+      };
+    }
+
+    isClaimingRewardRef.current = true;
+    const rewardSparks = todayCombo.rewardSparks || 5000000;
+
+    const updatedPlayer: PlayerState = {
+      ...currentBase,
+      dreamPoints: (currentBase.dreamPoints || 0) + rewardSparks,
+      dailyComboProgress: {
+        date: today,
+        upgradedCardIds: comboProg.upgradedCardIds,
+        claimed: true,
+      },
+      hasUnsavedActions: true,
+    };
+
+    playerRef.current = updatedPlayer;
+    setPlayer(updatedPlayer);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        const email = JSON.parse(authRaw)?.email;
+        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updatedPlayer));
+      }
+    } catch {}
+
+    saveGame(updatedPlayer).catch(() => {});
+
+    setTimeout(() => {
+      isClaimingRewardRef.current = false;
+    }, 600);
+
+    SoundEngine.playVictory(player.soundEnabled);
+    addLog({
+      type: 'CIVILIAN',
+      message: `🎉 DAILY COMBO CRACKED: Claimed +${rewardSparks.toLocaleString()} Dream Sparks reward!`,
+    });
+
+    return {
+      success: true,
+      rewardSparks,
+      message: `🎉 DAILY COMBO CRACKED! +${rewardSparks.toLocaleString()} Dream Sparks added to your vault!`,
     };
   };
 
@@ -4240,8 +4387,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/player/sync?${query.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.playerState?.referrals) {
-          const serverRefs = data.playerState.referrals;
+        if (data.success && (data.referrals || data.playerState?.referrals)) {
+          const serverRefs = data.referrals || data.playerState.referrals;
           setPlayer((prev) => {
             const currentRecruits = prev.referrals?.recruits || [];
             const serverRecruits = serverRefs.recruits || [];
@@ -4518,6 +4665,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         syncCloudItems,
         tapDreamEnergy,
         upgradeDreamCard,
+        claimDailyComboReward,
         equipTapperSkin,
         unlockTapperSkin,
         installBodyAugmentation,

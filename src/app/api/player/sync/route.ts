@@ -272,6 +272,7 @@ export async function GET(req: NextRequest) {
       userId: user.userId,
       userReferralCode: user.userReferralCode || user.playerState?.referrals?.referralCode,
       referredBy: finalReferredBy,
+      referrals: user.playerState?.referrals || null,
       playerState: user.playerState || null,
       lastSaveAt: user.lastSaveAt || null
     });
@@ -427,6 +428,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Operative game state successfully backed up to cluster!',
+      referrals: user.playerState?.referrals || null,
       lastSaveAt: user.lastSaveAt
     });
   } catch (err: any) {

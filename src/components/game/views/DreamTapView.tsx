@@ -32,7 +32,7 @@ import ReferralView from './ReferralView';
 import MissionsModal from './MissionsModal';
 import HowToPlayModal from './HowToPlayModal';
 import { SoundEngine } from '../gameAudio';
-import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, DailyComboDef, INITIAL_DREAM_MARKET_ITEMS, DreamMarketItemDef, INITIAL_TREE_STAGES, TreeStageDef } from '../gameCatalog';
+import { loadCatalogData, DynamicCatalogData, BotanicalCardDef, getTodayDailyCombo, getTodayDateString, DailyComboDef, INITIAL_DREAM_MARKET_ITEMS, DreamMarketItemDef, INITIAL_TREE_STAGES, TreeStageDef } from '../gameCatalog';
 import DynamicIcon from '../DynamicIcon';
 import { formatCompactNumber, CURRENCY_ICONS } from '../formatters';
 
@@ -55,6 +55,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
     tapDreamEnergy,
     exchangeDreamSparks,
     upgradeDreamCard,
+    claimDailyComboReward,
     unlockTapperSkin,
     equipTapperSkin,
     claimDailyStreak,
@@ -131,6 +132,17 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
   const cards = player.dreamCards || {};
   const unlockedPlants = player.unlockedTapperSkins || ['tree_mint', 'tree_sprout'];
   const activePlant = player.activeTapperSkinId || 'tree_mint';
+
+  // Strict Same-Day Daily Combo Enforcement: resets automatically at midnight UTC
+  const today = getTodayDateString();
+  const comboProgress = player.dailyComboProgress?.date === today
+    ? player.dailyComboProgress
+    : { date: today, upgradedCardIds: [], claimed: false };
+
+  const isCardUpgradedToday = (cid: string) => (comboProgress.upgradedCardIds || []).includes(cid);
+  const solvedComboCount = todayCombo.cardIds.filter((cid) => isCardUpgradedToday(cid)).length;
+  const allThreeComboUpgradedToday = solvedComboCount === 3;
+  const isComboClaimedToday = Boolean(comboProgress.claimed);
 
   // Calculate dynamic auto sparks per second
   const autoSparksPerSec = (catalog.cards || []).reduce((acc, card) => {
@@ -717,7 +729,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                 <span className="text-sm font-extrabold text-white tracking-wide">Daily combo</span>
                 <div className="flex items-center gap-1.5 ml-1">
                   {todayCombo.cardIds.map((cid, i) => {
-                    const isFound = (cards[cid] || 0) > 0;
+                    const isFound = isCardUpgradedToday(cid);
                     return (
                       <span
                         key={i}
@@ -747,7 +759,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
             {/* 3 Mystery Card Slots */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {todayCombo.cardIds.map((cid, slot) => {
-                const isGuessed = (cards[cid] || 0) > 0;
+                const isGuessed = isCardUpgradedToday(cid);
                 const foundCard = catalog.cards.find((c) => c.id === cid);
                 return (
                   <div
@@ -783,6 +795,35 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                 );
               })}
             </div>
+
+            {/* Daily Combo Action / Claim Status */}
+            {allThreeComboUpgradedToday && !isComboClaimedToday ? (
+              <button
+                onClick={() => {
+                  SoundEngine.playVictory(player.soundEnabled);
+                  const res = claimDailyComboReward();
+                  if (res.success) {
+                    setFeedback(res.message);
+                    setTimeout(() => setFeedback(null), 4000);
+                  } else {
+                    alert(res.message);
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 text-black font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-emerald-950/60 hover:brightness-110 active:scale-[0.99] transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>🎁</span>
+                <span>CLAIM DAILY COMBO: +{formatCompactNumber(todayCombo.rewardSparks)} SPARKS</span>
+              </button>
+            ) : isComboClaimedToday ? (
+              <div className="w-full py-2 px-3 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs font-bold text-center flex items-center justify-center gap-2">
+                <span>✓</span>
+                <span>Daily Combo Claimed Today (+{formatCompactNumber(todayCombo.rewardSparks)} Sparks) • Resets at 00:00 UTC ({comboCountdownStr})</span>
+              </div>
+            ) : (
+              <div className="text-center text-[11px] text-neutral-400 font-mono py-0.5">
+                Buy or upgrade today's 3 mystery botanical cards to unlock +{formatCompactNumber(todayCombo.rewardSparks)} Sparks ({solvedComboCount}/3 found today)
+              </div>
+            )}
           </div>
 
           {/* Centered Prominent Balance Row (Exact Hamster Kombat Match) */}

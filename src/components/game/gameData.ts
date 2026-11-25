@@ -1239,6 +1239,14 @@ export const DEFAULT_METROPOLIS_PLAYER: PlayerState = {
   dailyStreak: 1,
   lastStreakClaimTimestamp: 0,
   canClaimDailyStreak: true,
+  lastNewspaperRationTimestamp: 0,
+
+  // Daily Combo System (Resets at midnight UTC)
+  dailyComboProgress: {
+    date: '',
+    upgradedCardIds: [],
+    claimed: false,
+  },
 
   // Viral Referrals & Syndicate Affiliate Rewards
   referrals: {
