@@ -271,16 +271,16 @@ export default function TopVitalsBar({
               ? 'bg-red-950/40 border-red-500/80 animate-pulse'
               : 'bg-neutral-950/80 border-neutral-800'
           }`}>
-            <div className="flex justify-between items-center mb-1">
-              <span className="flex items-center gap-1 text-orange-400 font-bold">
-                <Utensils className="w-3 h-3" /> Satiety
+            <div className="flex flex-wrap justify-between items-center gap-1 mb-1">
+              <span className="flex items-center gap-1 text-orange-400 font-bold whitespace-nowrap">
+                <Utensils className="w-3 h-3 shrink-0" /> Satiety
                 {isStarving && (
-                  <span className="text-[9px] text-red-400 font-black ml-1 flex items-center gap-0.5">
-                    <AlertTriangle className="w-2.5 h-2.5" /> STARVING!
+                  <span className="text-[9px] text-red-400 font-black ml-0.5 flex items-center gap-0.5">
+                    <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> STARVING!
                   </span>
                 )}
               </span>
-              <span className={isStarving ? 'text-red-400 font-bold' : 'text-neutral-400'}>
+              <span className={`${isStarving ? 'text-red-400 font-bold' : 'text-neutral-400'} whitespace-nowrap`}>
                 {player.food ?? 70}/{player.maxFood ?? 100}
               </span>
             </div>

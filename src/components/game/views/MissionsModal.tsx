@@ -197,7 +197,7 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
         </div>
 
         {/* Tab Navigation Row */}
-        <div className="grid grid-cols-5 p-1.5 bg-neutral-950 border-b border-neutral-800 font-mono text-[10px] sm:text-xs shrink-0">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 p-1.5 bg-neutral-950 border-b border-neutral-800 font-mono text-[10px] sm:text-xs shrink-0">
           <button
             onClick={() => {
               SoundEngine.playTick(player.soundEnabled);
@@ -361,22 +361,22 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
 
                       {/* Reward Badge Chips */}
                       <div className="flex flex-col items-end gap-1 shrink-0 font-mono text-[10px]">
-                        {mission.rewardGreen && (
+                        {(mission.rewardGreen || 0) > 0 && (
                           <span className="text-emerald-400 font-bold">
                             +🌿 {mission.rewardGreen} GREEN
                           </span>
                         )}
-                        {mission.rewardSparks && (
+                        {(mission.rewardSparks || 0) > 0 && (
                           <span className="text-cyan-300 font-bold">
                             +⚡ {formatCompactNumber(mission.rewardSparks)} Sparks
                           </span>
                         )}
-                        {mission.rewardCash && (
+                        {(mission.rewardCash || 0) > 0 && (
                           <span className="text-zinc-300 font-bold">
                             +${mission.rewardCash.toLocaleString()}
                           </span>
                         )}
-                        {mission.rewardCredits && (
+                        {(mission.rewardCredits || 0) > 0 && (
                           <span className="text-amber-300 font-bold flex items-center gap-0.5">
                             <Award className="w-3 h-3 text-amber-400" />
                             +{mission.rewardCredits} Credits

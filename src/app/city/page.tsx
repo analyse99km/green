@@ -23,6 +23,7 @@ import AttackView from '@/components/game/views/AttackView';
 import LuckyWheelView from '@/components/game/views/LuckyWheelView';
 import DreamTapView from '@/components/game/views/DreamTapView';
 import ReferralView from '@/components/game/views/ReferralView';
+import TornFactionView from '@/components/game/views/TornFactionView';
 import { AdminDashboardView } from '@/components/game/views/AdminDashboardView';
 import MobileBottomDock from '@/components/game/MobileBottomDock';
 import MobileSidebarDrawer from '@/components/game/MobileSidebarDrawer';
@@ -97,15 +98,15 @@ export function TornCityContent() {
                   <div className="text-[11px] text-neutral-300 mt-0.5">
                     {isFoodLow && `🍞 Food Satiety depleted (${player.food ?? 0}/100). `}
                     {isEnergyLow && `⚡ Energy is low (${player.energy ?? 0}/100). `}
-                    {isNerveLow && `🛡️ Nerve is low (${player.nerve ?? 0}/100). `}
-                    {isLifeLow && `💖 Health is low (${player.life ?? 0}/100). `}
+                    {isNerveLow && `🛡️ Nerve is low (${player.nerve ?? 0}/${player.maxNerve ?? 10}). `}
+                    {isLifeLow && `💖 Health is low (${player.life ?? 0}/${player.maxLife ?? 100}). `}
                     Actions are locked. Refill instantly in Lucid Dream Tap with Sparks.
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => setCurrentView('DREAM_TAP')}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-400 hover:from-amber-400 hover:to-emerald-300 text-neutral-950 font-black text-xs font-mono shadow-lg transition-all active:scale-95 cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black text-xs font-mono shadow-lg transition-all active:scale-95 cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
               >
                 <span>⚡ Tap Lucid Dream to Refill & Unlock →</span>
               </button>
@@ -134,6 +135,32 @@ export function TornCityContent() {
           {currentView === 'BANK' && <TornBankView />}
           {currentView === 'HOSPITAL' && <TornHospitalView />}
           {currentView === 'CASINO' && <TornCasinoView />}
+          {currentView === 'FACTION' && <TornFactionView />}
+          {currentView === 'JAIL' && (
+            <div className="space-y-4">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🚔</span>
+                      <h2 className="text-xl font-bold text-white">Metropolis Correctional Facility</h2>
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-1 max-w-2xl leading-relaxed">
+                      {(player.jailTimeRemainingSeconds || 0) > 0
+                        ? `You are currently detained in Maximum Security. Remaining sentence: ${player.jailTimeRemainingSeconds}s.`
+                        : 'Clean standing — you have no active detention sentences. Stay sharp during high-risk street operations.'}
+                    </p>
+                  </div>
+                  <div className="bg-neutral-950 px-4 py-2.5 rounded-xl border border-neutral-800 font-mono text-xs">
+                    <span className="text-neutral-500 block text-[10px]">Custody Status</span>
+                    <span className={(player.jailTimeRemainingSeconds || 0) > 0 ? 'text-rose-400 font-bold text-sm' : 'text-emerald-400 font-bold text-sm'}>
+                      {(player.jailTimeRemainingSeconds || 0) > 0 ? `DETAINED (${player.jailTimeRemainingSeconds}s)` : 'FREE CITIZEN'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {currentView === 'ADMIN' && <AdminDashboardView />}
         </main>
       </div>
@@ -152,7 +179,7 @@ export function TornCityContent() {
       <OperativeIdModal
         isOpen={isIdModalOpen}
         onClose={() => setIsIdModalOpen(false)}
-        canDismiss={Boolean(player.hasCustomId)}
+        canDismiss={true}
       />
 
       {/* Mobile Slide-Out Sidebar Drawer */}

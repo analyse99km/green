@@ -216,7 +216,7 @@ export default function CityPhone({ isOpen: propIsOpen, onClose: propOnClose, on
     <>
       {/* Permanent Floating Smartphone Button (Desktop only; on mobile, Smartphone is cleanly accessible via sticky top header) */}
       {!isOpen && (
-        <div className="hidden sm:block fixed sm:bottom-8 sm:right-8 z-30 select-none">
+        <div className="hidden sm:block fixed sm:bottom-24 sm:right-6 z-30 select-none">
           <button
             onClick={handleOpen}
             className="relative flex items-center justify-center gap-2 p-3 sm:px-4 sm:py-2.5 rounded-full bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer border border-emerald-400/40"

@@ -602,7 +602,8 @@ export default function ReferralView() {
                 <div>
                   <div className="flex items-center justify-between text-xs font-mono mb-1.5">
                     <span className="font-bold text-amber-400 flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5" /> {tier.recruits} Recruit{tier.recruits === 1 ? '' : 's'}
+                      <Users className="w-3.5 h-3.5" />
+                      <span>{tier.recruits} {tier.recruits === 1 ? 'Recruit' : 'Recruits'}</span>
                     </span>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-950 text-neutral-400 border border-neutral-800">
                       {refs.totalRecruits}/{tier.recruits}

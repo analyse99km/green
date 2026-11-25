@@ -1128,20 +1128,20 @@ export const DEFAULT_METROPOLIS_PLAYER: PlayerState = {
   maritalStatus: 'Single',
   networth: 150,
 
-  // Vitals - Starting from scratch with 0 as required!
-  money: 0, // 🌿 0 GREEN Coins (Must earn sparks & mint in Dream Market)
+  // Vitals - Healthy starting state so new operatives can act immediately
+  money: 250, // 🌿 250 GREEN Starter Funds
   bankMoney: 0,
   points: 0,
   missionCredits: 0,
-  life: 0, // Awakens via Life Sap in Dream Market
+  life: 100,
   maxLife: 100,
-  energy: 0, // Awakens via Energy Stem in Dream Market
+  energy: 100,
   maxEnergy: 100,
-  nerve: 0, // Awakens via Nerve Nectar in Dream Market
+  nerve: 10,
   maxNerve: 10,
-  happy: 0, // Awakens via Happy Blossom in Dream Market
+  happy: 100,
   maxHappy: 100,
-  food: 0, // Awakens via Sprout Sourdough in Dream Market
+  food: 100,
   maxFood: 100,
   chain: 0,
   maxChain: 10,
@@ -1204,7 +1204,7 @@ export const DEFAULT_METROPOLIS_PLAYER: PlayerState = {
   soundEnabled: true,
 
   // Lucid Dream Botanical Plant Tapper & Idle Forest
-  dreamPoints: 0,
+  dreamPoints: 50,
   dreamMultiplier: 1,
   totalTaps: 0,
   tapStamina: 100,

@@ -46,6 +46,15 @@ export default function OperativeIdModal({ isOpen, onClose, canDismiss = true }:
     }
   }, [isOpen, player.name, player.referrals?.referredBy]);
 
+  useEffect(() => {
+    if (!isOpen || !canDismiss) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, canDismiss, onClose]);
+
   if (!isOpen) return null;
 
   const handleSaveId = async (e: React.FormEvent) => {

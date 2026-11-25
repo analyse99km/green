@@ -307,7 +307,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // ignore
       }
-    } else if (isTelegramEnv()) {
+    } else {
+      // Brand-new player / guest: populate Daily, Weekly, Monthly & Story missions immediately
+      const customMsn = loadCatalogData().customMissions || [];
+      setPlayer((prev) => {
+        const msnSync = ensureMissionsSynchronized(prev, customMsn);
+        const next: PlayerState = {
+          ...prev,
+          missions: msnSync.missions,
+          lastDailyMissionsDate: msnSync.lastDaily,
+          lastWeeklyMissionsWeek: msnSync.lastWeekly,
+          lastMonthlyMissionsMonth: msnSync.lastMonthly,
+        };
+        playerRef.current = next;
+        return next;
+      });
+    }
+    if (!saved && isTelegramEnv()) {
       // Cross-Domain Recovery: Query Telegram CloudStorage if local storage was empty
       tgCloudGet('metropolis_player_save_v1').then((cloudSaveRaw) => {
         if (cloudSaveRaw) {
