@@ -61,7 +61,14 @@ import { InsufficientFundsData } from './InsufficientFundsModal';
 import { P2PPurchaseReceipt } from './types';
 import { loadCatalogData, saveCatalogData, syncCatalogFromServer, DynamicCatalogData, BotanicalCardDef, DEFAULT_REFERRAL_REWARDS, getTodayDailyCombo, getTodayDateString } from './gameCatalog';
 import { isTelegramEnv, tgCloudGet, tgCloudSet, getCompactCloudSave } from '@/lib/telegramStorage';
-import { ensureMissionsSynchronized, recordMissionAction } from './gameMissions';
+import {
+  ensureMissionsSynchronized,
+  recordMissionAction,
+  getStandaloneClaimedMissions,
+  getStandaloneReferredBy,
+  persistLedgerToLocalAndParent,
+  mergeClientPlayerStates,
+} from './gameMissions';
 
 const LOCAL_STORAGE_KEY = 'neon_metropolis_v6_botanical_green';
 
@@ -179,6 +186,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [player, setPlayer] = useState<PlayerState>(DEFAULT_METROPOLIS_PLAYER);
   const playerRef = useRef<PlayerState>(player);
   const isClaimingRewardRef = useRef(false);
+  const claimingMissionsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     playerRef.current = player;
   }, [player]);
@@ -281,7 +289,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         parsed.lastDailyMissionsDate = msnSync.lastDaily;
         parsed.lastWeeklyMissionsWeek = msnSync.lastWeekly;
         parsed.lastMonthlyMissionsMonth = msnSync.lastMonthly;
-        setPlayer((prev) => ({ ...prev, ...parsed }));
+        persistLedgerToLocalAndParent(parsed.claimedMissionIds || [], parsed.referrals?.referredBy, authUser?.email);
+        setPlayer((prev) => {
+          const next = mergeClientPlayerStates(prev, parsed, DEFAULT_METROPOLIS_PLAYER, {
+            name: authUser?.name,
+            userId: authUser?.userId,
+            userReferralCode: authUser?.userReferralCode,
+            referredBy: authUser?.referredBy,
+            telegramId: authUser?.telegramId,
+            email: authUser?.email,
+          });
+          playerRef.current = next;
+          return next;
+        });
       } catch {
         // ignore
       }
@@ -292,12 +312,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           try {
             const parsed = JSON.parse(cloudSaveRaw);
             const customMsn = loadCatalogData().customMissions || [];
-        const msnSync = ensureMissionsSynchronized(parsed, customMsn);
-        parsed.missions = msnSync.missions;
-        parsed.lastDailyMissionsDate = msnSync.lastDaily;
-        parsed.lastWeeklyMissionsWeek = msnSync.lastWeekly;
-        parsed.lastMonthlyMissionsMonth = msnSync.lastMonthly;
-        setPlayer((prev) => ({ ...prev, ...parsed }));
+            setPlayer((prev) => {
+              const merged = mergeClientPlayerStates(prev, parsed, DEFAULT_METROPOLIS_PLAYER, authUser || {});
+              const msnSync = ensureMissionsSynchronized(merged, customMsn);
+              merged.missions = msnSync.missions;
+              merged.lastDailyMissionsDate = msnSync.lastDaily;
+              merged.lastWeeklyMissionsWeek = msnSync.lastWeekly;
+              merged.lastMonthlyMissionsMonth = msnSync.lastMonthly;
+              playerRef.current = merged;
+              return merged;
+            });
           } catch {}
         }
       }).catch(() => {});
@@ -312,7 +336,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 .then((r) => r.json())
                 .then((data) => {
                   if (data.success && data.playerState) {
-                    setPlayer((prev) => ({ ...prev, ...data.playerState }));
+                    setPlayer((prev) => {
+                      const merged = mergeClientPlayerStates(prev, data.playerState, DEFAULT_METROPOLIS_PLAYER, parsedAuth);
+                      const msnSync = ensureMissionsSynchronized(merged, loadCatalogData().customMissions || []);
+                      merged.missions = msnSync.missions;
+                      playerRef.current = merged;
+                      return merged;
+                    });
                   }
                 }).catch(() => {});
             }
@@ -322,104 +352,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Cloud Cluster State Sync: Fetch authoritative progress from cluster if user is signed in
-    if (authUser?.email) {
-      fetch(`/api/player/sync?email=${encodeURIComponent(authUser.email.trim().toLowerCase())}`)
+    const syncQuery = new URLSearchParams();
+    if (authUser?.email) syncQuery.set('email', authUser.email.trim().toLowerCase());
+    if (authUser?.userId) syncQuery.set('userId', authUser.userId);
+    if (authUser?.telegramId) syncQuery.set('telegramId', String(authUser.telegramId));
+    if (authUser?.userReferralCode) syncQuery.set('code', authUser.userReferralCode);
+
+    if (authUser?.email || authUser?.userId || authUser?.telegramId) {
+      fetch(`/api/player/sync?${syncQuery.toString()}`)
         .then((r) => r.json())
         .then((data) => {
           if (data.success && data.playerState) {
             setPlayer((prev) => {
-              const cloudState = data.playerState;
-              // Deep merge preserving highest progress, non-empty arrays, and full referral network
-              const localRecruits = prev.referrals?.recruits || [];
-              const cloudRecruits = cloudState.referrals?.recruits || [];
-              const allRecruits = [...cloudRecruits];
-              for (const lr of localRecruits) {
-                if (!allRecruits.some((r: any) => r.id === lr.id || (r.email && lr.email && r.email.toLowerCase() === lr.email.toLowerCase()))) {
-                  allRecruits.push(lr);
-                }
-              }
-
-              const mergedMilestones = Array.from(new Set([
-                ...(prev.referrals?.claimedMilestones || []),
-                ...(cloudState.referrals?.claimedMilestones || [])
-              ]));
-
-              const standaloneSponsor = typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : null;
-              const preservedReferredBy = standaloneSponsor || prev.referrals?.referredBy || cloudState.referrals?.referredBy || authUser?.referredBy || null;
-
-              // Irrevocable Claim Ledger merge: combine client, cloud, and standalone storage
-              const standaloneClaimed = typeof window !== 'undefined' ? (() => {
-                try {
-                  const raw = localStorage.getItem('metropolis_claimed_missions');
-                  return raw ? JSON.parse(raw) : [];
-                } catch { return []; }
-              })() : [];
-
-              const mergedClaimedMissionIds = Array.from(new Set([
-                ...(prev.claimedMissionIds || []),
-                ...(cloudState.claimedMissionIds || []),
-                ...(Array.isArray(standaloneClaimed) ? standaloneClaimed : []),
-              ]));
-
-              // Deep merge missions array preserving completed & claimed status permanently
-              const msnMap = new Map<string, any>();
-              (prev.missions || []).forEach((m: any) => msnMap.set(m.id, { ...m }));
-              (cloudState.missions || []).forEach((m: any) => {
-                const existing = msnMap.get(m.id);
-                msnMap.set(m.id, {
-                  ...existing,
-                  ...m,
-                  completed: Boolean(existing?.completed || m.completed || mergedClaimedMissionIds.includes(m.id)),
-                  claimed: Boolean(existing?.claimed || m.claimed || mergedClaimedMissionIds.includes(m.id)),
-                });
+              const merged = mergeClientPlayerStates(prev, data.playerState, DEFAULT_METROPOLIS_PLAYER, {
+                name: authUser?.name || data.name,
+                userId: authUser?.userId || data.userId,
+                userReferralCode: authUser?.userReferralCode || data.userReferralCode,
+                referredBy: authUser?.referredBy || data.referredBy,
+                telegramId: authUser?.telegramId,
+                email: authUser?.email || data.email,
               });
-              mergedClaimedMissionIds.forEach((id: string) => {
-                const m = msnMap.get(id);
-                if (m) {
-                  m.completed = true;
-                  m.claimed = true;
-                }
-              });
-              const mergedMissions = Array.from(msnMap.values());
-
-              const mergedReferrals = {
-                ...(DEFAULT_METROPOLIS_PLAYER.referrals),
-                ...(cloudState.referrals || {}),
-                ...(prev.referrals || {}),
-                referredBy: preservedReferredBy,
-                hasClaimedWelcomeBonus: Boolean(preservedReferredBy),
-                recruits: allRecruits,
-                totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), Number(cloudState.referrals?.totalRecruits || 0), allRecruits.length),
-                networkTotalCitizens: Math.max(Number(prev.referrals?.networkTotalCitizens || 0), Number(cloudState.referrals?.networkTotalCitizens || 0), allRecruits.length),
-                unclaimedCommissionGreen: Math.max(
-                  Number(prev.referrals?.unclaimedCommissionGreen || 0),
-                  Number(cloudState.referrals?.unclaimedCommissionGreen || 0)
-                ),
-                lifetimeCommissionGreen: Math.max(
-                  Number(prev.referrals?.lifetimeCommissionGreen || 0),
-                  Number(cloudState.referrals?.lifetimeCommissionGreen || 0)
-                ),
-                claimedMilestones: mergedMilestones,
-                referralCode: authUser?.userReferralCode || cloudState.referrals?.referralCode || prev.referrals?.referralCode || `NEON-TG-${authUser?.telegramId || prev.id}`,
-              };
-
-              const merged: PlayerState = {
-                ...DEFAULT_METROPOLIS_PLAYER,
-                ...prev,
-                ...cloudState,
-                missions: mergedMissions.length > 0 ? mergedMissions : (prev.missions || []),
-                claimedMissionIds: mergedClaimedMissionIds,
-                referrals: mergedReferrals,
-                name: authUser?.name || cloudState.name || prev.name,
-                money: Math.max(Number(prev.money || 0), Number(cloudState.money || 0)),
-                bankMoney: Math.max(Number(prev.bankMoney || 0), Number(cloudState.bankMoney || 0)),
-                dreamPoints: Math.max(Number(prev.dreamPoints || 0), Number(cloudState.dreamPoints || cloudState.sparks || 0)),
-                greenTokens: Math.max(Number(prev.greenTokens || 0), Number(cloudState.greenTokens || 0)),
-                level: Math.max(Number(prev.level || 1), Number(cloudState.level || 1)),
-                inventory: (cloudState.inventory && cloudState.inventory.length > 0) ? cloudState.inventory : (prev.inventory || []),
-                dreamCards: (cloudState.dreamCards && Object.keys(cloudState.dreamCards).length > 0) ? cloudState.dreamCards : (prev.dreamCards || {}),
-                lastSaveTimestamp: Math.max(prev.lastSaveTimestamp || 0, cloudState.lastSaveTimestamp || 0, Date.now())
-              };
+              const msnSync = ensureMissionsSynchronized(merged, loadCatalogData().customMissions || []);
+              merged.missions = msnSync.missions;
+              merged.lastDailyMissionsDate = msnSync.lastDaily;
+              merged.lastWeeklyMissionsWeek = msnSync.lastWeekly;
+              merged.lastMonthlyMissionsMonth = msnSync.lastMonthly;
+              playerRef.current = merged;
               localStorage.setItem(activeKey, JSON.stringify(merged));
               localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
               return merged;
@@ -698,22 +656,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: userEmail, playerState: autoSaved }),
           }).catch(() => {});
-
-          fetch('/api/admin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'update_player',
-              email: userEmail,
-              updates: {
-                name: autoSaved.name,
-                money: autoSaved.money,
-                sparks: autoSaved.dreamPoints,
-                level: autoSaved.level,
-                playerState: autoSaved,
-              },
-            }),
-          }).catch(() => {});
         }
 
         return autoSaved;
@@ -739,12 +681,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(player));
       const authUserRaw = localStorage.getItem('metropolis_auth_user');
+      let uEmail = '';
       if (authUserRaw) {
         const authUser = JSON.parse(authUserRaw);
         if (authUser?.email) {
-          localStorage.setItem(`neon_metropolis_user_${authUser.email.trim().toLowerCase()}`, JSON.stringify(player));
+          uEmail = authUser.email.trim().toLowerCase();
+          localStorage.setItem(`neon_metropolis_user_${uEmail}`, JSON.stringify(player));
         }
       }
+      persistLedgerToLocalAndParent(player.claimedMissionIds || [], player.referrals?.referredBy, uEmail);
     } catch {}
 
     // Debounce cloud cluster sync (800ms) so rapid button clicks coalesce cleanly into 1 server save
@@ -759,16 +704,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     try {
       const currentState = explicitState || playerRef.current || player;
       const newHash = await computeStateHash(currentState, currentState.stateHash);
-      const updatedPlayer: PlayerState = {
-        ...currentState,
-        stateHash: newHash,
-        lastSaveTimestamp: Date.now(),
-        hasUnsavedActions: false,
-      };
+      const standaloneClaimed = getStandaloneClaimedMissions();
+      const standaloneSponsor = getStandaloneReferredBy();
+      const mergedClaimedIds = Array.from(
+        new Set([...(currentState.claimedMissionIds || []), ...standaloneClaimed])
+      );
+      const claimedSet = new Set(mergedClaimedIds);
+      const ensuredMissions = (currentState.missions || []).map((m) =>
+        claimedSet.has(m.id) ? { ...m, completed: true, claimed: true } : m
+      );
 
       let activeKey = LOCAL_STORAGE_KEY;
       let userEmail = '';
       const authUserRaw = localStorage.getItem('metropolis_auth_user');
+      let authSponsor: string | null = null;
       if (authUserRaw) {
         try {
           const authUser = JSON.parse(authUserRaw);
@@ -776,19 +725,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             userEmail = authUser.email.trim().toLowerCase();
             activeKey = `neon_metropolis_user_${userEmail}`;
           }
-          if (authUser?.referredBy && !updatedPlayer.referrals?.referredBy) {
-            if (!updatedPlayer.referrals) updatedPlayer.referrals = { ...DEFAULT_METROPOLIS_PLAYER.referrals };
-            updatedPlayer.referrals.referredBy = authUser.referredBy;
-            updatedPlayer.referrals.hasClaimedWelcomeBonus = true;
-          }
+          if (authUser?.referredBy) authSponsor = authUser.referredBy;
         } catch {}
       }
 
+      const finalSponsor = standaloneSponsor || currentState.referrals?.referredBy || authSponsor || undefined;
+      const updatedPlayer: PlayerState = {
+        ...currentState,
+        missions: ensuredMissions,
+        claimedMissionIds: mergedClaimedIds,
+        referrals: {
+          ...(currentState.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
+          referredBy: finalSponsor,
+          hasClaimedWelcomeBonus: Boolean(finalSponsor || currentState.referrals?.hasClaimedWelcomeBonus),
+        },
+        stateHash: newHash,
+        lastSaveTimestamp: Date.now(),
+        hasUnsavedActions: false,
+      };
+
+      persistLedgerToLocalAndParent(mergedClaimedIds, finalSponsor, userEmail);
       localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
       if (isTelegramEnv()) {
         tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(updatedPlayer)).catch(() => {});
       }
+
+      let serverReferrals: any = null;
+      let serverClaimedIds: string[] = [];
+      let serverReferredBy: string | null = null;
 
       // Sync player state to cluster cloud server and merge live server downlines
       if (userEmail) {
@@ -796,54 +761,70 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           const syncRes = await fetch('/api/player/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
             body: JSON.stringify({ email: userEmail, playerState: updatedPlayer }),
           });
           if (syncRes.ok) {
             const syncData = await syncRes.json();
-            if (syncData.referrals && Array.isArray(syncData.referrals.recruits)) {
-              const currentRecruits = updatedPlayer.referrals?.recruits || [];
-              const serverRecruits = syncData.referrals.recruits;
-              const mergedRecruits = [...serverRecruits];
-              for (const cr of currentRecruits) {
-                if (!mergedRecruits.some((r: any) => r.id === cr.id || (r.email && cr.email && r.email.toLowerCase() === cr.email.toLowerCase()))) {
-                  mergedRecruits.push(cr);
-                }
-              }
-              updatedPlayer.referrals = {
-                ...(updatedPlayer.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
-                ...syncData.referrals,
-                recruits: mergedRecruits,
-                totalRecruits: Math.max(Number(updatedPlayer.referrals?.totalRecruits || 0), Number(syncData.referrals.totalRecruits || 0), mergedRecruits.length),
-                networkTotalCitizens: Math.max(Number(updatedPlayer.referrals?.networkTotalCitizens || 0), Number(syncData.referrals.networkTotalCitizens || 0), mergedRecruits.length),
-              };
-              localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
-              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
-            }
+            if (syncData.referrals) serverReferrals = syncData.referrals;
+            if (Array.isArray(syncData.claimedMissionIds)) serverClaimedIds = syncData.claimedMissionIds;
+            if (syncData.referredBy) serverReferredBy = syncData.referredBy;
           }
         } catch {}
-
-        // Dual sync: Also update runner memory & disk via /api/admin
-        fetch('/api/admin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'update_player',
-            email: userEmail,
-            updates: {
-              name: updatedPlayer.name,
-              money: updatedPlayer.money,
-              sparks: updatedPlayer.dreamPoints,
-              level: updatedPlayer.level,
-              playerState: updatedPlayer,
-            },
-          }),
-        }).catch(() => {});
       }
 
-      await new Promise((r) => setTimeout(r, 400));
+      // Safely update latest React state without overwriting any clicks that occurred while saving!
+      setPlayer((latest) => {
+        const currentRecruits = latest.referrals?.recruits || [];
+        const srvRecruits = serverReferrals?.recruits || [];
+        const mergedRecruits = [...srvRecruits];
+        for (const cr of currentRecruits) {
+          if (!mergedRecruits.some((r: any) => r.id === cr.id || (r.email && cr.email && r.email.toLowerCase() === cr.email.toLowerCase()))) {
+            mergedRecruits.push(cr);
+          }
+        }
+        const finalClaimed = Array.from(
+          new Set([...(latest.claimedMissionIds || []), ...mergedClaimedIds, ...serverClaimedIds])
+        );
+        const fSet = new Set(finalClaimed);
+        const finalSponsorMerged =
+          getStandaloneReferredBy() || serverReferredBy || latest.referrals?.referredBy || finalSponsor || undefined;
 
-      playerRef.current = updatedPlayer;
-      setPlayer(updatedPlayer);
+        const nextState: PlayerState = {
+          ...latest,
+          stateHash: newHash,
+          lastSaveTimestamp: updatedPlayer.lastSaveTimestamp,
+          hasUnsavedActions: false,
+          claimedMissionIds: finalClaimed,
+          missions: (latest.missions || []).map((m) =>
+            fSet.has(m.id) ? { ...m, completed: true, claimed: true } : m
+          ),
+          referrals: {
+            ...(latest.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
+            ...(serverReferrals || {}),
+            referredBy: finalSponsorMerged,
+            hasClaimedWelcomeBonus: Boolean(finalSponsorMerged || latest.referrals?.hasClaimedWelcomeBonus),
+            recruits: mergedRecruits,
+            totalRecruits: Math.max(
+              Number(latest.referrals?.totalRecruits || 0),
+              Number(serverReferrals?.totalRecruits || 0),
+              mergedRecruits.filter((r: any) => (r.tier || 1) === 1).length
+            ),
+            networkTotalCitizens: Math.max(
+              Number(latest.referrals?.networkTotalCitizens || 0),
+              Number(serverReferrals?.networkTotalCitizens || 0),
+              mergedRecruits.length
+            ),
+          },
+        };
+        playerRef.current = nextState;
+        persistLedgerToLocalAndParent(finalClaimed, finalSponsorMerged, userEmail);
+        try {
+          localStorage.setItem(activeKey, JSON.stringify(nextState));
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(nextState));
+        } catch {}
+        return nextState;
+      });
       setIsSaving(false);
       setSaveSuccess(true);
       addLog({
@@ -2207,7 +2188,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const claimMissionReward = (missionId: string) => {
-    if (isClaimingRewardRef.current) {
+    if (claimingMissionsRef.current.has(missionId)) {
       return { success: false, message: 'Processing mission claim, please wait...' };
     }
     const currentBase = playerRef.current || player;
@@ -2218,23 +2199,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const msn = currentBase.missions[mIdx];
 
     // Check irrevocable claim ledger in memory and persistent storage
-    let isAlreadyInPersistent = (currentBase.claimedMissionIds || []).includes(missionId);
-    if (!isAlreadyInPersistent && typeof window !== 'undefined') {
-      try {
-        const raw = localStorage.getItem('metropolis_claimed_missions');
-        if (raw) {
-          const arr = JSON.parse(raw);
-          if (Array.isArray(arr) && arr.includes(missionId)) isAlreadyInPersistent = true;
-        }
-      } catch {}
-    }
+    const standaloneClaimed = getStandaloneClaimedMissions();
+    const isAlreadyInPersistent =
+      (currentBase.claimedMissionIds || []).includes(missionId) ||
+      standaloneClaimed.includes(missionId);
 
     if (!msn.completed || msn.claimed || isAlreadyInPersistent) {
       return { success: false, message: 'Mission reward already claimed or conditions not met.' };
     }
 
-    isClaimingRewardRef.current = true;
-    let claimedMission: Mission = msn;
+    claimingMissionsRef.current.add(missionId);
     let rewardSummary = '';
 
     const rewCash = msn.rewardCash || 0;
@@ -2249,7 +2223,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (rewCredits > 0) rewardParts.push(`+${rewCredits} Credits`);
     rewardSummary = rewardParts.join(', ');
 
-    const updatedClaimed = Array.from(new Set([...(currentBase.claimedMissionIds || []), missionId]));
+    const updatedClaimed = Array.from(
+      new Set([...(currentBase.claimedMissionIds || []), ...standaloneClaimed, missionId])
+    );
     const updatedMissions = [...currentBase.missions];
     updatedMissions[mIdx] = { ...msn, completed: true, claimed: true };
 
@@ -2267,20 +2243,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     playerRef.current = updated;
     setPlayer(updated);
 
+    let activeEmail = '';
     try {
-      localStorage.setItem('metropolis_claimed_missions', JSON.stringify(updatedClaimed));
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
       const authRaw = localStorage.getItem('metropolis_auth_user');
       if (authRaw) {
-        const email = JSON.parse(authRaw)?.email;
-        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updated));
+        activeEmail = JSON.parse(authRaw)?.email || '';
+      }
+      persistLedgerToLocalAndParent(updatedClaimed, updated.referrals?.referredBy, activeEmail);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      if (activeEmail) {
+        localStorage.setItem(`neon_metropolis_user_${activeEmail.trim().toLowerCase()}`, JSON.stringify(updated));
       }
     } catch {}
 
     saveGame(updated).catch(() => {});
 
     setTimeout(() => {
-      isClaimingRewardRef.current = false;
+      claimingMissionsRef.current.delete(missionId);
     }, 600);
 
     SoundEngine.playVictory(player.soundEnabled);
@@ -4281,10 +4260,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       message: `Collected +🌿 ${amount.toLocaleString()} GREEN from Syndicate Referral Till!`,
     });
 
-    setTimeout(() => {
-      saveGame().catch(() => {});
-    }, 50);
-
     return {
       success: true,
       message: `Collected +🌿 ${amount.toLocaleString()} GREEN royalty!`,
@@ -4298,20 +4273,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     else if (trimmed.includes('/start ')) trimmed = trimmed.split('/start ')[1].split(' ')[0];
     trimmed = trimmed.trim().toUpperCase();
 
-    const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    const currentBase = playerRef.current || player;
+    const refs = currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    const standaloneSponsor = getStandaloneReferredBy();
 
     if (!trimmed) return { success: false, message: 'Please enter an invite code.' };
 
     const myCode = (refs.referralCode || '').toUpperCase();
-    const myId = (player.id || '').toUpperCase();
+    const myId = (currentBase.id || '').toUpperCase();
     if (myCode && myCode !== 'NEON-10001' && (trimmed === myCode || trimmed.includes(myCode))) {
       return { success: false, message: 'You cannot redeem your own referral code.' };
     }
     if (myId && trimmed === myId) {
       return { success: false, message: 'You cannot redeem your own referral code.' };
     }
-    if (refs.referredBy) {
-      return { success: false, message: `You are already affiliated under sponsor "${refs.referredBy}".` };
+    if (refs.referredBy || standaloneSponsor) {
+      return { success: false, message: `You are already affiliated under sponsor "${refs.referredBy || standaloneSponsor}".` };
     }
 
     // Starter Welcome Gift: +GREEN, +10 Energy, +1 Deli Bread
@@ -4331,55 +4308,84 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       quantity: 1,
     };
 
-    let recruiterName = '';
     let recruitEmail = '';
+    let recruitUserId = currentBase.id || '';
+    let recruitTelegramId: string | undefined = undefined;
     if (typeof localStorage !== 'undefined') {
       const authRaw = localStorage.getItem('metropolis_auth_user');
       if (authRaw) {
-        try { recruitEmail = JSON.parse(authRaw).email || ''; } catch {}
+        try {
+          const parsedAuth = JSON.parse(authRaw);
+          recruitEmail = parsedAuth.email || '';
+          if (parsedAuth.userId) recruitUserId = parsedAuth.userId;
+          if (parsedAuth.telegramId) recruitTelegramId = String(parsedAuth.telegramId);
+        } catch {}
       }
       if (!recruitEmail) {
         recruitEmail = localStorage.getItem('metropolis_user_email') || '';
       }
     }
 
+    // Fallback check session cookie if email wasn't in localStorage yet
+    if (!recruitEmail) {
+      try {
+        const sRes = await fetch('/api/auth/email');
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          if (sData.authenticated && sData.user?.email) {
+            recruitEmail = sData.user.email;
+            if (sData.user.userId) recruitUserId = sData.user.userId;
+          }
+        }
+      } catch {}
+    }
+
+    let recruiterName = '';
+    let sponsorCode = trimmed;
     try {
       const res = await fetch('/api/referral', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
         body: JSON.stringify({
           action: 'redeem',
           referralCode: trimmed,
-          recruitEmail: recruitEmail || `oper_${player.id || Date.now()}@neon.city`,
-          recruitName: player.name,
-          recruitUserId: player.id,
+          recruitEmail: recruitEmail || `oper_${recruitUserId || Date.now()}@neon.city`,
+          recruitName: currentBase.name,
+          recruitUserId,
+          recruitTelegramId,
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        recruiterName = data.recruiterName || trimmed;
-      } else {
-        recruiterName = trimmed;
+      if (!res.ok || !data.success) {
+        return {
+          success: false,
+          message: data.message || `Invite code "${trimmed}" is invalid or could not be verified on server.`,
+        };
       }
+      recruiterName = data.recruiterName || trimmed;
+      if (data.referralCode) sponsorCode = String(data.referralCode).toUpperCase();
     } catch {
-      recruiterName = trimmed;
+      return {
+        success: false,
+        message: 'Network error verifying invite code with cluster server. Please try again.',
+      };
     }
 
-    const sponsorCode = trimmed;
-    const sponsorDisplayName = recruiterName || trimmed;
+    const sponsorDisplayName = recruiterName || sponsorCode;
     const rewardsCfg = loadCatalogData()?.referralRewards || DEFAULT_REFERRAL_REWARDS;
     const welcomeBonus = Number(rewardsCfg?.recruitWelcomeBonus) || 100;
     const stipendAmount = Number(rewardsCfg?.dailyRecruitStipend) || 50;
 
-    const currentBase = playerRef.current || player;
-    const currentRefs = currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    const latestBase = playerRef.current || player;
+    const latestRefs = latestBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
     const updatedPlayer: PlayerState = {
-      ...currentBase,
-      money: currentBase.money + welcomeBonus,
-      energy: Math.min(currentBase.maxEnergy, currentBase.energy + 10),
-      inventory: [...currentBase.inventory, welcomeBread],
+      ...latestBase,
+      money: latestBase.money + welcomeBonus,
+      energy: Math.min(latestBase.maxEnergy, latestBase.energy + 10),
+      inventory: [...latestBase.inventory, welcomeBread],
       referrals: {
-        ...currentRefs,
+        ...latestRefs,
         referredBy: sponsorCode,
         hasClaimedWelcomeBonus: true,
       },
@@ -4389,23 +4395,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setPlayer(updatedPlayer);
     playerRef.current = updatedPlayer;
 
-    // Instantly write to standalone and local storage so a page reload never loses it
+    // Instantly persist to standalone, parent shell, and local storage
     let activeKey = LOCAL_STORAGE_KEY;
     if (recruitEmail) activeKey = `neon_metropolis_user_${recruitEmail.trim().toLowerCase()}`;
     try {
+      persistLedgerToLocalAndParent(updatedPlayer.claimedMissionIds || [], sponsorCode, recruitEmail);
       localStorage.setItem('metropolis_user_referred_by', sponsorCode);
       localStorage.setItem('metropolis_user_sponsor_name', sponsorDisplayName);
       localStorage.setItem(activeKey, JSON.stringify(updatedPlayer));
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
-      if (isTelegramEnv()) {
-        tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(updatedPlayer)).catch(() => {});
-      }
 
       const currentAuthRaw = localStorage.getItem('metropolis_auth_user');
       let authObj = currentAuthRaw ? JSON.parse(currentAuthRaw) : {};
       authObj.referredBy = sponsorCode;
       if (!authObj.email && recruitEmail) authObj.email = recruitEmail;
       localStorage.setItem('metropolis_auth_user', JSON.stringify(authObj));
+      if (isTelegramEnv()) {
+        tgCloudSet('metropolis_auth_user', JSON.stringify(authObj)).catch(() => {});
+        tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(updatedPlayer)).catch(() => {});
+      }
     } catch {}
 
     SoundEngine.playVictory(player.soundEnabled);
@@ -4414,8 +4422,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       message: `REDEEM CODE: Activated invite under Operative "${sponsorDisplayName}" [${sponsorCode}]! Received +🌿 ${welcomeBonus} GREEN & Welcome Meal!`,
     });
 
-    // Save game immediately to server and cloud passing explicit updatedPlayer
-    saveGame(updatedPlayer).catch(() => {});
+    // Save game immediately and await cluster write
+    await saveGame(updatedPlayer);
 
     return {
       success: true,
@@ -4458,55 +4466,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/player/sync?${query.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.success && (data.referrals || data.playerState?.referrals)) {
-          const serverRefs = data.referrals || data.playerState.referrals;
+        if (data.success && (data.playerState || data.referrals)) {
           setPlayer((prev) => {
-            const currentRecruits = prev.referrals?.recruits || [];
-            const serverRecruits = serverRefs.recruits || [];
-            const mergedRecruits = [...serverRecruits];
-            for (const cr of currentRecruits) {
-              if (!mergedRecruits.some((r: any) => r.id === cr.id || (r.email && cr.email && r.email.toLowerCase() === cr.email.toLowerCase()))) {
-                mergedRecruits.push(cr);
-              }
-            }
-
-            const mergedMilestones = Array.from(new Set([
-              ...(prev.referrals?.claimedMilestones || []),
-              ...(serverRefs.claimedMilestones || [])
-            ]));
-
-            const standaloneSponsor = typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : null;
-            const preservedReferredBy = standaloneSponsor || prev.referrals?.referredBy || serverRefs.referredBy || authReferredBy || null;
-
-            const updatedPlayer: PlayerState = {
-              ...prev,
-              referrals: {
-                ...(prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
-                ...serverRefs,
-                referredBy: preservedReferredBy,
-                hasClaimedWelcomeBonus: Boolean(preservedReferredBy),
-                recruits: mergedRecruits,
-                totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), Number(serverRefs.totalRecruits || 0), mergedRecruits.length),
-                networkTotalCitizens: Math.max(Number(prev.referrals?.networkTotalCitizens || 0), Number(serverRefs.networkTotalCitizens || 0), mergedRecruits.length),
-                lastDailyStipendClaimTimestamp: Math.max(
-                  Number(prev.referrals?.lastDailyStipendClaimTimestamp || 0),
-                  Number(serverRefs.lastDailyStipendClaimTimestamp || 0)
-                ),
-                lastDailyRoyaltyClaimTimestamp: Math.max(
-                  Number(prev.referrals?.lastDailyRoyaltyClaimTimestamp || 0),
-                  Number(serverRefs.lastDailyRoyaltyClaimTimestamp || 0)
-                ),
-                unclaimedCommissionGreen: Math.max(
-                  Number(prev.referrals?.unclaimedCommissionGreen || 0),
-                  Number(serverRefs.unclaimedCommissionGreen || 0)
-                ),
-                lifetimeCommissionGreen: Math.max(
-                  Number(prev.referrals?.lifetimeCommissionGreen || 0),
-                  Number(serverRefs.lifetimeCommissionGreen || 0)
-                ),
-                claimedMilestones: mergedMilestones,
-              },
-            };
+            const incoming = data.playerState || { referrals: data.referrals };
+            const updatedPlayer = mergeClientPlayerStates(prev, incoming, DEFAULT_METROPOLIS_PLAYER, {
+              email: authEmail || data.email,
+              referredBy: authReferredBy || data.referredBy,
+              userReferralCode: authCode || data.userReferralCode,
+              userId: authUserId || data.userId,
+              telegramId: authTgId,
+            });
+            const msnSync = ensureMissionsSynchronized(updatedPlayer, loadCatalogData().customMissions || []);
+            updatedPlayer.missions = msnSync.missions;
             playerRef.current = updatedPlayer;
             try {
               localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));

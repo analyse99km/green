@@ -13,6 +13,11 @@ import {
   tgCloudSet,
   getCompactCloudSave,
 } from '@/lib/telegramStorage';
+import {
+  getStandaloneClaimedMissions,
+  getStandaloneReferredBy,
+  persistLedgerToLocalAndParent,
+} from '@/components/game/gameMissions';
 
 function MetropolisLoadingScreen({ status = 'Entering Neon Metropolis...' }: { status?: string }) {
   return (
@@ -54,6 +59,16 @@ export default function GameRootPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Hydrate cross-origin ledger forwarded from permanent gateway shell before mounting GameProvider
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const fwdSponsor = p.get('referredBy');
+      const fwdClaimed = p.get('claimedMissions');
+      const parsedClaimed = fwdClaimed ? fwdClaimed.split(',').filter(Boolean) : [];
+      if (fwdSponsor || parsedClaimed.length > 0) {
+        persistLedgerToLocalAndParent(parsedClaimed, fwdSponsor, p.get('userEmail') || '');
+      }
+    } catch {}
     if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
       try {
         window.parent.postMessage({ type: 'METROPOLIS_READY' }, '*');
@@ -132,10 +147,12 @@ export default function GameRootPage() {
       if (!hasLocalSession && urlParams) {
         const paramEmail = urlParams.get('userEmail');
         const paramName = urlParams.get('userName');
+        const paramRef = urlParams.get('referredBy') || getStandaloneReferredBy();
         if (paramEmail) {
           const sessionObj = {
             email: paramEmail,
             name: paramName || 'Operative',
+            referredBy: paramRef || null,
             isTelegram: Boolean(urlParams.get('isTelegram') || isTg),
           };
           localStorage.setItem('metropolis_auth_user', JSON.stringify(sessionObj));
@@ -162,10 +179,12 @@ export default function GameRootPage() {
             const data = await res.json();
             if (data.success && data.email && !isCancelled) {
               // Preserve locally redeemed referredBy so server SSO never wipes active sponsor
-              let existingLocalReferredBy: string | null = null;
+              let existingLocalReferredBy: string | null = getStandaloneReferredBy();
               try {
-                const prevAuth = localStorage.getItem('metropolis_auth_user');
-                if (prevAuth) existingLocalReferredBy = JSON.parse(prevAuth).referredBy || null;
+                if (!existingLocalReferredBy) {
+                  const prevAuth = localStorage.getItem('metropolis_auth_user');
+                  if (prevAuth) existingLocalReferredBy = JSON.parse(prevAuth).referredBy || null;
+                }
                 if (!existingLocalReferredBy) {
                   const prevSave = localStorage.getItem('metropolis_player_save_v1');
                   if (prevSave) existingLocalReferredBy = JSON.parse(prevSave).referrals?.referredBy || null;
@@ -194,17 +213,29 @@ export default function GameRootPage() {
               }
 
               if (data.playerState) {
+                const srvClaimed = Array.isArray(data.playerState.claimedMissionIds) ? data.playerState.claimedMissionIds : [];
+                const mergedClaimed = Array.from(new Set([...getStandaloneClaimedMissions(), ...srvClaimed]));
+                data.playerState.claimedMissionIds = mergedClaimed;
+                if (Array.isArray(data.playerState.missions)) {
+                  const cSet = new Set(mergedClaimed);
+                  data.playerState.missions = data.playerState.missions.map((m: any) =>
+                    cSet.has(m.id) ? { ...m, completed: true, claimed: true } : m
+                  );
+                }
                 if (finalReferredBy) {
                   if (!data.playerState.referrals) data.playerState.referrals = {};
                   data.playerState.referrals.referredBy = finalReferredBy;
                   data.playerState.referrals.hasClaimedWelcomeBonus = true;
                 }
+                persistLedgerToLocalAndParent(mergedClaimed, finalReferredBy, data.email);
                 const stateStr = JSON.stringify(data.playerState);
                 localStorage.setItem(`neon_metropolis_user_${data.email.trim().toLowerCase()}`, stateStr);
                 localStorage.setItem('metropolis_player_save_v1', stateStr);
 
                 // Backup compact player save to Telegram CloudStorage
                 tgCloudSet('metropolis_player_save_v1', getCompactCloudSave(data.playerState)).catch(() => {});
+              } else if (finalReferredBy) {
+                persistLedgerToLocalAndParent([], finalReferredBy, data.email);
               }
 
               setIsAuthenticated(true);
@@ -242,13 +273,19 @@ export default function GameRootPage() {
         const res = await fetch('/api/auth/email');
         const data = await res.json();
         if (data.authenticated && data.user && !isCancelled) {
+          const recoveredReferredBy = data.user.referredBy || getStandaloneReferredBy() || null;
           const userObj = {
             email: data.user.email,
             name: data.user.name,
             userId: data.user.userId,
+            userReferralCode: data.user.userReferralCode,
+            referredBy: recoveredReferredBy,
             loginTime: Date.now(),
           };
           localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
+          if (recoveredReferredBy) {
+            persistLedgerToLocalAndParent([], recoveredReferredBy, data.user.email);
+          }
           setIsAuthenticated(true);
         } else if (!isCancelled) {
           setIsAuthenticated(false);

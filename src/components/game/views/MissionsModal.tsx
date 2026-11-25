@@ -34,6 +34,8 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
   if (!isOpen) return null;
 
   const missions = player.missions || [];
+  const claimedLedgerSet = new Set(player.claimedMissionIds || []);
+  const isMsnClaimed = (m: Mission) => Boolean(m.claimed || claimedLedgerSet.has(m.id));
   const dailyMissions = missions.filter((m) => m.category === 'DAILY');
   const weeklyMissions = missions.filter((m) => m.category === 'WEEKLY');
   const monthlyMissions = missions.filter((m) => m.category === 'MONTHLY');
@@ -41,11 +43,11 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
   const partnerMissions = missions.filter((m) => m.category === 'PARTNER' || m.reqType === 'WATCH_VIDEO' || m.reqType === 'EXTERNAL_LINK');
 
   // Unclaimed counts for badges
-  const unclaimedDaily = dailyMissions.filter((m) => m.completed && !m.claimed).length;
-  const unclaimedWeekly = weeklyMissions.filter((m) => m.completed && !m.claimed).length;
-  const unclaimedMonthly = monthlyMissions.filter((m) => m.completed && !m.claimed).length;
-  const unclaimedStory = storyMissions.filter((m) => m.completed && !m.claimed).length;
-  const unclaimedPartner = partnerMissions.filter((m) => m.completed && !m.claimed).length;
+  const unclaimedDaily = dailyMissions.filter((m) => m.completed && !isMsnClaimed(m)).length;
+  const unclaimedWeekly = weeklyMissions.filter((m) => m.completed && !isMsnClaimed(m)).length;
+  const unclaimedMonthly = monthlyMissions.filter((m) => m.completed && !isMsnClaimed(m)).length;
+  const unclaimedStory = storyMissions.filter((m) => m.completed && !isMsnClaimed(m)).length;
+  const unclaimedPartner = partnerMissions.filter((m) => m.completed && !isMsnClaimed(m)).length;
 
   const displayedMissions =
     activeTab === 'DAILY'
@@ -312,7 +314,7 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
               </div>
             ) : (
               displayedMissions.map((mission) => {
-                const isClaimed = Boolean(mission.claimed);
+                const isClaimed = isMsnClaimed(mission);
                 const isCompleted = Boolean(mission.completed) && !isClaimed;
                 const progressPct = Math.min(100, Math.round((mission.currentCount / mission.targetCount) * 100));
 
@@ -407,7 +409,11 @@ export default function MissionsModal({ isOpen, onClose }: MissionsModalProps) {
                       <div className="shrink-0 flex items-center gap-2">
                         {isCompleted ? (
                           <button
-                            onClick={() => claimMissionReward(mission.id)}
+                            onClick={() => {
+                              const res = claimMissionReward(mission.id);
+                              setShopFeedback(res.message);
+                              setTimeout(() => setShopFeedback(null), 3000);
+                            }}
                             className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-black font-mono font-black text-xs shadow-lg shadow-emerald-500/30 transition transform active:scale-95 flex items-center gap-1.5 cursor-pointer animate-bounce"
                           >
                             <Gift className="w-3.5 h-3.5" />

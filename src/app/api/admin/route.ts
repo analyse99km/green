@@ -1,40 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { matchesReferral, mergeUserRecords, mutateMasterUsers } from '@/lib/masterDb';
 
 const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
 const CATALOG_FILE = path.join(process.cwd(), 'data', 'catalog.json');
 const MASTER_STORAGE_REPO = 'pocomon9/green-status';
 const MASTER_PAT = process.env.GH_PAT || process.env.MASTER_PAT || '';
-
-function matchesReferral(referredBy: string, user: any, userEmail: string): boolean {
-  if (!referredBy || !user) return false;
-  let ref = String(referredBy).trim();
-  if (ref.includes('start=')) ref = ref.split('start=')[1].split('&')[0];
-  else if (ref.includes('/start ')) ref = ref.split('/start ')[1].split(' ')[0];
-  ref = ref.trim().toUpperCase();
-
-  const stripped = ref.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
-  const tgCandidate = stripped.replace(/[^0-9]/g, '');
-
-  const myCode = (user.userReferralCode || user.playerState?.referrals?.referralCode || '').toUpperCase();
-  const myTgId = String(user.telegramId || '').toUpperCase();
-  const myUserId = (user.userId || '').toUpperCase();
-  const myEmail = userEmail.toUpperCase();
-  const myName = (user.name || '').toUpperCase();
-  const myUsername = (user.username || '').toUpperCase();
-
-  return (
-    myCode === ref ||
-    myCode === stripped ||
-    (stripped.length >= 3 && myCode.includes(stripped)) ||
-    (myTgId && (myTgId === ref || myTgId === stripped || (tgCandidate && myTgId === tgCandidate))) ||
-    (myUserId && (myUserId === ref || myUserId.includes(ref))) ||
-    myEmail === ref ||
-    (myUsername && (myUsername === ref || `@${myUsername}` === ref)) ||
-    (myName && myName === ref)
-  );
-}
 
 async function pushCatalogToMaster(catalog: Record<string, any>) {
   try {
@@ -215,40 +187,34 @@ export async function POST(req: NextRequest) {
     if (action === 'update_player') {
       const { email, updates } = body;
       const cleanEmail = (email || '').trim().toLowerCase();
-      const users = loadUsers();
-      if (!users[cleanEmail]) {
+      let updatedUser: any = null;
+      await mutateMasterUsers('admin player update [skip ci]', (users) => {
+        if (!users[cleanEmail]) return;
+        const existing = users[cleanEmail];
+        const incoming = {
+          ...existing,
+          name: updates.name || existing.name,
+          money: updates.money !== undefined ? Number(updates.money) : existing.money,
+          sparks: updates.sparks !== undefined ? Number(updates.sparks) : existing.sparks,
+          level: updates.level !== undefined ? Number(updates.level) : existing.level,
+          lastSaveAt: Date.now(),
+          playerState: {
+            ...(existing.playerState || {}),
+            ...(updates.playerState || {}),
+            ...(updates.name ? { name: updates.name } : {}),
+            ...(updates.money !== undefined ? { money: Number(updates.money) } : {}),
+            ...(updates.sparks !== undefined ? { dreamPoints: Number(updates.sparks) } : {}),
+            ...(updates.level !== undefined ? { level: Number(updates.level) } : {}),
+            lastSaveTimestamp: Date.now(),
+          },
+        };
+        updatedUser = mergeUserRecords(existing, incoming, true);
+        users[cleanEmail] = updatedUser;
+      });
+      if (!updatedUser) {
         return NextResponse.json({ success: false, message: 'Player not found.' }, { status: 404 });
       }
-
-      const existing = users[cleanEmail];
-      const mergedPlayerState = {
-        ...(existing.playerState || {}),
-        ...(updates.playerState || {}),
-      };
-
-      if (updates.name) {
-        existing.name = updates.name;
-        mergedPlayerState.name = updates.name;
-      }
-      if (updates.money !== undefined) {
-        existing.money = Number(updates.money);
-        mergedPlayerState.money = Number(updates.money);
-      }
-      if (updates.sparks !== undefined) {
-        existing.sparks = Number(updates.sparks);
-        mergedPlayerState.dreamPoints = Number(updates.sparks);
-      }
-      if (updates.level !== undefined) {
-        existing.level = Number(updates.level);
-        mergedPlayerState.level = Number(updates.level);
-      }
-
-      existing.playerState = mergedPlayerState;
-      existing.lastLoginAt = Date.now();
-      users[cleanEmail] = existing;
-
-      saveUsers(users);
-      return NextResponse.json({ success: true, message: 'Player updated successfully.', player: existing });
+      return NextResponse.json({ success: true, message: 'Player updated successfully.', player: updatedUser });
     }
 
     if (action === 'delete_player') {

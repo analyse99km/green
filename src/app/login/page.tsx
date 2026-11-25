@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { deriveUserSigningKey } from '@/components/game/gameCrypto';
 import { isTelegramEnv, parseTelegramInitData, tgCloudSet } from '@/lib/telegramStorage';
-import { INITIAL_MISSIONS } from '@/components/game/gameData';
+import { INITIAL_MISSIONS, DEFAULT_METROPOLIS_PLAYER } from '@/components/game/gameData';
+import { mergeClientPlayerStates, persistLedgerToLocalAndParent, getStandaloneReferredBy } from '@/components/game/gameMissions';
 
 interface OperativeSession {
   authenticated: boolean;
@@ -102,15 +103,22 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
           });
           const data = await res.json();
           if (data.success && data.email) {
+            const recoveredSponsor = data.referredBy || getStandaloneReferredBy() || null;
             const userObj = {
               email: data.email,
               name: data.username || tgUser.first_name || 'Operative',
               userId: data.userId,
               userReferralCode: data.userReferralCode,
               telegramId: data.telegramId,
+              referredBy: recoveredSponsor,
               loginTime: Date.now(),
             };
             localStorage.setItem('metropolis_auth_user', JSON.stringify(userObj));
+            persistLedgerToLocalAndParent(
+              data.playerState?.claimedMissionIds || [],
+              recoveredSponsor,
+              data.email
+            );
             tgCloudSet('metropolis_auth_user', JSON.stringify(userObj)).catch(() => {});
             if (onSuccess) onSuccess();
             else window.location.href = '/';
@@ -216,7 +224,15 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
 
       // 3. Update isolated per-user local player state so each user has their own distinct data & name!
       const userStateKey = `neon_metropolis_user_${cleanEmail}`;
-      const savedUserStr = localStorage.getItem(userStateKey) || localStorage.getItem('neon_metropolis_v6_botanical_green');
+      let savedUserStr = localStorage.getItem(userStateKey);
+      if (!savedUserStr) {
+        try {
+          const prevAuth = JSON.parse(localStorage.getItem('metropolis_auth_user') || '{}');
+          if (!prevAuth.email || prevAuth.email.trim().toLowerCase() === cleanEmail) {
+            savedUserStr = localStorage.getItem('neon_metropolis_v6_botanical_green');
+          }
+        } catch {}
+      }
       let playerState: any = null;
       let localState: any = null;
       if (savedUserStr) {
@@ -227,14 +243,22 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
 
       let cloudState: any = (!isRegister && data.playerState) ? data.playerState : null;
 
-      // If logging in on a new device or cleared cache, pull latest state from cluster
-      if (!isRegister && !cloudState) {
+      // Also fetch latest cluster sync state on login so cloudState is always freshest possible
+      if (!isRegister) {
         try {
           const syncRes = await fetch(`/api/player/sync?email=${encodeURIComponent(cleanEmail)}`);
           if (syncRes.ok) {
             const syncData = await syncRes.json();
             if (syncData.playerState) {
-              cloudState = syncData.playerState;
+              cloudState = cloudState
+                ? mergeClientPlayerStates(cloudState, syncData.playerState, DEFAULT_METROPOLIS_PLAYER, {
+                    email: cleanEmail,
+                    name: authoritativeName,
+                    userId: data.userId,
+                    userReferralCode: data.userReferralCode,
+                    referredBy: data.referredBy || syncData.referredBy,
+                  })
+                : syncData.playerState;
             }
           }
         } catch {}
@@ -243,89 +267,19 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
       const uniqueRef = data.userReferralCode || `NEON-${Math.floor(100000 + Math.random() * 900000)}`;
 
       // Merge local and cloud state so progress is NEVER wiped by an older cloud or empty local state
-      if (!isRegister) {
-        if (cloudState && localState) {
-          const cloudRefs = cloudState.referrals || {};
-          const localRefs = localState.referrals || {};
-          const mergedRecruits = [...(cloudRefs.recruits || [])];
-          for (const lr of (localRefs.recruits || [])) {
-            if (!mergedRecruits.some((r: any) => r.id === lr.id || (r.email && lr.email && r.email.toLowerCase() === lr.email.toLowerCase()))) {
-              mergedRecruits.push(lr);
-            }
-          }
-          const effTotal = Math.max(Number(cloudRefs.totalRecruits || 0), Number(localRefs.totalRecruits || 0), mergedRecruits.length);
-          const effNetwork = Math.max(Number(cloudRefs.networkTotalCitizens || 0), Number(localRefs.networkTotalCitizens || 0), mergedRecruits.length);
-
-          const standaloneSponsor = typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : undefined;
-          const effReferredBy = data.referredBy || cloudRefs.referredBy || localRefs.referredBy || standaloneSponsor || undefined;
-
-          // Merge claimed missions irrevocably
-          const standaloneClaimed = typeof window !== 'undefined' ? (() => {
-            try {
-              const raw = localStorage.getItem('metropolis_claimed_missions');
-              return raw ? JSON.parse(raw) : [];
-            } catch { return []; }
-          })() : [];
-
-          const mergedClaimedMissionIds = Array.from(new Set([
-            ...(localState.claimedMissionIds || []),
-            ...(cloudState.claimedMissionIds || []),
-            ...(Array.isArray(standaloneClaimed) ? standaloneClaimed : []),
-          ]));
-
-          const msnMap = new Map();
-          (localState.missions || []).forEach((m: any) => msnMap.set(m.id, { ...m }));
-          (cloudState.missions || []).forEach((m: any) => {
-            const existing = msnMap.get(m.id);
-            msnMap.set(m.id, {
-              ...existing,
-              ...m,
-              completed: Boolean(existing?.completed || m.completed || mergedClaimedMissionIds.includes(m.id)),
-              claimed: Boolean(existing?.claimed || m.claimed || mergedClaimedMissionIds.includes(m.id)),
-            });
-          });
-          mergedClaimedMissionIds.forEach((id: string) => {
-            const m = msnMap.get(id);
-            if (m) {
-              m.completed = true;
-              m.claimed = true;
-            }
-          });
-          const mergedMissions = Array.from(msnMap.values());
-
-          playerState = {
-            ...localState,
-            ...cloudState,
+      if (!isRegister && (cloudState || localState)) {
+        playerState = mergeClientPlayerStates(
+          localState || DEFAULT_METROPOLIS_PLAYER,
+          cloudState || localState,
+          DEFAULT_METROPOLIS_PLAYER,
+          {
+            email: cleanEmail,
             name: authoritativeName,
-            money: Math.max(Number(localState.money || 0), Number(cloudState.money || 0)),
-            bankMoney: Math.max(Number(localState.bankMoney || 0), Number(cloudState.bankMoney || 0)),
-            dreamPoints: Math.max(Number(localState.dreamPoints || 0), Number(cloudState.dreamPoints || cloudState.sparks || 0)),
-            greenTokens: Math.max(Number(localState.greenTokens || 0), Number(cloudState.greenTokens || 0)),
-            level: Math.max(Number(localState.level || 1), Number(cloudState.level || 1)),
-            inventory: (localState.inventory && localState.inventory.length > 0) ? localState.inventory : (cloudState.inventory || []),
-            dreamCards: { ...(cloudState.dreamCards || {}), ...(localState.dreamCards || {}) },
-            missions: mergedMissions.length > 0 ? mergedMissions : (localState.missions || cloudState.missions || INITIAL_MISSIONS),
-            claimedMissionIds: mergedClaimedMissionIds,
-            referrals: {
-              ...localRefs,
-              ...cloudRefs,
-              referralCode: data.userReferralCode || cloudRefs.referralCode || localRefs.referralCode || uniqueRef,
-              referredBy: effReferredBy,
-              recruits: mergedRecruits,
-              totalRecruits: effTotal,
-              networkTotalCitizens: effNetwork,
-              unclaimedCommissionGreen: Math.max(Number(cloudRefs.unclaimedCommissionGreen || 0), Number(localRefs.unclaimedCommissionGreen || 0)),
-              lifetimeCommissionGreen: Math.max(Number(cloudRefs.lifetimeCommissionGreen || 0), Number(localRefs.lifetimeCommissionGreen || 0)),
-              claimedMilestones: Array.from(new Set([...(cloudRefs.claimedMilestones || []), ...(localRefs.claimedMilestones || [])]))
-            },
-            dailyComboProgress: cloudState.dailyComboProgress || localState.dailyComboProgress || undefined,
-            lastSaveTimestamp: Math.max(localState.lastSaveTimestamp || 0, cloudState.lastSaveTimestamp || 0, Date.now())
-          };
-        } else if (cloudState) {
-          playerState = cloudState;
-        } else if (localState) {
-          playerState = localState;
-        }
+            userId: data.userId,
+            userReferralCode: uniqueRef,
+            referredBy: data.referredBy || undefined,
+          }
+        );
       }
 
       if (isRegister) {
@@ -442,29 +396,31 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
         }
       }
 
-      const finalReferredBy = playerState.referrals?.referredBy || data.referredBy || (typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : undefined) || undefined;
+      const finalReferredBy = playerState.referrals?.referredBy || data.referredBy || getStandaloneReferredBy() || undefined;
       const finalRefCode = playerState.referrals?.referralCode || data.userReferralCode || uniqueRef;
       if (finalReferredBy) {
         playerState.referrals.referredBy = finalReferredBy;
         playerState.referrals.hasClaimedWelcomeBonus = true;
-        try { localStorage.setItem('metropolis_user_referred_by', finalReferredBy); } catch {}
       }
+      persistLedgerToLocalAndParent(playerState.claimedMissionIds || [], finalReferredBy, cleanEmail);
+
+      const authPayload = {
+        email: cleanEmail,
+        name: authoritativeName,
+        userId: data.userId,
+        userReferralCode: finalRefCode,
+        referredBy: finalReferredBy,
+        loginTime: Date.now(),
+      };
 
       // Save to both the per-user key and current active session key
       localStorage.setItem(userStateKey, JSON.stringify(playerState));
       localStorage.setItem('neon_metropolis_v6_botanical_green', JSON.stringify(playerState));
       localStorage.setItem('METROPOLIS_SAVE_SLOT_01', JSON.stringify(playerState));
-      localStorage.setItem(
-        'metropolis_auth_user',
-        JSON.stringify({
-          email: cleanEmail,
-          name: authoritativeName,
-          userId: data.userId,
-          userReferralCode: finalRefCode,
-          referredBy: finalReferredBy,
-          loginTime: Date.now()
-        })
-      );
+      localStorage.setItem('metropolis_auth_user', JSON.stringify(authPayload));
+      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'METROPOLIS_SESSION_SAVE', user: authPayload }, '*');
+      }
 
       if (!isRegister && playerState) {
         fetch('/api/player/sync', {

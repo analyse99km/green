@@ -518,3 +518,216 @@ export function recordMissionAction(
 
   return { updated, updatedMissions, newCompleted };
 }
+
+// ── 7. IRREVOCABLE CLIENT LEDGER & STATE MERGE HELPERS ─────────────────────────
+export function getStandaloneClaimedMissions(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem('metropolis_claimed_missions');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return arr.filter((id) => typeof id === 'string');
+    }
+  } catch {}
+  return [];
+}
+
+export function getStandaloneReferredBy(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const val = localStorage.getItem('metropolis_user_referred_by');
+    if (val && val !== 'null' && val !== 'undefined') return val.trim().toUpperCase();
+  } catch {}
+  return null;
+}
+
+export function persistLedgerToLocalAndParent(claimedIds: string[], referredBy?: string | null, userEmail?: string) {
+  if (typeof window === 'undefined') return;
+  const cleanIds = Array.from(new Set([...getStandaloneClaimedMissions(), ...(claimedIds || [])]));
+  const cleanSponsor = referredBy && referredBy !== 'null' && referredBy !== 'undefined'
+    ? String(referredBy).trim().toUpperCase()
+    : getStandaloneReferredBy();
+
+  try {
+    if (cleanIds.length > 0) {
+      localStorage.setItem('metropolis_claimed_missions', JSON.stringify(cleanIds));
+    }
+    if (cleanSponsor) {
+      localStorage.setItem('metropolis_user_referred_by', cleanSponsor);
+    }
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: 'METROPOLIS_PERSIST_LEDGER',
+          email: userEmail || '',
+          claimedMissionIds: cleanIds,
+          referredBy: cleanSponsor,
+        },
+        '*'
+      );
+    }
+  } catch {}
+}
+
+/**
+ * Unifies local and server/cloud PlayerState objects without ever wiping
+ * claimed missions, sponsor attribution, recruits, milestones, or card levels.
+ */
+export function mergeClientPlayerStates(
+  baseState: any,
+  incomingState: any,
+  fallbackDefaults: any = {},
+  authHints?: { name?: string; userId?: string; userReferralCode?: string; referredBy?: string | null; telegramId?: string | number; email?: string }
+): any {
+  const prev = baseState || {};
+  const cloud = incomingState || {};
+
+  const localRecruits = Array.isArray(prev.referrals?.recruits) ? prev.referrals.recruits : [];
+  const cloudRecruits = Array.isArray(cloud.referrals?.recruits) ? cloud.referrals.recruits : [];
+  const allRecruits = [...cloudRecruits];
+  for (const lr of localRecruits) {
+    if (
+      !allRecruits.some(
+        (r: any) =>
+          (lr.id && r.id === lr.id) ||
+          (r.email && lr.email && r.email.toLowerCase() === lr.email.toLowerCase())
+      )
+    ) {
+      allRecruits.push(lr);
+    }
+  }
+
+  const mergedMilestones = Array.from(
+    new Set([
+      ...(Array.isArray(prev.referrals?.claimedMilestones) ? prev.referrals.claimedMilestones : []),
+      ...(Array.isArray(cloud.referrals?.claimedMilestones) ? cloud.referrals.claimedMilestones : []),
+    ])
+  );
+
+  const standaloneSponsor = getStandaloneReferredBy();
+  const preservedReferredBy =
+    standaloneSponsor ||
+    cloud.referrals?.referredBy ||
+    prev.referrals?.referredBy ||
+    authHints?.referredBy ||
+    undefined;
+
+  const standaloneClaimed = getStandaloneClaimedMissions();
+  const mergedClaimedMissionIds = Array.from(
+    new Set([
+      ...(Array.isArray(prev.claimedMissionIds) ? prev.claimedMissionIds : []),
+      ...(Array.isArray(cloud.claimedMissionIds) ? cloud.claimedMissionIds : []),
+      ...standaloneClaimed,
+      ...((Array.isArray(prev.missions) ? prev.missions : []).filter((m: any) => m?.claimed).map((m: any) => m.id)),
+      ...((Array.isArray(cloud.missions) ? cloud.missions : []).filter((m: any) => m?.claimed).map((m: any) => m.id)),
+    ])
+  );
+
+  const claimedSet = new Set(mergedClaimedMissionIds);
+  const msnMap = new Map<string, any>();
+  for (const m of Array.isArray(prev.missions) ? prev.missions : []) {
+    if (m?.id) msnMap.set(m.id, { ...m });
+  }
+  for (const m of Array.isArray(cloud.missions) ? cloud.missions : []) {
+    if (!m?.id) continue;
+    const existing = msnMap.get(m.id);
+    const isClaimed = Boolean(existing?.claimed || m.claimed || claimedSet.has(m.id));
+    msnMap.set(m.id, {
+      ...(existing || {}),
+      ...m,
+      currentCount: Math.max(Number(existing?.currentCount || 0), Number(m.currentCount || 0)),
+      completed: Boolean(existing?.completed || m.completed || isClaimed),
+      claimed: isClaimed,
+    });
+  }
+  for (const id of mergedClaimedMissionIds) {
+    const m = msnMap.get(id);
+    if (m) {
+      m.completed = true;
+      m.claimed = true;
+    }
+  }
+  const mergedMissions = Array.from(msnMap.values());
+
+  const prevCombo = prev.dailyComboProgress;
+  const cloudCombo = cloud.dailyComboProgress;
+  let mergedCombo = cloudCombo || prevCombo;
+  if (prevCombo && cloudCombo && prevCombo.date === cloudCombo.date) {
+    mergedCombo = {
+      date: prevCombo.date,
+      upgradedCardIds: Array.from(new Set([...(prevCombo.upgradedCardIds || []), ...(cloudCombo.upgradedCardIds || [])])),
+      claimed: Boolean(prevCombo.claimed || cloudCombo.claimed),
+    };
+  }
+
+  const prevTs = Number(prev.lastSaveTimestamp || 0);
+  const cloudTs = Number(cloud.lastSaveTimestamp || 0);
+  const cloudIsNewer = cloudTs >= prevTs;
+
+  const mergedCards: Record<string, number> = { ...(prev.dreamCards || {}) };
+  for (const [cid, lvl] of Object.entries(cloud.dreamCards || {})) {
+    mergedCards[cid] = Math.max(Number(mergedCards[cid] || 0), Number(lvl || 0));
+  }
+
+  const tier1Count = allRecruits.filter((r: any) => (r.tier || 1) === 1).length;
+  const mergedReferrals = {
+    ...(fallbackDefaults.referrals || {}),
+    ...(prev.referrals || {}),
+    ...(cloud.referrals || {}),
+    referredBy: preservedReferredBy,
+    hasClaimedWelcomeBonus: Boolean(preservedReferredBy || prev.referrals?.hasClaimedWelcomeBonus || cloud.referrals?.hasClaimedWelcomeBonus),
+    recruits: allRecruits,
+    totalRecruits: Math.max(
+      Number(prev.referrals?.totalRecruits || 0),
+      Number(cloud.referrals?.totalRecruits || 0),
+      tier1Count
+    ),
+    networkTotalCitizens: Math.max(
+      Number(prev.referrals?.networkTotalCitizens || 0),
+      Number(cloud.referrals?.networkTotalCitizens || 0),
+      allRecruits.length
+    ),
+    unclaimedCommissionGreen: cloudIsNewer
+      ? Number(cloud.referrals?.unclaimedCommissionGreen ?? prev.referrals?.unclaimedCommissionGreen ?? 0)
+      : Math.max(Number(prev.referrals?.unclaimedCommissionGreen || 0), Number(cloud.referrals?.unclaimedCommissionGreen || 0)),
+    lifetimeCommissionGreen: Math.max(
+      Number(prev.referrals?.lifetimeCommissionGreen || 0),
+      Number(cloud.referrals?.lifetimeCommissionGreen || 0)
+    ),
+    lastDailyStipendClaimTimestamp: Math.max(
+      Number(prev.referrals?.lastDailyStipendClaimTimestamp || 0),
+      Number(cloud.referrals?.lastDailyStipendClaimTimestamp || 0)
+    ),
+    lastDailyRoyaltyClaimTimestamp: Math.max(
+      Number(prev.referrals?.lastDailyRoyaltyClaimTimestamp || 0),
+      Number(cloud.referrals?.lastDailyRoyaltyClaimTimestamp || 0)
+    ),
+    claimedMilestones: mergedMilestones,
+    referralCode:
+      authHints?.userReferralCode ||
+      cloud.referrals?.referralCode ||
+      prev.referrals?.referralCode ||
+      `NEON-TG-${authHints?.telegramId || prev.id || 'OPER'}`,
+  };
+
+  persistLedgerToLocalAndParent(mergedClaimedMissionIds, preservedReferredBy, authHints?.email);
+
+  return {
+    ...fallbackDefaults,
+    ...prev,
+    ...cloud,
+    missions: mergedMissions.length > 0 ? mergedMissions : (prev.missions || fallbackDefaults.missions || []),
+    claimedMissionIds: mergedClaimedMissionIds,
+    referrals: mergedReferrals,
+    name: authHints?.name || cloud.name || prev.name || fallbackDefaults.name,
+    money: Math.max(Number(prev.money || 0), Number(cloud.money || 0)),
+    bankMoney: Math.max(Number(prev.bankMoney || 0), Number(cloud.bankMoney || 0)),
+    dreamPoints: Math.max(Number(prev.dreamPoints || 0), Number(cloud.dreamPoints || cloud.sparks || 0)),
+    greenTokens: Math.max(Number(prev.greenTokens || 0), Number(cloud.greenTokens || 0)),
+    level: Math.max(Number(prev.level || 1), Number(cloud.level || 1)),
+    inventory: Array.isArray(cloud.inventory) && cloud.inventory.length > 0 ? cloud.inventory : (prev.inventory || []),
+    dreamCards: mergedCards,
+    dailyComboProgress: mergedCombo,
+    lastSaveTimestamp: Math.max(prevTs, cloudTs, Date.now()),
+  };
+}

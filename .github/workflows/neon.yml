@@ -228,8 +228,9 @@ jobs:
                 "https://api.github.com/repos/${{ github.repository }}/contents/status.json" \
                 -d "{\"message\":\"heartbeat [skip ci]\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\"}" > /dev/null
               
-              # 2. Sync master state files to central shared repository
-              for f in users.json catalog.json notifications.json database.json; do
+              # 2. Sync master state files to central shared repository (monotonically merge users.json so stale disks never wipe progress!)
+              node scripts/sync_master_users.mjs "sync master users.json [skip ci]" || true
+              for f in catalog.json notifications.json database.json; do
                 if [ -s "data/$f" ]; then
                   F_B64=$(base64 -w0 "data/$f")
                   F_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
@@ -257,7 +258,8 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           if [ "$SESSION_STARTED" = "true" ]; then
-            for f in users.json catalog.json notifications.json database.json; do
+            node scripts/sync_master_users.mjs "final users.json backup before recycle [skip ci]" || true
+            for f in catalog.json notifications.json database.json; do
               if [ -s "data/$f" ]; then
                 F_B64=$(base64 -w0 "data/$f")
                 F_SHA=$(curl -sf -H "Authorization: Bearer $GH_PAT" \
