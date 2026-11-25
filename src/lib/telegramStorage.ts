@@ -29,10 +29,22 @@ export function getTelegramWebApp(): any {
 export function parseTelegramInitData(): { user?: TelegramUser; start_param?: string } {
   if (typeof window === 'undefined') return {};
   const tg = getTelegramWebApp();
+
+  let fallbackRef = '';
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    fallbackRef = urlParams.get('ref') || urlParams.get('start_param') || urlParams.get('start') || '';
+    if (!fallbackRef) {
+      fallbackRef = localStorage.getItem('metropolis_pending_ref') || '';
+    } else {
+      localStorage.setItem('metropolis_pending_ref', fallbackRef);
+    }
+  } catch {}
+
   if (tg?.initDataUnsafe?.user) {
     return {
       user: tg.initDataUnsafe.user,
-      start_param: tg.initDataUnsafe.start_param || '',
+      start_param: tg.initDataUnsafe.start_param || fallbackRef || '',
     };
   }
 
@@ -42,7 +54,7 @@ export function parseTelegramInitData(): { user?: TelegramUser; start_param?: st
     if (raw && typeof raw === 'string') {
       const params = new URLSearchParams(raw);
       const userStr = params.get('user');
-      const startParam = params.get('start_param') || '';
+      const startParam = params.get('start_param') || fallbackRef || '';
       if (userStr) {
         return {
           user: JSON.parse(userStr),
@@ -58,7 +70,7 @@ export function parseTelegramInitData(): { user?: TelegramUser; start_param?: st
   try {
     const urlParams = new URLSearchParams(window.location.search);
     const rawTg = urlParams.get('tgUser');
-    const ref = urlParams.get('ref') || '';
+    const ref = urlParams.get('ref') || urlParams.get('start_param') || fallbackRef || '';
     if (rawTg) {
       return {
         user: JSON.parse(decodeURIComponent(rawTg)),
@@ -67,7 +79,7 @@ export function parseTelegramInitData(): { user?: TelegramUser; start_param?: st
     }
   } catch {}
 
-  return {};
+  return fallbackRef ? { start_param: fallbackRef } : {};
 }
 
 // Telegram.WebApp.CloudStorage Promisified Helpers

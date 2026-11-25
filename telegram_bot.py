@@ -338,8 +338,20 @@ def get_player_content(action, user_first="Operative", user_id=None, ref_code=""
     msgs = bot_config.get("messages", {})
     
     if action == "welcome":
-        raw = msgs.get("welcome") or DEFAULT_CONFIG["messages"]["welcome"]
-        text = raw.replace("{name}", user_first)
+        if ref_code:
+            text = (
+                f"🎉 *WELCOME TO NEON METROPOLIS, OPERATIVE!*\n\n"
+                f"🤝 *You have been recruited via VIP Invite:* `{ref_code}`\n\n"
+                f"🎁 *Your Recruit Welcome Benefits:*\n"
+                f"• 🌿 *+100 Instant GREEN Tokens Starter Bounty*\n"
+                f"• 🍞 *Syndicate Welcome Baguette (+30 Food, +10 Energy)*\n"
+                f"• ⚡ *+50 GREEN Daily Allowance Active*\n"
+                f"• 🪙 *Real GREEN Coin Mainnet Launching Soon!*\n\n"
+                f"Tap below to enter the city and claim your starter kit:"
+            )
+        else:
+            raw = msgs.get("welcome") or DEFAULT_CONFIG["messages"]["welcome"]
+            text = raw.replace("{name}", user_first)
         return text, get_main_keyboard(user_id, ref_code), None
 
     elif action == "airdrop":
@@ -429,16 +441,27 @@ def get_player_content(action, user_first="Operative", user_id=None, ref_code=""
     elif action == "invite":
         ref_id = str(user_id or "operative")
         ref_link = f"https://t.me/{BOT_USERNAME}?start=NEON-TG-{ref_id}"
-        share_url = f"https://t.me/share/url?url={urllib.parse.quote(ref_link)}&text={urllib.parse.quote('Join me in Neon Metropolis! 🌿 Tap to mint GREEN coins, solve daily combos, and build your digital city.')}"
+        viral_share_text = (
+            "🌿 Join the Neon Metropolis Revolution! 🚀\n\n"
+            "💰 PLAY & EARN: Real GREEN Token Currency Launching Soon!\n"
+            "⚡ Tap the Core Plant, level up 7 District Botanical Cards, and build your digital empire.\n"
+            "🎁 Use my VIP link for an INSTANT +100 GREEN Starter Bonus + 50 GREEN/Day Allowance:\n"
+        )
+        share_url = f"https://t.me/share/url?url={urllib.parse.quote(ref_link)}&text={urllib.parse.quote(viral_share_text)}"
         text = (
-            "🔗 *Your Personal Referral Link*\n\n"
-            f"`{ref_link}`\n\n"
-            "Share this link with your squad. When they join and play, both you and your friend earn bonus Metro Points and +100 GREEN instant rewards!"
+            "🚀 *Recruit Operatives & Earn Lifetime Dividends!*\n\n"
+            "💰 *PLAY & EARN — Real GREEN Token Currency Launching Soon!*\n\n"
+            f"🔗 *Your VIP Recruit Link:*\n`{ref_link}`\n\n"
+            "🎁 *Recruiter Bounty & Squad Benefits:*\n"
+            "• 🤝 Your recruit gets an *instant +100 GREEN bonus* + *50 GREEN/day allowance*\n"
+            "• 🪙 You get *+100 GREEN instantly* for every recruit + *10% lifetime commissions* on their harvest\n"
+            "• 🏆 Level up your Syndicate Network rank on the city leaderboard!\n\n"
+            "Tap below to send this viral invite directly to your Telegram contacts:"
         )
         kb = {
             "inline_keyboard": [
-                [{"text": "📲 Share to Telegram Friends", "url": share_url}],
-                [{"text": "🚀 Launch App & View Squad", "web_app": {"url": get_live_game_url()}}],
+                [{"text": "🚀 Share to Telegram Friends 📲", "url": share_url}],
+                [{"text": "🏙️ Launch Mini App & View Squad", "web_app": {"url": get_live_game_url(f"NEON-TG-{ref_id}")}}],
                 [{"text": "⬅️ Back to Menu", "callback_data": "menu_back"}]
             ]
         }

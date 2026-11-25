@@ -6,7 +6,7 @@ import { Sparkles, Trophy, Gift, RotateCw, DollarSign, Zap, Award } from 'lucide
 import { SoundEngine } from '../gameAudio';
 
 export default function LuckyWheelView() {
-  const { player, spinDailyWheel } = useGame();
+  const { player, spinDailyWheel, deductMoney } = useGame();
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotationDegrees, setRotationDegrees] = useState(0);
   const [lastReward, setLastReward] = useState<string | null>(null);
@@ -35,7 +35,8 @@ export default function LuckyWheelView() {
 
     // Deduct GREEN if no free spins
     if (player.dailyWheelSpinsAvailable <= 0) {
-      player.money -= 100;
+      const ok = deductMoney(100, 'Lucky Wheel Spin');
+      if (!ok) return;
     }
 
     setIsSpinning(true);

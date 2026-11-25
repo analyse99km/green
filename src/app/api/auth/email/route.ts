@@ -69,6 +69,34 @@ async function pushUsersToMaster(users: Record<string, any>) {
   }
 }
 
+// Universal recruiter finder across all referral formats (telegramId, raw ID, ref_ID, NEON-TG-ID, NEON-CODE, email)
+function findRecruiterEmail(users: Record<string, any>, rawRef: string): string | null {
+  if (!rawRef) return null;
+  const clean = String(rawRef).trim().toUpperCase();
+  const stripped = clean.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
+  const tgCandidate = stripped.replace(/[^0-9]/g, '');
+
+  for (const [em, u] of Object.entries(users)) {
+    const userRef = (u.userReferralCode || '').toUpperCase();
+    const stateRef = (u.playerState?.referrals?.referralCode || '').toUpperCase();
+    const tgId = String(u.telegramId || '').toUpperCase();
+    const userId = (u.userId || '').toUpperCase();
+
+    if (
+      userRef === clean ||
+      stateRef === clean ||
+      (stripped && userRef.includes(stripped)) ||
+      (stripped && stateRef.includes(stripped)) ||
+      (tgId && (tgId === clean || tgId === stripped || tgId === tgCandidate)) ||
+      (userId && userId === clean) ||
+      em.toUpperCase() === clean
+    ) {
+      return em;
+    }
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { action, email, password, name, referralCode } = await req.json();
@@ -133,12 +161,7 @@ export async function POST(req: NextRequest) {
 
       // Real-time Recruiter Attribution
       if (newUser.referredBy) {
-        const targetRefCode = newUser.referredBy;
-        // Search local users or fetch remote master users
-        let recruiterEmail = Object.keys(users).find(
-          em => (users[em].userReferralCode && users[em].userReferralCode.toUpperCase() === targetRefCode) ||
-                (users[em].playerState?.referrals?.referralCode && users[em].playerState.referrals.referralCode.toUpperCase() === targetRefCode)
-        );
+        let recruiterEmail = findRecruiterEmail(users, newUser.referredBy);
 
         if (!recruiterEmail) {
           try {
@@ -147,11 +170,8 @@ export async function POST(req: NextRequest) {
               const remoteUsers = await remoteRes.json();
               for (const [rEm, rUser] of Object.entries(remoteUsers as Record<string, any>)) {
                 if (!users[rEm]) users[rEm] = rUser;
-                if ((rUser.userReferralCode && rUser.userReferralCode.toUpperCase() === targetRefCode) ||
-                    (rUser.playerState?.referrals?.referralCode && rUser.playerState.referrals.referralCode.toUpperCase() === targetRefCode)) {
-                  recruiterEmail = rEm;
-                }
               }
+              recruiterEmail = findRecruiterEmail(users, newUser.referredBy);
             }
           } catch {}
         }
@@ -161,7 +181,7 @@ export async function POST(req: NextRequest) {
           if (!recruiter.playerState) recruiter.playerState = {};
           if (!recruiter.playerState.referrals) {
             recruiter.playerState.referrals = {
-              referralCode: recruiter.userReferralCode || targetRefCode,
+              referralCode: recruiter.userReferralCode || newUser.referredBy || `NEON-TG-${recruiter.telegramId || recruiter.userId}`,
               recruits: [],
               totalRecruits: 0,
               networkTotalCitizens: 0,

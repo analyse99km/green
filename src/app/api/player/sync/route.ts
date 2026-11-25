@@ -107,9 +107,11 @@ function reconcileAllReferrals(users: Record<string, any>): boolean {
         }
       }
     }
-    if (recruiter.playerState.referrals.totalRecruits !== recruits.length || recruiter.playerState.referrals.networkTotalCitizens !== recruits.length) {
-      recruiter.playerState.referrals.totalRecruits = recruits.length;
-      recruiter.playerState.referrals.networkTotalCitizens = recruits.length;
+    const effTotal = Math.max(Number(recruiter.playerState.referrals.totalRecruits || 0), recruits.length);
+    const effNetwork = Math.max(Number(recruiter.playerState.referrals.networkTotalCitizens || 0), recruits.length);
+    if (recruiter.playerState.referrals.totalRecruits !== effTotal || recruiter.playerState.referrals.networkTotalCitizens !== effNetwork) {
+      recruiter.playerState.referrals.totalRecruits = effTotal;
+      recruiter.playerState.referrals.networkTotalCitizens = effNetwork;
       modified = true;
     }
   }
@@ -170,6 +172,16 @@ export async function GET(req: NextRequest) {
     }
 
     let users = loadUsers();
+    // Synchronize and merge master cluster storage so downlines registered on any runner node are immediately visible
+    try {
+      const remoteRes = await fetch(`https://raw.githubusercontent.com/${MASTER_STORAGE_REPO}/main/users.json?t=${Date.now()}`);
+      if (remoteRes.ok) {
+        const remoteUsers = await remoteRes.json();
+        users = { ...users, ...remoteUsers };
+        saveUsers(users);
+      }
+    } catch {}
+
     let userKey = email;
     let user = email ? users[email] : null;
 

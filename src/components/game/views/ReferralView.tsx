@@ -46,6 +46,7 @@ export default function ReferralView() {
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedViral, setCopiedViral] = useState(false);
   const [inviteInput, setInviteInput] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -119,6 +120,14 @@ export default function ReferralView() {
   const isStipendReady = refs.referredBy && (lastStipendClaim === 0 || now - lastStipendClaim >= 86400000);
   const stipendRemainingHours = Math.max(0, Math.ceil((86400000 - (now - lastStipendClaim)) / (1000 * 60 * 60)));
 
+  const viralPitchText = `🌿 Join the Neon Metropolis Revolution! 🚀\n\n💰 PLAY & EARN: Real GREEN Token Currency Launching Soon!\n⚡ Tap the Core Plant, level up 7 District Botanical Cards, and build your digital empire.\n🎁 Use my VIP link for an INSTANT +100 GREEN Starter Bonus + 50 GREEN/Day Allowance:\n${referralUrl}`;
+
+  const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralUrl)}&text=${encodeURIComponent(
+    '🌿 Join the Neon Metropolis Revolution! 🚀\n\n💰 PLAY & EARN: Real GREEN Token Currency Launching Soon!\n⚡ Tap the Core Plant, level up 7 District Botanical Cards, and build your digital empire.\n🎁 Use my VIP link for an INSTANT +100 GREEN Starter Bonus + 50 GREEN/Day Allowance!'
+  )}`;
+
+  const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(viralPitchText)}`;
+
   const handleCopyLink = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(referralUrl);
@@ -132,6 +141,18 @@ export default function ReferralView() {
       navigator.clipboard.writeText(effectiveCode);
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2500);
+    }
+  };
+
+  const handleCopyViral = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(viralPitchText);
+      setCopiedViral(true);
+      setFeedback('📋 Viral invite pitch & link copied to clipboard!');
+      setTimeout(() => {
+        setCopiedViral(false);
+        setFeedback(null);
+      }, 2500);
     }
   };
 
@@ -389,18 +410,64 @@ export default function ReferralView() {
 
       {/* Personal Syndicate Link & Till */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Card 1: Unique Referral Link & Code */}
+        {/* Card 1: Unique Referral Link, Viral Share & Code */}
         <div className="lg:col-span-7 bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
                 <Share2 className="w-4 h-4" />
               </div>
-              <h3 className="font-bold text-white text-sm">Your Personal Syndicate Link</h3>
+              <h3 className="font-bold text-white text-sm">Viral Syndicate Invite & Share</h3>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30">
-              5-Tier Cascading Royalties
+              🪙 Real GREEN Launching Soon
             </span>
+          </div>
+
+          {/* Quick Viral Share Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <a
+              href={telegramShareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2.5 rounded-xl font-bold text-xs font-mono bg-sky-500 hover:bg-sky-400 text-neutral-950 flex items-center justify-center gap-2 transition-all shadow shadow-sky-950/40"
+            >
+              <span>📲</span>
+              <span>Telegram Share</span>
+            </a>
+            <a
+              href={whatsappShareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2.5 rounded-xl font-bold text-xs font-mono bg-emerald-500 hover:bg-emerald-400 text-neutral-950 flex items-center justify-center gap-2 transition-all shadow shadow-emerald-950/40"
+            >
+              <span>💬</span>
+              <span>WhatsApp Share</span>
+            </a>
+            <button
+              onClick={handleCopyViral}
+              className={`px-3 py-2.5 rounded-xl font-bold text-xs font-mono flex items-center justify-center gap-2 transition-all shadow cursor-pointer ${
+                copiedViral
+                  ? 'bg-amber-400 text-neutral-950 shadow-amber-950/40'
+                  : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700'
+              }`}
+            >
+              <span>{copiedViral ? '✓' : '📋'}</span>
+              <span>{copiedViral ? 'Pitch Copied!' : 'Copy Viral Pitch'}</span>
+            </button>
+          </div>
+
+          {/* Pitch Preview Box */}
+          <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800/80 text-[11px] font-mono text-neutral-300 space-y-1">
+            <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              <span>Viral Share Pitch Preview</span>
+            </div>
+            <p className="text-neutral-300 leading-relaxed">
+              🌿 <strong>Join the Neon Metropolis Revolution! 🚀</strong><br/>
+              💰 <em>PLAY & EARN: Real GREEN Token Currency Launching Soon!</em><br/>
+              🎁 Use my VIP link for an <strong>INSTANT +100 GREEN Starter Bonus + 50 GREEN/Day Allowance!</strong>
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -449,6 +516,9 @@ export default function ReferralView() {
                 {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-neutral-500" />}
               </button>
             </div>
+            <span className="text-[10px] font-mono text-neutral-500">
+              5-Tier Cascading Royalties Active
+            </span>
           </div>
         </div>
 

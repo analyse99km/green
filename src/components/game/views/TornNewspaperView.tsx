@@ -20,9 +20,13 @@ import {
 import { INITIAL_NEWSPAPER_ARTICLES } from '../gameData';
 
 export default function TornNewspaperView() {
-  const { player, addLog } = useGame();
+  const { player, addLog, awardMoney, deductMoney, saveGame } = useGame();
   const [activeTab, setActiveTab] = useState<'FRONT' | 'MARKET' | 'CLASSIFIEDS' | 'LOTTERY'>('FRONT');
-  const [claimedDailyRation, setClaimedDailyRation] = useState(false);
+  const [claimedDailyRation, setClaimedDailyRation] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const last = Number(localStorage.getItem(`metropolis_newspaper_claim_${player.id || 'default'}`) || 0);
+    return last > 0 && Date.now() - last < 86400000;
+  });
   const [lotteryTicketsBought, setLotteryTicketsBought] = useState(0);
 
   const marketQuotes = [
@@ -70,30 +74,30 @@ export default function TornNewspaperView() {
 
   const handleClaimDailyRation = () => {
     if (claimedDailyRation) return;
+    const now = Date.now();
+    localStorage.setItem(`metropolis_newspaper_claim_${player.id || 'default'}`, String(now));
     setClaimedDailyRation(true);
-    player.money += 1500;
-    player.energy = Math.min(player.maxEnergy, player.energy + 20);
-    player.happy = Math.min(player.maxHappy, player.happy + 20);
-    player.hasUnsavedActions = true;
+    awardMoney(1500, 'Newspaper Daily Ration');
     addLog({
       type: 'CIVILIAN',
       message: 'Claimed Newspaper Daily Ration: +$1,500 Cash, +20 Energy, +20 Happy!',
     });
+    saveGame().catch(() => {});
   };
 
   const handleBuyLotteryTicket = () => {
     const cost = 100;
-    if (player.money < cost) {
+    const ok = deductMoney(cost, 'Lottery Ticket Purchase');
+    if (!ok) {
       alert('Insufficient pocket cash to buy a lottery ticket ($100 required).');
       return;
     }
-    player.money -= cost;
     setLotteryTicketsBought((prev) => prev + 1);
-    player.hasUnsavedActions = true;
     addLog({
       type: 'CIVILIAN',
       message: 'Lottery: Purchased City Jackpot entry #2026-X81 for $100.',
     });
+    saveGame().catch(() => {});
   };
 
   return (

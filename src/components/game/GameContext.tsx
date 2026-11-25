@@ -2106,55 +2106,72 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const claimMissionReward = (missionId: string) => {
-    let claimedMission: Mission | null = null;
+    if (isClaimingRewardRef.current) {
+      return { success: false, message: 'Processing mission claim, please wait...' };
+    }
+    const currentBase = playerRef.current || player;
+    const mIdx = (currentBase.missions || []).findIndex((m) => m.id === missionId);
+    if (mIdx === -1) {
+      return { success: false, message: 'Mission not found.' };
+    }
+    const msn = currentBase.missions[mIdx];
+    if (!msn.completed || msn.claimed) {
+      return { success: false, message: 'Mission reward already claimed or conditions not met.' };
+    }
+
+    isClaimingRewardRef.current = true;
+    let claimedMission: Mission = msn;
     let rewardSummary = '';
 
-    setPlayer((prev) => {
-      const mIdx = (prev.missions || []).findIndex((m) => m.id === missionId);
-      if (mIdx === -1) return prev;
-      const msn = prev.missions[mIdx];
-      if (!msn.completed || msn.claimed) return prev;
+    const rewCash = msn.rewardCash || 0;
+    const rewGreen = msn.rewardGreen || 0;
+    const rewSparks = msn.rewardSparks || 0;
+    const rewCredits = msn.rewardCredits || 0;
 
-      claimedMission = msn;
+    const rewardParts: string[] = [];
+    if (rewGreen > 0) rewardParts.push(`+🌿 ${rewGreen} GREEN`);
+    if (rewSparks > 0) rewardParts.push(`+⚡ ${rewSparks} Sparks`);
+    if (rewCash > 0) rewardParts.push(`+$${rewCash.toLocaleString()}`);
+    if (rewCredits > 0) rewardParts.push(`+${rewCredits} Credits`);
+    rewardSummary = rewardParts.join(', ');
 
-      const rewCash = msn.rewardCash || 0;
-      const rewGreen = msn.rewardGreen || 0;
-      const rewSparks = msn.rewardSparks || 0;
-      const rewCredits = msn.rewardCredits || 0;
+    const updatedMissions = [...currentBase.missions];
+    updatedMissions[mIdx] = { ...msn, claimed: true };
 
-      const rewardParts: string[] = [];
-      if (rewGreen > 0) rewardParts.push(`+🌿 ${rewGreen} GREEN`);
-      if (rewSparks > 0) rewardParts.push(`+⚡ ${rewSparks} Sparks`);
-      if (rewCash > 0) rewardParts.push(`+$${rewCash.toLocaleString()}`);
-      if (rewCredits > 0) rewardParts.push(`+${rewCredits} Credits`);
-      rewardSummary = rewardParts.join(', ');
+    const updated: PlayerState = {
+      ...currentBase,
+      money: currentBase.money + rewCash,
+      greenTokens: (currentBase.greenTokens || 0) + rewGreen,
+      dreamPoints: (currentBase.dreamPoints || 0) + rewSparks,
+      missionCredits: (currentBase.missionCredits || 0) + rewCredits,
+      missions: updatedMissions,
+      hasUnsavedActions: true,
+    };
 
-      const updatedMissions = [...prev.missions];
-      updatedMissions[mIdx] = { ...msn, claimed: true };
+    playerRef.current = updated;
+    setPlayer(updated);
 
-      const updated: PlayerState = {
-        ...prev,
-        money: prev.money + rewCash,
-        greenTokens: (prev.greenTokens || 0) + rewGreen,
-        dreamPoints: (prev.dreamPoints || 0) + rewSparks,
-        missionCredits: (prev.missionCredits || 0) + rewCredits,
-        missions: updatedMissions,
-        hasUnsavedActions: true,
-      };
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        const email = JSON.parse(authRaw)?.email;
+        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updated));
+      }
+    } catch {}
 
-      saveGame(updated).catch(() => {});
-      return updated;
+    saveGame(updated).catch(() => {});
+
+    setTimeout(() => {
+      isClaimingRewardRef.current = false;
+    }, 600);
+
+    SoundEngine.playVictory(player.soundEnabled);
+    addLog({
+      type: 'CIVILIAN',
+      message: `🎯 MISSION CLAIMED: "${msn.title}" completed! Rewarded: ${rewardSummary}!`,
     });
-
-    if (claimedMission) {
-      SoundEngine.playVictory(player.soundEnabled);
-      addLog({
-        type: 'CIVILIAN',
-        message: `🎯 MISSION CLAIMED: "${(claimedMission as Mission).title}" completed! Rewarded: ${rewardSummary}!`,
-      });
-      return { success: true, message: `Reward claimed: ${rewardSummary}!`, rewardText: rewardSummary };
-    }
-    return { success: false, message: 'Mission reward already claimed or conditions not met.' };
+    return { success: true, message: `Reward claimed: ${rewardSummary}!`, rewardText: rewardSummary };
   };
 
   const completeExternalMission = (missionId: string) => {
@@ -2407,7 +2424,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const spinDailyWheel = () => {
-    if (player.dailyWheelSpinsAvailable <= 0) {
+    if (isClaimingRewardRef.current) {
+      return { rewardText: 'Wheel is already processing a spin...' };
+    }
+    const currentBase = playerRef.current || player;
+    if (currentBase.dailyWheelSpinsAvailable <= 0) {
       return { rewardText: 'No daily spins remaining today. Resets daily!' };
     }
 
@@ -2427,51 +2448,68 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     ];
 
     const won = prizes[Math.floor(Math.random() * prizes.length)];
+    isClaimingRewardRef.current = true;
 
-    setPlayer((prev) => {
-      let money = prev.money;
-      let energy = prev.energy;
-      let happy = prev.happy;
-      let inv = prev.inventory;
+    let money = currentBase.money;
+    let energy = currentBase.energy;
+    let happy = currentBase.happy;
+    let inv = [...currentBase.inventory];
 
-      if (won.cash) money += won.cash;
-      if (won.energy) energy = Math.min(prev.maxEnergy + 150, energy + won.energy);
-      if (won.happy) happy = Math.min(prev.maxHappy + 200, happy + won.happy);
+    if (won.cash) money += won.cash;
+    if (won.energy) energy = Math.min(currentBase.maxEnergy + 150, energy + won.energy);
+    if (won.happy) happy = Math.min(currentBase.maxHappy + 200, happy + won.happy);
 
-      if (won.item) {
-        const existing = inv.find((i) => i.id === won.item);
-        if (existing) {
-          inv = inv.map((i) => (i.id === won.item ? { ...i, quantity: i.quantity + 1 } : i));
-        } else {
-          inv = [
-            ...inv,
-            {
-              id: won.item + '_' + Date.now().toString(36),
-              name: won.text.split('(')[0].trim(),
-              description: 'Won from the Metropolis Daily Wheel of Fortune!',
-              category: 'LUXURY',
-              rarity: 'EPIC',
-              price: 2500,
-              marketValue: 2500,
-              shopliftDifficulty: 50,
-              icon: '🎁',
-              quantity: 1,
-            },
-          ];
-        }
+    if (won.item) {
+      const existing = inv.find((i) => i.id === won.item);
+      if (existing) {
+        inv = inv.map((i) => (i.id === won.item ? { ...i, quantity: i.quantity + 1 } : i));
+      } else {
+        inv = [
+          ...inv,
+          {
+            id: won.item + '_' + Date.now().toString(36),
+            name: won.text.split('(')[0].trim(),
+            description: 'Won from the Metropolis Daily Wheel of Fortune!',
+            category: 'LUXURY',
+            rarity: 'EPIC',
+            price: 2500,
+            marketValue: 2500,
+            shopliftDifficulty: 50,
+            icon: '🎁',
+            quantity: 1,
+          },
+        ];
       }
+    }
 
-      return {
-        ...prev,
-        money,
-        energy,
-        happy,
-        inventory: inv,
-        dailyWheelSpinsAvailable: prev.dailyWheelSpinsAvailable - 1,
-        lastWheelSpinTimestamp: Date.now(),
-        hasUnsavedActions: true,
-      };
-    });
+    const updatedPlayer: PlayerState = {
+      ...currentBase,
+      money,
+      energy,
+      happy,
+      inventory: inv,
+      dailyWheelSpinsAvailable: Math.max(0, currentBase.dailyWheelSpinsAvailable - 1),
+      lastWheelSpinTimestamp: Date.now(),
+      hasUnsavedActions: true,
+    };
+
+    playerRef.current = updatedPlayer;
+    setPlayer(updatedPlayer);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        const email = JSON.parse(authRaw)?.email;
+        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updatedPlayer));
+      }
+    } catch {}
+
+    saveGame(updatedPlayer).catch(() => {});
+
+    setTimeout(() => {
+      isClaimingRewardRef.current = false;
+    }, 600);
 
     if (won.jackpot) {
       SoundEngine.playVictory(player.soundEnabled);
@@ -2484,7 +2522,25 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const claimDailyStreak = () => {
-    const day = (player.dailyStreak || 1);
+    if (isClaimingRewardRef.current) {
+      return { success: false, message: 'Processing streak claim, please wait...', day: player.dailyStreak || 1, reward: '' };
+    }
+    const currentBase = playerRef.current || player;
+    const now = Date.now();
+    const lastClaim = currentBase.lastStreakClaimTimestamp || 0;
+    const cooldownMs = 86400000; // 24 hours
+
+    if (!currentBase.canClaimDailyStreak && lastClaim > 0 && now - lastClaim < cooldownMs) {
+      const remainingHours = Math.ceil((cooldownMs - (now - lastClaim)) / (1000 * 60 * 60));
+      return {
+        success: false,
+        message: `Today's streak reward is already claimed. Next daily streak unlocks in ~${remainingHours} hours.`,
+        day: currentBase.dailyStreak || 1,
+        reward: '',
+      };
+    }
+
+    const day = currentBase.dailyStreak || 1;
     const rewards: { day: number; title: string; cash: number; energy: number; nerve: number; green: number; sparks: number; item?: string }[] = [
       { day: 1, title: '🌿 5 GREEN Coins + 15 Sparks + 10 Energy', cash: 500, energy: 10, nerve: 2, green: 5, sparks: 15 },
       { day: 2, title: '🌿 10 GREEN Coins + 30 Sparks + 15 Energy', cash: 1000, energy: 15, nerve: 4, green: 10, sparks: 30 },
@@ -2496,59 +2552,74 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     ];
 
     const currentReward = rewards[(day - 1) % 7];
+    isClaimingRewardRef.current = true;
 
-    setPlayer((prev) => {
-      let inv = prev.inventory;
-      if (currentReward.item) {
-        const existing = inv.find((i) => i.name === currentReward.item);
-        if (existing) {
-          inv = inv.map((i) => (i.name === currentReward.item ? { ...i, quantity: i.quantity + 1 } : i));
-        } else {
-          inv = [...inv, {
-            id: 'streak_loot_' + Date.now().toString(36),
-            name: currentReward.item,
-            description: 'Claimed from Daily Login Streak Calendar.',
-            category: 'LUXURY',
-            rarity: 'EPIC',
-            price: 2500,
-            marketValue: 2500,
-            shopliftDifficulty: 80,
-            icon: '🎁',
-            quantity: 1,
-          }];
-        }
+    let inv = [...currentBase.inventory];
+    if (currentReward.item) {
+      const existing = inv.find((i) => i.name === currentReward.item);
+      if (existing) {
+        inv = inv.map((i) => (i.name === currentReward.item ? { ...i, quantity: i.quantity + 1 } : i));
+      } else {
+        inv = [...inv, {
+          id: 'streak_loot_' + Date.now().toString(36),
+          name: currentReward.item,
+          description: 'Claimed from Daily Login Streak Calendar.',
+          category: 'LUXURY',
+          rarity: 'EPIC',
+          price: 2500,
+          marketValue: 2500,
+          shopliftDifficulty: 80,
+          icon: '🎁',
+          quantity: 1,
+        }];
       }
+    }
 
-      // Check if user is sponsored by another operative -> grants +5 GREEN/day recruit stipend!
-      let recruitStipendBonus = 0;
-      let newLastStipend = prev.referrals?.lastDailyStipendClaimTimestamp || 0;
-      const now = Date.now();
-      if (prev.referrals?.referredBy && (newLastStipend === 0 || now - newLastStipend >= 86400000)) {
-        recruitStipendBonus = 5;
-        newLastStipend = now;
+    let recruitStipendBonus = 0;
+    let newLastStipend = currentBase.referrals?.lastDailyStipendClaimTimestamp || 0;
+    if (currentBase.referrals?.referredBy && (newLastStipend === 0 || now - newLastStipend >= 86400000)) {
+      recruitStipendBonus = 5;
+      newLastStipend = now;
+    }
+
+    const updatedPlayer: PlayerState = {
+      ...currentBase,
+      money: currentBase.money + (currentReward.cash || 0) + recruitStipendBonus,
+      energy: Math.min(currentBase.maxEnergy, currentBase.energy + (currentReward.energy || 0)),
+      nerve: Math.min(currentBase.maxNerve, currentBase.nerve + (currentReward.nerve || 0)),
+      dreamPoints: (currentBase.dreamPoints || 0) + (currentReward.sparks || 0),
+      greenTokens: (currentBase.greenTokens || 0) + (currentReward.green || 0),
+      dailyStreak: (day % 7) + 1,
+      lastStreakClaimTimestamp: now,
+      canClaimDailyStreak: false,
+      inventory: inv,
+      referrals: {
+        ...(currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
+        lastDailyStipendClaimTimestamp: newLastStipend,
+      },
+      hasUnsavedActions: true,
+    };
+
+    playerRef.current = updatedPlayer;
+    setPlayer(updatedPlayer);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        const email = JSON.parse(authRaw)?.email;
+        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updatedPlayer));
       }
+    } catch {}
 
-      return {
-        ...prev,
-        money: prev.money + (currentReward.cash || 0) + recruitStipendBonus,
-        energy: Math.min(prev.maxEnergy, prev.energy + (currentReward.energy || 0)),
-        nerve: Math.min(prev.maxNerve, prev.nerve + (currentReward.nerve || 0)),
-        dreamPoints: (prev.dreamPoints || 0) + (currentReward.sparks || 0),
-        greenTokens: (prev.greenTokens || 0) + (currentReward.green || 0),
-        dailyStreak: (day % 7) + 1,
-        lastStreakClaimTimestamp: now,
-        canClaimDailyStreak: false,
-        inventory: inv,
-        referrals: {
-          ...(prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
-          lastDailyStipendClaimTimestamp: newLastStipend,
-        },
-        hasUnsavedActions: true,
-      };
-    });
+    saveGame(updatedPlayer).catch(() => {});
+
+    setTimeout(() => {
+      isClaimingRewardRef.current = false;
+    }, 600);
 
     SoundEngine.playVictory(player.soundEnabled);
-    const hasSponsorBonus = !!(player.referrals?.referredBy && (Date.now() - (player.referrals.lastDailyStipendClaimTimestamp || 0) >= 86400000 || !player.referrals.lastDailyStipendClaimTimestamp));
+    const hasSponsorBonus = !!(currentBase.referrals?.referredBy && (now - (currentBase.referrals.lastDailyStipendClaimTimestamp || 0) >= 86400000 || !currentBase.referrals.lastDailyStipendClaimTimestamp));
     addLog({
       type: 'CIVILIAN',
       message: `📅 DAILY CLIPPER: Claimed Day ${day} Streak: ${currentReward.title}!${hasSponsorBonus ? ' (+🌿 50 GREEN Recruit Stipend included!)' : ''}`,
@@ -4189,7 +4260,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
             const preservedReferredBy = prev.referrals?.referredBy || serverRefs.referredBy || authReferredBy || null;
 
-            return {
+            const updatedPlayer: PlayerState = {
               ...prev,
               referrals: {
                 ...(prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals),
@@ -4218,6 +4289,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 claimedMilestones: mergedMilestones,
               },
             };
+            playerRef.current = updatedPlayer;
+            try {
+              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+              if (authEmail) {
+                localStorage.setItem(`neon_metropolis_user_${authEmail.trim().toLowerCase()}`, JSON.stringify(updatedPlayer));
+              }
+            } catch {}
+            return updatedPlayer;
           });
         }
       }
