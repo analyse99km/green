@@ -36,8 +36,11 @@ export async function POST(req: NextRequest) {
     if (action === 'register') {
       let conflict = false;
       let createdUser: any = null;
+      const isRelay = req.headers.get('x-cluster-relay') === '1';
 
-      await mutateMasterUsers('users sync update [skip ci]', (users) => {
+      await mutateMasterUsers(
+        'users sync update [skip ci]',
+        (users) => {
         if (users[cleanEmail]) {
           conflict = true;
           return;
@@ -96,7 +99,9 @@ export async function POST(req: NextRequest) {
 
         users[cleanEmail] = createdUser;
         reconcileAllReferrals(users);
-      });
+      },
+      { endpoint: '/api/auth/email', payload: { action, email, password, name, referralCode }, isRelay }
+      );
 
       if (conflict) {
         return NextResponse.json(

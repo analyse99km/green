@@ -129,34 +129,39 @@ export async function POST(req: NextRequest) {
     }
 
     const now = Date.now();
-    const users = await mutateMasterUsers('cloud player state sync [skip ci]', (dict) => {
-      const existingUser = dict[cleanEmail];
-      const incomingUser = {
-        userId: playerState.id || existingUser?.userId || `usr_${now}`,
-        email: cleanEmail,
-        name: playerState.name || existingUser?.name || cleanEmail.split('@')[0],
-        userReferralCode:
-          existingUser?.userReferralCode ||
-          playerState.referrals?.referralCode ||
-          `NEON-${now.toString(36).toUpperCase()}`,
-        referredBy: playerState.referrals?.referredBy || existingUser?.referredBy || null,
-        createdAt: existingUser?.createdAt || now,
-        lastSaveAt: now,
-        lastLoginAt: now,
-        money: playerState.money !== undefined ? Number(playerState.money) : existingUser?.money,
-        sparks: playerState.dreamPoints !== undefined ? Number(playerState.dreamPoints) : existingUser?.sparks,
-        level: playerState.level !== undefined ? Number(playerState.level) : existingUser?.level,
-        rank: playerState.rank !== undefined ? playerState.rank : existingUser?.rank,
-        playerState: {
-          ...playerState,
-          lastSaveTimestamp: Math.max(Number(playerState.lastSaveTimestamp || 0), now),
-        },
-      };
+    const isRelay = req.headers.get('x-cluster-relay') === '1';
+    const users = await mutateMasterUsers(
+      'cloud player state sync [skip ci]',
+      (dict) => {
+        const existingUser = dict[cleanEmail];
+        const incomingUser = {
+          userId: playerState.id || existingUser?.userId || `usr_${now}`,
+          email: cleanEmail,
+          name: playerState.name || existingUser?.name || cleanEmail.split('@')[0],
+          userReferralCode:
+            existingUser?.userReferralCode ||
+            playerState.referrals?.referralCode ||
+            `NEON-${now.toString(36).toUpperCase()}`,
+          referredBy: playerState.referrals?.referredBy || existingUser?.referredBy || null,
+          createdAt: existingUser?.createdAt || now,
+          lastSaveAt: now,
+          lastLoginAt: now,
+          money: playerState.money !== undefined ? Number(playerState.money) : existingUser?.money,
+          sparks: playerState.dreamPoints !== undefined ? Number(playerState.dreamPoints) : existingUser?.sparks,
+          level: playerState.level !== undefined ? Number(playerState.level) : existingUser?.level,
+          rank: playerState.rank !== undefined ? playerState.rank : existingUser?.rank,
+          playerState: {
+            ...playerState,
+            lastSaveTimestamp: Math.max(Number(playerState.lastSaveTimestamp || 0), now),
+          },
+        };
 
-      dict[cleanEmail] = existingUser
-        ? mergeUserRecords(existingUser, incomingUser, true)
-        : incomingUser;
-    });
+        dict[cleanEmail] = existingUser
+          ? mergeUserRecords(existingUser, incomingUser, true)
+          : incomingUser;
+      },
+      { endpoint: '/api/player/sync', payload: { email: cleanEmail, playerState }, isRelay }
+    );
 
     const savedUser = users[cleanEmail];
     return NextResponse.json({

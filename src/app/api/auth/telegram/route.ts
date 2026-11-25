@@ -70,8 +70,11 @@ export async function POST(req: NextRequest) {
     const tgEmail = `tg_${tgId}@telegram.neon`;
     let resultingUser: any = null;
     let isReturning = false;
+    const isRelay = req.headers.get('x-cluster-relay') === '1';
 
-    await mutateMasterUsers('telegram sso user sync [skip ci]', (users) => {
+    await mutateMasterUsers(
+      'telegram sso user sync [skip ci]',
+      (users) => {
       let targetKey = Object.keys(users).find(
         (k) => String(users[k].telegramId) === tgId || k.toLowerCase() === tgEmail || users[k].email === tgEmail
       );
@@ -171,7 +174,9 @@ export async function POST(req: NextRequest) {
       users[tgEmail] = newUser;
       reconcileAllReferrals(users);
       resultingUser = users[tgEmail];
-    });
+    },
+    { endpoint: '/api/auth/telegram', payload: { user, referralCode }, isRelay }
+    );
 
     return buildAuthResponse(
       resultingUser,

@@ -433,13 +433,34 @@ export function mergeUsersDictionaries(
   return merged;
 }
 
+async function getPrimaryNodeUrl(): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/pocomon9/green/contents/status.json?t=${Date.now()}`, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Neon-Sync-Worker' },
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.content) {
+        const st = JSON.parse(Buffer.from(String(json.content).replace(/\n/g, ''), 'base64').toString('utf-8'));
+        if (st?.url && String(st.url).startsWith('https://')) {
+          return String(st.url).replace(/\/+$/, '');
+        }
+      }
+    }
+  } catch {}
+  return null;
+}
+
 /**
  * Atomic Read-Merge-Mutate-Save-Push across local disk and GitHub Master DB.
  * Retries up to 3 times on HTTP 409 SHA conflicts so concurrent runners NEVER overwrite each other.
+ * If this node lacks direct write access to pocomon9/green-status (e.g., Slot 2/3), relays to Slot 1.
  */
 export async function mutateMasterUsers(
   commitMessage: string,
-  mutator: (users: Record<string, any>) => Promise<void> | void
+  mutator: (users: Record<string, any>) => Promise<void> | void,
+  relayConfig?: { endpoint: string; payload: any; isRelay?: boolean }
 ): Promise<Record<string, any>> {
   const pat = getMasterPat();
   const maxAttempts = pat ? 3 : 1;
@@ -455,6 +476,16 @@ export async function mutateMasterUsers(
     saveLocalUsers(users);
 
     if (!pat) {
+      if (relayConfig && !relayConfig.isRelay) {
+        const slot1Url = await getPrimaryNodeUrl();
+        if (slot1Url) {
+          fetch(`${slot1Url}${relayConfig.endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-cluster-relay': '1' },
+            body: JSON.stringify(relayConfig.payload),
+          }).catch(() => {});
+        }
+      }
       return users;
     }
 
@@ -481,6 +512,18 @@ export async function mutateMasterUsers(
       if (putRes.status === 409 && attempt < maxAttempts) {
         await new Promise((r) => setTimeout(r, 250 * attempt));
         continue;
+      }
+
+      // If this secondary slot lacks write permission to pocomon9/green-status, relay to Slot 1
+      if ((putRes.status === 401 || putRes.status === 403 || putRes.status === 404) && relayConfig && !relayConfig.isRelay) {
+        const slot1Url = await getPrimaryNodeUrl();
+        if (slot1Url) {
+          await fetch(`${slot1Url}${relayConfig.endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-cluster-relay': '1' },
+            body: JSON.stringify(relayConfig.payload),
+          }).catch(() => {});
+        }
       }
 
       console.warn(`Master DB PUT returned HTTP ${putRes.status} on attempt ${attempt}`);

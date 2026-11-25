@@ -49,7 +49,10 @@ export async function POST(req: NextRequest) {
       canonicalCode: cleanCode,
     };
 
-    await mutateMasterUsers('referral network update [skip ci]', (users) => {
+    const isRelay = req.headers.get('x-cluster-relay') === '1';
+    await mutateMasterUsers(
+      'referral network update [skip ci]',
+      (users) => {
       const recruiterEmail = findRecruiterEmail(users, cleanCode);
 
       if (!recruiterEmail || !users[recruiterEmail]) {
@@ -146,7 +149,9 @@ export async function POST(req: NextRequest) {
       }
 
       reconcileAllReferrals(users, bounty);
-    });
+    },
+    { endpoint: '/api/referral', payload: body, isRelay }
+  );
 
     if (errStatus) {
       return NextResponse.json({ success: false, message: errMessage }, { status: errStatus });
