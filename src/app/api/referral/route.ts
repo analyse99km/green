@@ -123,6 +123,37 @@ function findRecruiterEmail(users: Record<string, any>, rawRef: string): string 
   return null;
 }
 
+function matchesReferral(referredBy: string, user: any, userEmail: string): boolean {
+  if (!referredBy || !user) return false;
+  let ref = String(referredBy).trim();
+  if (ref.includes('start=')) ref = ref.split('start=')[1].split('&')[0];
+  else if (ref.includes('/start ')) ref = ref.split('/start ')[1].split(' ')[0];
+  ref = ref.trim().toUpperCase();
+
+  const stripped = ref.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
+  const tgCandidate = stripped.replace(/[^0-9]/g, '');
+
+  const myCode = (user.userReferralCode || user.playerState?.referrals?.referralCode || '').toUpperCase();
+  const myCodeStripped = myCode.replace(/^(REF[_-]|NEON[_-]|TG[_-])+/, '');
+  const myTgId = String(user.telegramId || '').toUpperCase();
+  const myUserId = String(user.userId || user.playerState?.id || '').toUpperCase();
+  const myEmail = String(userEmail || user.email || '').toUpperCase();
+  const myName = String(user.name || user.playerState?.name || '').toUpperCase();
+  const myUsername = String(user.username || '').toUpperCase();
+
+  return (
+    myCode === ref ||
+    myCode === stripped ||
+    (myCodeStripped && myCodeStripped === stripped) ||
+    (stripped.length >= 3 && myCode.includes(stripped)) ||
+    (myTgId && (myTgId === ref || myTgId === stripped || (tgCandidate && myTgId === tgCandidate))) ||
+    (myUserId && (myUserId === ref || myUserId === stripped || myUserId.includes(ref))) ||
+    myEmail === ref ||
+    (myUsername && (myUsername === ref || `@${myUsername}` === ref)) ||
+    (myName && myName === ref)
+  );
+}
+
 // POST /api/referral - Redeem code & affiliate recruit
 export async function POST(req: NextRequest) {
   try {
@@ -301,11 +332,10 @@ export async function POST(req: NextRequest) {
       if (!Array.isArray(rUser.playerState.referrals.recruits)) {
         rUser.playerState.referrals.recruits = [];
       }
-      const myRefCode = (rUser.userReferralCode || rUser.playerState.referrals.referralCode || '').toUpperCase();
       for (const [cKey, cUser] of Object.entries(users)) {
         if (cKey.toLowerCase() === rKey.toLowerCase()) continue;
         const ref = (cUser.referredBy || cUser.playerState?.referrals?.referredBy || '').toUpperCase();
-        if (ref && myRefCode && (ref === myRefCode || ref.includes(myRefCode) || myRefCode.includes(ref))) {
+        if (ref && matchesReferral(ref, rUser, rKey)) {
           const already = rUser.playerState.referrals.recruits.some(
             (r: any) => r.id === cUser.userId || (r.email && cUser.email && r.email.toLowerCase() === cUser.email.toLowerCase())
           );

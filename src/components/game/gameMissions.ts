@@ -394,11 +394,31 @@ export function ensureMissionsSynchronized(
   let existingMissions = Array.isArray(player.missions) ? [...player.missions] : [];
   let updated = false;
 
-  // 1. Ensure story missions exist
+  // Irrevocable Claim Ledger: merge player.claimedMissionIds and persistent standalone localStorage
+  const persistentClaimedSet = new Set<string>(player.claimedMissionIds || []);
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('metropolis_claimed_missions');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) arr.forEach((id: string) => persistentClaimedSet.add(id));
+      }
+    } catch {}
+  }
+  for (const m of existingMissions) {
+    if (m.claimed) persistentClaimedSet.add(m.id);
+  }
+
+  // 1. Ensure story missions exist (permanently preserve claimed status across reloads/logins)
   const storyIds = new Set(existingMissions.filter((m) => m.category === 'STORY').map((m) => m.id));
   for (const storyMsn of INITIAL_STORY_MISSIONS) {
     if (!storyIds.has(storyMsn.id)) {
-      existingMissions.push({ ...storyMsn });
+      const isAlreadyClaimed = persistentClaimedSet.has(storyMsn.id);
+      existingMissions.push({
+        ...storyMsn,
+        completed: isAlreadyClaimed || storyMsn.completed,
+        claimed: isAlreadyClaimed || storyMsn.claimed,
+      });
       updated = true;
     }
   }
@@ -408,7 +428,12 @@ export function ensureMissionsSynchronized(
     for (const cm of customAdminMissions) {
       const idx = existingMissions.findIndex((m) => m.id === cm.id);
       if (idx === -1) {
-        existingMissions.push({ ...cm });
+        const isAlreadyClaimed = persistentClaimedSet.has(cm.id);
+        existingMissions.push({
+          ...cm,
+          completed: isAlreadyClaimed || cm.completed,
+          claimed: isAlreadyClaimed || cm.claimed,
+        });
         updated = true;
       }
     }
@@ -434,6 +459,17 @@ export function ensureMissionsSynchronized(
     existingMissions.push(...getMonthlyMissions(currentMonthlyKey));
     updated = true;
   }
+
+  // 6. Guarantee that any mission in persistentClaimedSet is NEVER marked unclaimed
+  existingMissions = existingMissions.map((m) => {
+    if (persistentClaimedSet.has(m.id)) {
+      if (!m.claimed || !m.completed) {
+        updated = true;
+        return { ...m, completed: true, claimed: true };
+      }
+    }
+    return m;
+  });
 
   return {
     updated,

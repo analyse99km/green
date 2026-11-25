@@ -1193,6 +1193,7 @@ export const DEFAULT_METROPOLIS_PLAYER: PlayerState = {
   educationCourses: INITIAL_EDUCATION_COURSES,
   businessRegistries: INITIAL_BUSINESS_REGISTRIES,
   missions: INITIAL_MISSIONS,
+  claimedMissionIds: [],
   properties: INITIAL_PROPERTIES,
   currentPropertyId: 'prop_apt',
   inventory: [],

@@ -59,6 +59,8 @@ export default function ReferralView() {
   const authUserReferredBy = typeof window !== 'undefined'
     ? (() => {
         try {
+          const standalone = localStorage.getItem('metropolis_user_referred_by');
+          if (standalone) return standalone;
           const raw = localStorage.getItem('metropolis_auth_user');
           if (raw) {
             const parsed = JSON.parse(raw);
@@ -74,7 +76,8 @@ export default function ReferralView() {
       })()
     : null;
 
-  const effectiveReferredBy = player.referrals?.referredBy || authUserReferredBy || undefined;
+  const standaloneSponsor = typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : null;
+  const effectiveReferredBy = player.referrals?.referredBy || authUserReferredBy || standaloneSponsor || undefined;
 
   const recruitsList = Array.isArray(player.referrals?.recruits) ? player.referrals.recruits : [];
   const effectiveTotalRecruits = Math.max(Number(player.referrals?.totalRecruits || 0), recruitsList.length);

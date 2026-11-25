@@ -370,6 +370,7 @@ export interface PlayerState {
   educationCourses: EducationCourse[];
   businessRegistries: BusinessRegistry[];
   missions: Mission[];
+  claimedMissionIds?: string[]; // Irrevocable list of claimed mission IDs across lifetime
   lastDailyMissionsDate?: string;
   lastWeeklyMissionsWeek?: string;
   lastMonthlyMissionsMonth?: string;

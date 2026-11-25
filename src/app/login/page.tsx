@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { deriveUserSigningKey } from '@/components/game/gameCrypto';
 import { isTelegramEnv, parseTelegramInitData, tgCloudSet } from '@/lib/telegramStorage';
+import { INITIAL_MISSIONS } from '@/components/game/gameData';
 
 interface OperativeSession {
   authenticated: boolean;
@@ -255,6 +256,43 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
           const effTotal = Math.max(Number(cloudRefs.totalRecruits || 0), Number(localRefs.totalRecruits || 0), mergedRecruits.length);
           const effNetwork = Math.max(Number(cloudRefs.networkTotalCitizens || 0), Number(localRefs.networkTotalCitizens || 0), mergedRecruits.length);
 
+          const standaloneSponsor = typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : undefined;
+          const effReferredBy = data.referredBy || cloudRefs.referredBy || localRefs.referredBy || standaloneSponsor || undefined;
+
+          // Merge claimed missions irrevocably
+          const standaloneClaimed = typeof window !== 'undefined' ? (() => {
+            try {
+              const raw = localStorage.getItem('metropolis_claimed_missions');
+              return raw ? JSON.parse(raw) : [];
+            } catch { return []; }
+          })() : [];
+
+          const mergedClaimedMissionIds = Array.from(new Set([
+            ...(localState.claimedMissionIds || []),
+            ...(cloudState.claimedMissionIds || []),
+            ...(Array.isArray(standaloneClaimed) ? standaloneClaimed : []),
+          ]));
+
+          const msnMap = new Map();
+          (localState.missions || []).forEach((m: any) => msnMap.set(m.id, { ...m }));
+          (cloudState.missions || []).forEach((m: any) => {
+            const existing = msnMap.get(m.id);
+            msnMap.set(m.id, {
+              ...existing,
+              ...m,
+              completed: Boolean(existing?.completed || m.completed || mergedClaimedMissionIds.includes(m.id)),
+              claimed: Boolean(existing?.claimed || m.claimed || mergedClaimedMissionIds.includes(m.id)),
+            });
+          });
+          mergedClaimedMissionIds.forEach((id: string) => {
+            const m = msnMap.get(id);
+            if (m) {
+              m.completed = true;
+              m.claimed = true;
+            }
+          });
+          const mergedMissions = Array.from(msnMap.values());
+
           playerState = {
             ...localState,
             ...cloudState,
@@ -266,11 +304,13 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             level: Math.max(Number(localState.level || 1), Number(cloudState.level || 1)),
             inventory: (localState.inventory && localState.inventory.length > 0) ? localState.inventory : (cloudState.inventory || []),
             dreamCards: { ...(cloudState.dreamCards || {}), ...(localState.dreamCards || {}) },
+            missions: mergedMissions.length > 0 ? mergedMissions : (localState.missions || cloudState.missions || INITIAL_MISSIONS),
+            claimedMissionIds: mergedClaimedMissionIds,
             referrals: {
               ...localRefs,
               ...cloudRefs,
               referralCode: data.userReferralCode || cloudRefs.referralCode || localRefs.referralCode || uniqueRef,
-              referredBy: cloudRefs.referredBy || localRefs.referredBy || undefined,
+              referredBy: effReferredBy,
               recruits: mergedRecruits,
               totalRecruits: effTotal,
               networkTotalCitizens: effNetwork,
@@ -290,6 +330,8 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
 
       if (isRegister) {
         const uniqueXid = String(Math.floor(1000000 + Math.random() * 9000000));
+        const standaloneSponsor = typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : undefined;
+        const regSponsor = referralInput.trim() ? referralInput.trim().toUpperCase() : standaloneSponsor;
         playerState = {
           id: data.userId || `usr_${Date.now()}`,
           name: authoritativeName,
@@ -318,6 +360,8 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
           isAwakened: false,
           inventory: [],
           dreamCards: {},
+          missions: INITIAL_MISSIONS,
+          claimedMissionIds: [],
           referrals: {
             referralCode: uniqueRef,
             totalRecruits: 0,
@@ -325,8 +369,8 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             lifetimeCommissionGreen: 0,
             recruits: [],
             claimedMilestones: [],
-            referredBy: referralInput.trim() ? referralInput.trim().toUpperCase() : undefined,
-            hasClaimedWelcomeBonus: false,
+            referredBy: regSponsor,
+            hasClaimedWelcomeBonus: Boolean(regSponsor),
           },
         };
 
@@ -339,6 +383,7 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
       } else if (!playerState) {
         // Fallback for older accounts that did not have a cloud playerState saved
         const uniqueXid = String(Math.floor(1000000 + Math.random() * 9000000));
+        const standaloneSponsor = typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : undefined;
         playerState = {
           id: data.userId || `usr_${Date.now()}`,
           name: authoritativeName,
@@ -367,6 +412,8 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
           isAwakened: false,
           inventory: [],
           dreamCards: {},
+          missions: INITIAL_MISSIONS,
+          claimedMissionIds: [],
           referrals: {
             referralCode: uniqueRef,
             totalRecruits: 0,
@@ -374,6 +421,8 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
             lifetimeCommissionGreen: 0,
             recruits: [],
             claimedMilestones: [],
+            referredBy: standaloneSponsor,
+            hasClaimedWelcomeBonus: Boolean(standaloneSponsor),
           },
         };
       } else {
@@ -393,13 +442,28 @@ export function LoginContent({ onSuccess }: { onSuccess?: () => void } = {}) {
         }
       }
 
+      const finalReferredBy = playerState.referrals?.referredBy || data.referredBy || (typeof window !== 'undefined' ? localStorage.getItem('metropolis_user_referred_by') : undefined) || undefined;
+      const finalRefCode = playerState.referrals?.referralCode || data.userReferralCode || uniqueRef;
+      if (finalReferredBy) {
+        playerState.referrals.referredBy = finalReferredBy;
+        playerState.referrals.hasClaimedWelcomeBonus = true;
+        try { localStorage.setItem('metropolis_user_referred_by', finalReferredBy); } catch {}
+      }
+
       // Save to both the per-user key and current active session key
       localStorage.setItem(userStateKey, JSON.stringify(playerState));
       localStorage.setItem('neon_metropolis_v6_botanical_green', JSON.stringify(playerState));
       localStorage.setItem('METROPOLIS_SAVE_SLOT_01', JSON.stringify(playerState));
       localStorage.setItem(
         'metropolis_auth_user',
-        JSON.stringify({ email: cleanEmail, name: authoritativeName, userId: data.userId, loginTime: Date.now() })
+        JSON.stringify({
+          email: cleanEmail,
+          name: authoritativeName,
+          userId: data.userId,
+          userReferralCode: finalRefCode,
+          referredBy: finalReferredBy,
+          loginTime: Date.now()
+        })
       );
 
       if (!isRegister && playerState) {
