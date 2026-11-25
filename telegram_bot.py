@@ -48,7 +48,6 @@ DEFAULT_CONFIG = {
             "🌿 *Welcome to Neon Metropolis*\n\n"
             "A new digital world is growing.\n\n"
             "Explore the ecosystem, tap to mint GREEN coins, solve daily combos, and build your digital empire.\n\n"
-            "🎮 *Play Now:* https://pocomon9.github.io/green-status/\n\n"
             "🌱 *Your city. Your community. Your future.*"
         ),
         "airdrop": (
@@ -314,12 +313,6 @@ def get_main_keyboard(user_id=None, ref_code=''):
                 {
                     "text": "🚀 OPEN MINI APP 🌿",
                     "web_app": {"url": game_url}
-                }
-            ],
-            [
-                {
-                    "text": "🌐 Direct Play (Browser) ↗️",
-                    "url": game_url
                 }
             ],
             [

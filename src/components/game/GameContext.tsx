@@ -178,6 +178,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [player, setPlayer] = useState<PlayerState>(DEFAULT_METROPOLIS_PLAYER);
   const playerRef = useRef<PlayerState>(player);
+  const isClaimingRewardRef = useRef(false);
   useEffect(() => {
     playerRef.current = player;
   }, [player]);
@@ -3859,8 +3860,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // VIRAL REFERRALS & SYNDICATE COMMISSIONS
   const claimReferralMilestone = (recruitsRequired: number) => {
-    const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-    if (refs.totalRecruits < recruitsRequired) {
+    if (isClaimingRewardRef.current) {
+      return { success: false, message: 'Processing claim, please wait...' };
+    }
+    const currentBase = playerRef.current || player;
+    const refs = currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    const effectiveRecruits = Math.max(
+      Number(refs.totalRecruits || 0),
+      Array.isArray(refs.recruits) ? refs.recruits.length : 0
+    );
+
+    if (effectiveRecruits < recruitsRequired) {
       return { success: false, message: `Need ${recruitsRequired} recruits to claim this milestone reward.` };
     }
     if ((refs.claimedMilestones || []).includes(recruitsRequired)) {
@@ -3870,18 +3880,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const milestoneTable: Record<number, { green: number; sparks: number; statBonus?: Partial<PlayerState> }> = {
       1: { green: 100, sparks: 50 },
       3: { green: 350, sparks: 200 },
-      5: { green: 750, sparks: 500, statBonus: { unallocatedStatPoints: player.unallocatedStatPoints + 1 } },
-      10: { green: 2000, sparks: 1500, statBonus: { maxEnergy: player.maxEnergy + 5 } },
-      25: { green: 6000, sparks: 5000, statBonus: { maxNerve: player.maxNerve + 5 } },
-      50: { green: 15000, sparks: 15000, statBonus: { maxHappy: player.maxHappy + 50 } },
+      5: { green: 750, sparks: 500, statBonus: { unallocatedStatPoints: (currentBase.unallocatedStatPoints || 0) + 1 } },
+      10: { green: 2000, sparks: 1500, statBonus: { maxEnergy: currentBase.maxEnergy + 5 } },
+      25: { green: 6000, sparks: 5000, statBonus: { maxNerve: currentBase.maxNerve + 5 } },
+      50: { green: 15000, sparks: 15000, statBonus: { maxHappy: currentBase.maxHappy + 50 } },
       100: {
         green: 35000,
         sparks: 30000,
         statBonus: {
-          maxEnergy: player.maxEnergy + 10,
-          maxNerve: player.maxNerve + 10,
-          maxHappy: player.maxHappy + 100,
-          unallocatedStatPoints: player.unallocatedStatPoints + 3,
+          maxEnergy: currentBase.maxEnergy + 10,
+          maxNerve: currentBase.maxNerve + 10,
+          maxHappy: currentBase.maxHappy + 100,
+          unallocatedStatPoints: (currentBase.unallocatedStatPoints || 0) + 3,
         },
       },
     };
@@ -3893,56 +3903,92 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const catalogMilestone = (catalogRewards.milestones || []).find((m: any) => m.recruits === recruitsRequired);
     const finalGreen = catalogMilestone ? catalogMilestone.rewardGreen : reward.green;
 
-    setPlayer((prev) => {
-      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-      return {
-        ...prev,
-        money: prev.money + finalGreen,
-        dreamPoints: (prev.dreamPoints || 0) + reward.sparks,
-        referrals: {
-          ...currentRefs,
-          claimedMilestones: [...(currentRefs.claimedMilestones || []), recruitsRequired],
-        },
-        ...(reward.statBonus || {}),
-        hasUnsavedActions: true,
-      };
-    });
+    isClaimingRewardRef.current = true;
+
+    const newClaimed = [...(refs.claimedMilestones || []), recruitsRequired];
+    const updatedPlayer: PlayerState = {
+      ...currentBase,
+      money: currentBase.money + finalGreen,
+      dreamPoints: (currentBase.dreamPoints || 0) + reward.sparks,
+      referrals: {
+        ...refs,
+        claimedMilestones: newClaimed,
+      },
+      ...(reward.statBonus || {}),
+      hasUnsavedActions: true,
+    };
+
+    playerRef.current = updatedPlayer;
+    setPlayer(updatedPlayer);
+
+    // Instantly write synchronously to localStorage so double-claims or reload race conditions are impossible
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        const email = JSON.parse(authRaw)?.email;
+        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updatedPlayer));
+      }
+    } catch {}
+
+    saveGame(updatedPlayer).catch(() => {});
+
+    setTimeout(() => {
+      isClaimingRewardRef.current = false;
+    }, 600);
 
     SoundEngine.playVictory(player.soundEnabled);
     addLog({
       type: 'CIVILIAN',
-      message: `REFERRAL MILESTONE: Claimed ${recruitsRequired}-Recruit reward! +🌿 ${reward.green.toLocaleString()} GREEN & +${reward.sparks} Sparks!`,
+      message: `REFERRAL MILESTONE: Claimed ${recruitsRequired}-Recruit reward! +🌿 ${finalGreen.toLocaleString()} GREEN & +${reward.sparks} Sparks!`,
     });
-
-    setTimeout(() => {
-      saveGame().catch(() => {});
-    }, 50);
 
     return {
       success: true,
-      message: `Claimed +🌿 ${reward.green.toLocaleString()} GREEN and +${reward.sparks} Dream Sparks!`,
+      message: `Claimed +🌿 ${finalGreen.toLocaleString()} GREEN and +${reward.sparks} Dream Sparks!`,
     };
   };
 
   const collectReferralCommission = () => {
-    const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    if (isClaimingRewardRef.current) {
+      return { success: false, message: 'Processing collection, please wait...', amount: 0 };
+    }
+    const currentBase = playerRef.current || player;
+    const refs = currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
     const amount = refs.unclaimedCommissionGreen || 0;
     if (amount <= 0) {
       return { success: false, message: 'No uncollected referral commissions in till.', amount: 0 };
     }
 
-    setPlayer((prev) => {
-      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-      return {
-        ...prev,
-        money: prev.money + amount,
-        referrals: {
-          ...currentRefs,
-          unclaimedCommissionGreen: 0,
-        },
-        hasUnsavedActions: true,
-      };
-    });
+    isClaimingRewardRef.current = true;
+
+    const updatedPlayer: PlayerState = {
+      ...currentBase,
+      money: currentBase.money + amount,
+      referrals: {
+        ...refs,
+        unclaimedCommissionGreen: 0,
+      },
+      hasUnsavedActions: true,
+    };
+
+    playerRef.current = updatedPlayer;
+    setPlayer(updatedPlayer);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        const email = JSON.parse(authRaw)?.email;
+        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updatedPlayer));
+      }
+    } catch {}
+
+    saveGame(updatedPlayer).catch(() => {});
+
+    setTimeout(() => {
+      isClaimingRewardRef.current = false;
+    }, 600);
 
     SoundEngine.playCash(player.soundEnabled);
     addLog({
@@ -4153,6 +4199,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 recruits: mergedRecruits,
                 totalRecruits: Math.max(Number(prev.referrals?.totalRecruits || 0), Number(serverRefs.totalRecruits || 0), mergedRecruits.length),
                 networkTotalCitizens: Math.max(Number(prev.referrals?.networkTotalCitizens || 0), Number(serverRefs.networkTotalCitizens || 0), mergedRecruits.length),
+                lastDailyStipendClaimTimestamp: Math.max(
+                  Number(prev.referrals?.lastDailyStipendClaimTimestamp || 0),
+                  Number(serverRefs.lastDailyStipendClaimTimestamp || 0)
+                ),
+                lastDailyRoyaltyClaimTimestamp: Math.max(
+                  Number(prev.referrals?.lastDailyRoyaltyClaimTimestamp || 0),
+                  Number(serverRefs.lastDailyRoyaltyClaimTimestamp || 0)
+                ),
                 unclaimedCommissionGreen: Math.max(
                   Number(prev.referrals?.unclaimedCommissionGreen || 0),
                   Number(serverRefs.unclaimedCommissionGreen || 0)
@@ -4197,7 +4251,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // ONCE-A-DAY ROYALTY DIVIDEND DISTRIBUTION (Based on Active Gameplay)
   const claimDailyRoyaltyDividends = () => {
-    const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    if (isClaimingRewardRef.current) {
+      return {
+        success: false,
+        message: 'Processing dividend claim, please wait...',
+        amount: 0,
+        tierBreakdown: calculateNetworkTiers(),
+      };
+    }
+    const currentBase = playerRef.current || player;
+    const refs = currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
     const now = Date.now();
     const lastClaim = refs.lastDailyRoyaltyClaimTimestamp || 0;
     const cooldownMs = 86400000; // 24 hours
@@ -4225,34 +4288,50 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
 
     const payoutAmount = Math.max(totalDividend, 1);
+    isClaimingRewardRef.current = true;
 
-    setPlayer((prev) => {
-      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-      const updatedRecruits = (currentRefs.recruits || []).map((r) => {
-        const tierCfg = tiers.find((t) => t.tier === (r.tier || 1));
-        const memberDividend = Math.round((r.dailyGameplayEarned || 0) * ((tierCfg?.royaltyPercent || 10) / 100));
-        // Reset daily gameplay and generate next day's active volume (60 - 240 GREEN)
-        const nextDayActivity = Math.floor(Math.random() * 180) + 60;
-        return {
-          ...r,
-          totalGeneratedGreen: (r.totalGeneratedGreen || 0) + memberDividend,
-          dailyGameplayEarned: nextDayActivity,
-          lastActive: 'Active today (Daily gameplay verified)',
-        };
-      });
-
+    const updatedRecruits = (refs.recruits || []).map((r) => {
+      const tierCfg = tiers.find((t) => t.tier === (r.tier || 1));
+      const memberDividend = Math.round((r.dailyGameplayEarned || 0) * ((tierCfg?.royaltyPercent || 10) / 100));
+      // Reset daily gameplay and generate next day's active volume (60 - 240 GREEN)
+      const nextDayActivity = Math.floor(Math.random() * 180) + 60;
       return {
-        ...prev,
-        money: prev.money + payoutAmount,
-        referrals: {
-          ...currentRefs,
-          lastDailyRoyaltyClaimTimestamp: now,
-          lifetimeCommissionGreen: (currentRefs.lifetimeCommissionGreen || 0) + payoutAmount,
-          recruits: updatedRecruits,
-        },
-        hasUnsavedActions: true,
+        ...r,
+        totalGeneratedGreen: (r.totalGeneratedGreen || 0) + memberDividend,
+        dailyGameplayEarned: nextDayActivity,
+        lastActive: 'Active today (Daily gameplay verified)',
       };
     });
+
+    const updatedPlayer: PlayerState = {
+      ...currentBase,
+      money: currentBase.money + payoutAmount,
+      referrals: {
+        ...refs,
+        lastDailyRoyaltyClaimTimestamp: now,
+        lifetimeCommissionGreen: (refs.lifetimeCommissionGreen || 0) + payoutAmount,
+        recruits: updatedRecruits,
+      },
+      hasUnsavedActions: true,
+    };
+
+    playerRef.current = updatedPlayer;
+    setPlayer(updatedPlayer);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        const email = JSON.parse(authRaw)?.email;
+        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updatedPlayer));
+      }
+    } catch {}
+
+    saveGame(updatedPlayer).catch(() => {});
+
+    setTimeout(() => {
+      isClaimingRewardRef.current = false;
+    }, 600);
 
     SoundEngine.playVictory(player.soundEnabled);
     addLog({
@@ -4270,7 +4349,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // RECRUIT DAILY STIPEND: daily GREEN allowance for recruited operatives
   const claimDailyRecruitStipend = () => {
-    const refs = player.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
+    if (isClaimingRewardRef.current) {
+      return {
+        success: false,
+        message: 'Processing stipend claim, please wait...',
+        amount: 0,
+      };
+    }
+    const currentBase = playerRef.current || player;
+    const refs = currentBase.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
     const stipendAmount = loadCatalogData()?.referralRewards?.dailyRecruitStipend ?? 50;
 
     if (!refs.referredBy) {
@@ -4294,29 +4381,46 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    setPlayer((prev) => {
-      const currentRefs = prev.referrals || DEFAULT_METROPOLIS_PLAYER.referrals;
-      return {
-        ...prev,
-        money: prev.money + stipendAmount,
-        referrals: {
-          ...currentRefs,
-          lastDailyStipendClaimTimestamp: now,
-        },
-        hasUnsavedActions: true,
-      };
-    });
+    isClaimingRewardRef.current = true;
+
+    const updatedPlayer: PlayerState = {
+      ...currentBase,
+      money: currentBase.money + stipendAmount,
+      referrals: {
+        ...refs,
+        lastDailyStipendClaimTimestamp: now,
+      },
+      hasUnsavedActions: true,
+    };
+
+    playerRef.current = updatedPlayer;
+    setPlayer(updatedPlayer);
+
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      const authRaw = localStorage.getItem('metropolis_auth_user');
+      if (authRaw) {
+        const email = JSON.parse(authRaw)?.email;
+        if (email) localStorage.setItem(`neon_metropolis_user_${email.trim().toLowerCase()}`, JSON.stringify(updatedPlayer));
+      }
+    } catch {}
+
+    saveGame(updatedPlayer).catch(() => {});
+
+    setTimeout(() => {
+      isClaimingRewardRef.current = false;
+    }, 600);
 
     SoundEngine.playCash(player.soundEnabled);
     addLog({
       type: 'CIVILIAN',
-      message: `🤝 RECRUIT STIPEND: Received +🌿 50 GREEN daily sponsor allowance [Sponsor: ${refs.referredBy}]!`,
+      message: `🤝 RECRUIT STIPEND: Received +🌿 ${stipendAmount} GREEN daily sponsor allowance [Sponsor: ${refs.referredBy}]!`,
     });
 
     return {
       success: true,
-      message: 'Claimed +🌿 50 GREEN daily recruit stipend!',
-      amount: 50,
+      message: `Claimed +🌿 ${stipendAmount} GREEN daily recruit stipend!`,
+      amount: stipendAmount,
     };
   };
 
@@ -4347,19 +4451,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const existing = currentRefs.recruits || [];
       const updatedRecruits = [newRecruit, ...existing];
       const isDirect = effectiveTier === 1;
+      const directRecruitsCount = updatedRecruits.filter((r) => (r.tier || 1) === 1).length;
+      const updatedTotalRecruits = Math.max(
+        Number(currentRefs.totalRecruits || 0) + (isDirect ? 1 : 0),
+        directRecruitsCount
+      );
 
-      return {
+      const updatedPlayer: PlayerState = {
         ...prev,
         referrals: {
           ...currentRefs,
           recruits: updatedRecruits,
-          totalRecruits: isDirect ? (currentRefs.totalRecruits || 0) + 1 : currentRefs.totalRecruits,
-          networkTotalCitizens: updatedRecruits.length,
+          totalRecruits: updatedTotalRecruits,
+          networkTotalCitizens: Math.max(Number(currentRefs.networkTotalCitizens || 0) + 1, updatedRecruits.length),
           unclaimedCommissionGreen: (currentRefs.unclaimedCommissionGreen || 0) + (isDirect ? bounty : 20),
           lifetimeCommissionGreen: (currentRefs.lifetimeCommissionGreen || 0) + (isDirect ? bounty : 20),
         },
         hasUnsavedActions: true,
       };
+
+      playerRef.current = updatedPlayer;
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPlayer));
+      } catch {}
+      return updatedPlayer;
     });
 
     SoundEngine.playVictory(player.soundEnabled);

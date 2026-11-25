@@ -25,6 +25,8 @@ import {
   ChevronRight,
   Clock,
   Info,
+  Save,
+  CheckCircle,
 } from 'lucide-react';
 import ReferralView from './ReferralView';
 import MissionsModal from './MissionsModal';
@@ -56,7 +58,22 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
     unlockTapperSkin,
     equipTapperSkin,
     claimDailyStreak,
+    saveGame,
+    isSaving,
+    saveSuccess,
   } = useGame();
+
+  const handleManualSave = async () => {
+    SoundEngine.playTick(player.soundEnabled);
+    try {
+      await saveGame();
+      setFeedback('💾 Progress saved to cluster storage!');
+      setTimeout(() => setFeedback(null), 3000);
+    } catch {
+      setFeedback('💾 Local save updated.');
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  };
 
   const [activeSubTab, setActiveSubTab] = useState<
     'TAP_CORE' | 'CARDS_STORE' | 'MARKET' | 'PLANTS' | 'REFERRALS'
@@ -350,7 +367,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
           </button>
         </div>
 
-        {/* Global Sparks Balance Pill */}
+        {/* Global Sparks Balance Pill & Quick Save Button */}
         <div className="flex items-center gap-2 font-mono text-xs px-2">
           <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
             <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
@@ -360,6 +377,36 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
           <span className="text-[11px] text-cyan-400 font-bold hidden sm:inline">
             +{autoSparksPerSec} /s
           </span>
+
+          <button
+            onClick={handleManualSave}
+            disabled={isSaving}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-all shadow cursor-pointer active:scale-95 shrink-0 ${
+              saveSuccess
+                ? 'bg-emerald-600 text-white ring-1 ring-emerald-400'
+                : player.hasUnsavedActions
+                ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-neutral-950 font-black animate-pulse'
+                : 'bg-neutral-950 hover:bg-neutral-800 text-neutral-200 border border-neutral-700'
+            }`}
+            title="Click to manually save game state"
+          >
+            {isSaving ? (
+              <>
+                <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <span className="text-[10px]">Saving...</span>
+              </>
+            ) : saveSuccess ? (
+              <>
+                <CheckCircle className="w-3.5 h-3.5 text-white" />
+                <span className="text-[10px]">Saved!</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[10px]">{player.hasUnsavedActions ? 'Save!' : 'Save'}</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -428,14 +475,14 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
             </div>
           </div>
 
-          {/* QUICK ACTION ROW (Daily Reward, Missions, Daily Combo, Guide, Friends) */}
-          <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2 max-w-xl mx-auto w-full my-1">
+          {/* QUICK ACTION ROW (Daily Reward, Missions, Daily Combo, Guide, Save) */}
+          <div className="grid grid-cols-5 gap-1 sm:gap-2 max-w-xl mx-auto w-full my-1">
             <button
               onClick={() => {
                 SoundEngine.playTick(player.soundEnabled);
                 setShowDailyRewardModal(true);
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 group cursor-pointer"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 group cursor-pointer"
             >
               <div className="relative">
                 <span className="text-base sm:text-lg">🎁</span>
@@ -445,7 +492,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
               </div>
               <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Daily</span>
               <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono">
-                {canClaim ? 'CLAIM NOW' : `Day ${currentStreakDay}`}
+                {canClaim ? 'CLAIM' : `D${currentStreakDay}`}
               </span>
             </button>
 
@@ -454,7 +501,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                 SoundEngine.playTick(player.soundEnabled);
                 setShowMissionsModal(true);
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-amber-500/40 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 relative group cursor-pointer"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-amber-500/40 rounded-xl p-1 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 relative group cursor-pointer"
             >
               <div className="relative">
                 <span className="text-base sm:text-lg">🎯</span>
@@ -464,7 +511,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
               </div>
               <span className="text-[9px] sm:text-[10px] font-bold text-amber-200">Missions</span>
               <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">
-                {unclaimedMissionsCount > 0 ? `${unclaimedMissionsCount} Ready!` : 'View All'}
+                {unclaimedMissionsCount > 0 ? `${unclaimedMissionsCount} Ready!` : 'View'}
               </span>
             </button>
 
@@ -473,7 +520,7 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                 SoundEngine.playTick(player.soundEnabled);
                 setActiveSubTab('CARDS_STORE');
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer"
             >
               <span className="text-base sm:text-lg">🃏</span>
               <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Combo</span>
@@ -485,23 +532,43 @@ export default function DreamTapView({ onNavigateToCity }: DreamTapViewProps = {
                 SoundEngine.playTick(player.soundEnabled);
                 setShowHowToPlayModal(true);
               }}
-              className="bg-neutral-900 hover:bg-neutral-800 border border-cyan-500/40 rounded-xl p-1.5 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer"
+              className="bg-neutral-900 hover:bg-neutral-800 border border-cyan-500/40 rounded-xl p-1 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer"
             >
               <span className="text-base sm:text-lg">❓</span>
               <span className="text-[9px] sm:text-[10px] font-bold text-cyan-200">Guide</span>
-              <span className="text-[8px] sm:text-[9px] text-cyan-400 font-mono">How to Play</span>
+              <span className="text-[8px] sm:text-[9px] text-cyan-400 font-mono">Help</span>
             </button>
 
             <button
-              onClick={() => {
-                SoundEngine.playTick(player.soundEnabled);
-                setActiveSubTab('REFERRALS');
-              }}
-              className="hidden sm:flex bg-neutral-900 hover:bg-neutral-800 border border-neutral-700/80 rounded-xl p-1.5 sm:p-2 text-center transition flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer"
+              onClick={handleManualSave}
+              disabled={isSaving}
+              className={`border rounded-xl p-1 sm:p-2 text-center transition flex flex-col items-center justify-center gap-0.5 sm:gap-1 cursor-pointer relative ${
+                saveSuccess
+                  ? 'border-emerald-500/80 bg-emerald-950/40 text-emerald-300'
+                  : player.hasUnsavedActions
+                  ? 'border-amber-500/80 bg-amber-950/40 text-amber-300 animate-pulse'
+                  : 'bg-neutral-900 hover:bg-neutral-800 border-neutral-700/80 text-neutral-200'
+              }`}
+              title="Click to manually save game state"
             >
-              <span className="text-base sm:text-lg">👥</span>
-              <span className="text-[9px] sm:text-[10px] font-bold text-neutral-200">Friends</span>
-              <span className="text-[8px] sm:text-[9px] text-emerald-400 font-mono">+50G Direct</span>
+              <div className="relative">
+                {isSaving ? (
+                  <span className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin inline-block" />
+                ) : saveSuccess ? (
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+                ) : (
+                  <Save className={`w-4 h-4 sm:w-5 sm:h-5 ${player.hasUnsavedActions ? 'text-amber-400' : 'text-emerald-400'}`} />
+                )}
+                {player.hasUnsavedActions && !saveSuccess && !isSaving && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping" />
+                )}
+              </div>
+              <span className="text-[9px] sm:text-[10px] font-bold">
+                {isSaving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save'}
+              </span>
+              <span className="text-[8px] sm:text-[9px] font-mono">
+                {player.hasUnsavedActions ? 'Pending' : 'Synced'}
+              </span>
             </button>
           </div>
 

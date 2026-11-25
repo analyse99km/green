@@ -367,9 +367,15 @@ export async function GET(req: NextRequest) {
       referralCode: user.userReferralCode || '',
       recruits: [],
       totalRecruits: 0,
+      networkTotalCitizens: 0,
       unclaimedCommissionGreen: 0,
       lifetimeCommissionGreen: 0,
     };
+
+    const currentRecruits = Array.isArray(refs.recruits) ? refs.recruits : [];
+    refs.recruits = currentRecruits;
+    refs.totalRecruits = Math.max(Number(refs.totalRecruits || 0), currentRecruits.length);
+    refs.networkTotalCitizens = Math.max(Number(refs.networkTotalCitizens || 0), currentRecruits.length);
 
     return NextResponse.json({
       success: true,

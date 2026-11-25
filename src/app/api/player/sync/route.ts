@@ -348,8 +348,9 @@ export async function POST(req: NextRequest) {
     }
 
     const myRefCode = (user.userReferralCode || playerState.referrals?.referralCode || '').toUpperCase();
-    const existingClaimed = Array.isArray(user.playerState?.referrals?.claimedMilestones)
-      ? user.playerState.referrals.claimedMilestones
+    const existingRefs = user.playerState?.referrals || {};
+    const existingClaimed = Array.isArray(existingRefs.claimedMilestones)
+      ? existingRefs.claimedMilestones
       : [];
     const incomingClaimed = Array.isArray(playerState.referrals?.claimedMilestones)
       ? playerState.referrals.claimedMilestones
@@ -368,11 +369,19 @@ export async function POST(req: NextRequest) {
       };
     } else {
       playerState.referrals.recruits = mergedRecruits;
-      playerState.referrals.totalRecruits = mergedRecruits.length;
-      playerState.referrals.networkTotalCitizens = mergedRecruits.length;
+      playerState.referrals.totalRecruits = Math.max(Number(playerState.referrals.totalRecruits || 0), mergedRecruits.length);
+      playerState.referrals.networkTotalCitizens = Math.max(Number(playerState.referrals.networkTotalCitizens || 0), mergedRecruits.length);
       playerState.referrals.unclaimedCommissionGreen = (playerState.referrals.unclaimedCommissionGreen || 0) + bonusCommissions;
       playerState.referrals.lifetimeCommissionGreen = (playerState.referrals.lifetimeCommissionGreen || 0) + bonusCommissions;
       playerState.referrals.claimedMilestones = mergedClaimed;
+      playerState.referrals.lastDailyStipendClaimTimestamp = Math.max(
+        Number(existingRefs.lastDailyStipendClaimTimestamp || 0),
+        Number(playerState.referrals.lastDailyStipendClaimTimestamp || 0)
+      );
+      playerState.referrals.lastDailyRoyaltyClaimTimestamp = Math.max(
+        Number(existingRefs.lastDailyRoyaltyClaimTimestamp || 0),
+        Number(playerState.referrals.lastDailyRoyaltyClaimTimestamp || 0)
+      );
     }
 
     // Update with latest player state

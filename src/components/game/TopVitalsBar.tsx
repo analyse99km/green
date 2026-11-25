@@ -11,6 +11,8 @@ import {
   Calendar,
   Sparkles,
   AlertTriangle,
+  Save,
+  CheckCircle,
 } from 'lucide-react';
 import { formatCompactNumber, CURRENCY_ICONS } from './formatters';
 
@@ -27,8 +29,20 @@ export default function TopVitalsBar({
   onOpenForge,
   onOpenEditId,
 }: TopVitalsBarProps) {
-  const { player, claimDailyStreak } = useGame();
+  const { player, claimDailyStreak, saveGame, isSaving, saveSuccess } = useGame();
   const [streakClaimedMsg, setStreakClaimedMsg] = useState<string | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+
+  const handleManualSave = async () => {
+    try {
+      await saveGame();
+      setSaveFeedback('Saved!');
+      setTimeout(() => setSaveFeedback(null), 2500);
+    } catch {
+      setSaveFeedback('Saved locally');
+      setTimeout(() => setSaveFeedback(null), 2500);
+    }
+  };
 
   // Auto-updating countdown display
   const [timerText, setTimerText] = useState('02:15');
@@ -113,7 +127,7 @@ export default function TopVitalsBar({
             </button>
           </div>
 
-          {/* Daily Streak Clipper Pill Button */}
+          {/* Daily Streak & Direct Save Buttons */}
           <div className="flex items-center gap-2">
             {streakClaimedMsg ? (
               <span className="text-emerald-400 font-bold text-[11px] animate-fadeIn">
@@ -133,6 +147,37 @@ export default function TopVitalsBar({
                 <span>Day {player.dailyStreak || 1} Claimed ✓</span>
               </span>
             )}
+
+            {/* Direct Save Button */}
+            <button
+              onClick={handleManualSave}
+              disabled={isSaving}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs transition-all shadow cursor-pointer active:scale-95 ${
+                saveSuccess
+                  ? 'bg-emerald-600 text-white'
+                  : player.hasUnsavedActions
+                  ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-neutral-950 font-black animate-pulse'
+                  : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700'
+              }`}
+              title="Save progress to cluster storage"
+            >
+              {isSaving ? (
+                <>
+                  <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : saveSuccess ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5 text-white" />
+                  <span>Saved!</span>
+                </>
+              ) : (
+                <>
+                  <Save className={`w-3.5 h-3.5 ${player.hasUnsavedActions ? 'text-neutral-950' : 'text-emerald-400'}`} />
+                  <span>{player.hasUnsavedActions ? 'Save Now!' : 'Save'}</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
